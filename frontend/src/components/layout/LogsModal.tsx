@@ -15,7 +15,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('ALL');
 
-  const parsed = useMemo(() => (logs ?? []).map(l => ({ ...parseLog(l), id: l.id })), [logs]);
+  const parsed = useMemo(() => (logs ?? []).map(l => ({ ...parseLog(l), id: l.id, actor: l.actorName ?? 'Sistem' })), [logs]);
   const counts = useMemo(() => {
     const c: Record<Filter, number> = { ALL: parsed.length, PROJE: 0, IZIN: 0, GOREV: 0, SISTEM: 0 };
     parsed.forEach(p => { c[p.type] += 1; });
@@ -23,7 +23,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
   }, [parsed]);
 
   const q = trLower(search.trim());
-  const visible = parsed.filter(l => (filter === 'ALL' || l.type === filter) && (!q || trLower(l.text).includes(q)));
+  const visible = parsed.filter(l => (filter === 'ALL' || l.type === filter) && (!q || trLower(`${l.text} ${l.actor}`).includes(q)));
 
   return (
     <Modal open={open} onClose={onClose} size="lg" title="Sistem Logları" description="Proje atamaları, izinler, yeni görev ve projeler kaydedilir.">
@@ -79,6 +79,8 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
                       <p className="text-xs font-semibold text-theme-muted mt-1.5 flex items-center gap-2">
                         <span>{meta.label}</span>
                         {log.time && <><span aria-hidden="true">·</span><time>{log.time}</time></>}
+                        <span aria-hidden="true">·</span>
+                        <span className="text-theme-deep">{log.actor === 'Sistem' ? 'Sistem tarafından' : `${log.actor} tarafından`}</span>
                       </p>
                     </div>
                   </motion.li>

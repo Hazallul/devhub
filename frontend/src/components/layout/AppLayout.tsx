@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
-import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
-  Gear, SignOut, ListDashes, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
+  Gear, SignOut, ListDashes, Key, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
 } from '@phosphor-icons/react';
 import { getStoredUser, clearSession } from '../../lib/session';
 import { useAllTasks, useLeaves, useMe } from '../../hooks/api';
-import { page } from '../../lib/motion';
+import { page, pageWipe, wipeEdge } from '../../lib/motion';
 import { Avatar } from '../ui/primitives';
 import { Menu, MenuItem, MenuDivider } from '../ui/Menu';
-import { NAV_ITEMS } from './nav';
+import { navFor, systemNavFor } from './nav';
+import NotificationBell from './NotificationBell';
 import { QuickActionsProvider, useQuickActions } from './QuickActions';
 import CommandPalette from './CommandPalette';
 
@@ -29,6 +30,9 @@ function Shell() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
+  // Geçiş animasyonu bölüm değişince oynar; /docs/a → /docs/b gibi alt sayfalarda sayfa kendi içinde değişir.
+  const section = location.pathname.split('/')[1] || 'home';
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -49,7 +53,7 @@ function Shell() {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-theme-cream">
+    <div className="relative flex h-[100dvh] overflow-hidden bg-theme-cream">
       <aside className="hidden lg:flex w-72 shrink-0 bg-white border-r border-theme-light/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] relative z-20">
         <SidebarContent />
       </aside>
@@ -73,10 +77,21 @@ function Shell() {
 
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onOpenPalette={() => setPaletteOpen(true)} onOpenDrawer={() => setDrawerOpen(true)} />
-        <main ref={mainRef} tabIndex={-1} id="main-scroll-container" className="flex-1 overflow-y-auto scrollbar-thin outline-none">
+        <main ref={mainRef} tabIndex={-1} id="main-scroll-container" className="relative flex-1 overflow-y-auto overscroll-contain scrollbar-thin outline-none">
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div key={location.pathname} variants={page} initial="hidden" animate="visible" exit="exit" className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10">
-              {outlet}
+            {/* Tam genişlikte sarmalayıcı: açılma menünün kenarından başlar, ortalanmış içerikten değil. */}
+            <motion.div key={section} variants={reduceMotion ? page : pageWipe} initial="hidden" animate="visible" exit="exit" className="relative min-h-full">
+              {!reduceMotion && (
+                <motion.span
+                  variants={wipeEdge}
+                  className="pointer-events-none absolute inset-y-0 w-40 -translate-x-full bg-gradient-to-r from-transparent via-theme-light/25 to-theme-light/60 z-10"
+                  aria-hidden="true"
+                />
+              )}
+              <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10">
+                <PasswordNotice />
+                {outlet}
+              </div>
             </motion.div>
           </AnimatePresence>
         </main>
@@ -104,7 +119,7 @@ function SidebarContent() {
   };
 
   return (
-    <div className="flex flex-col w-full p-5">
+    <div className="flex flex-col w-full h-full min-h-0 p-5 overflow-y-auto overscroll-contain scrollbar-thin">
       <button onClick={() => navigate('/')} className="flex items-center gap-3 px-3 mb-10 mt-2 rounded-2xl" aria-label="DevHub ana sayfa">
         <div className="w-10 h-10 bg-theme-deep rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-sm">D</div>
         <span className="text-2xl font-bold tracking-tight text-theme-text">DevHub</span>
@@ -112,7 +127,7 @@ function SidebarContent() {
 
       <p className="eyebrow px-4 mb-2">Menü</p>
       <nav className="space-y-1" aria-label="Ana menü">
-        {NAV_ITEMS.map(item => (
+        {navFor(me).map(item => (
           <NavLink key={item.to} to={item.to} end={item.to === '/'} className="block rounded-2xl">
             {({ isActive }) => (
               <span className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors ${isActive ? 'text-theme-deep font-bold' : 'text-theme-muted font-medium hover:text-theme-deep hover:bg-theme-lightest/50'}`}>
@@ -138,6 +153,17 @@ function SidebarContent() {
           <ListDashes size={22} weight="duotone" aria-hidden="true" />
           <span>Loglar</span>
         </button>
+        {systemNavFor(me).map(item => (
+          <NavLink key={item.to} to={item.to} className="block rounded-2xl">
+            {({ isActive }) => (
+              <span className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors ${isActive ? 'text-theme-deep font-bold' : 'text-theme-muted font-medium hover:text-theme-deep hover:bg-theme-lightest/50'}`}>
+                {isActive && <motion.span layoutId="nav-active" className="absolute inset-0 bg-theme-lightest rounded-2xl" transition={{ type: 'spring', stiffness: 420, damping: 36 }} />}
+                <item.icon size={22} weight={isActive ? 'fill' : 'duotone'} className="relative" aria-hidden="true" />
+                <span className="relative">{item.label}</span>
+              </span>
+            )}
+          </NavLink>
+        ))}
         <NavLink to="/settings" className="block rounded-2xl">
           {({ isActive }) => (
             <span className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors ${isActive ? 'text-theme-deep font-bold' : 'text-theme-muted font-medium hover:text-theme-deep hover:bg-theme-lightest/50'}`}>
@@ -149,7 +175,7 @@ function SidebarContent() {
         </NavLink>
       </div>
 
-      <div className="mt-auto pt-6">
+      <div className="mt-auto pt-6 shrink-0">
         <div className="bg-theme-cream p-3 rounded-3xl flex items-center gap-3 border border-theme-light/40">
           <Avatar user={me} size="sm" />
           <div className="min-w-0 flex-1">
@@ -191,6 +217,7 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
         <button onClick={actions.openLogs} className="icon-btn hidden sm:inline-flex" aria-label="Sistem logları" title="Sistem logları">
           <ListDashes size={20} weight="bold" />
         </button>
+        <NotificationBell />
         <button ref={setNewBtn} onClick={() => setMenuOpen(o => !o)} aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Yeni oluştur" className="btn-primary h-11 px-4">
           <motion.span animate={{ rotate: menuOpen ? 45 : 0 }} transition={{ type: 'spring', stiffness: 400, damping: 25 }} className="flex">
             <Plus size={18} weight="bold" />
@@ -208,5 +235,20 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
         </Menu>
       </div>
     </header>
+  );
+}
+
+/** Yönetici şifreyi sıfırladıysa kullanıcı geçici şifreyle girmiştir: şifresini değiştirmesi istenir. */
+function PasswordNotice() {
+  const me = useMe();
+  const navigate = useNavigate();
+  const location = useLocation();
+  if (!me.mustChangePassword || location.pathname === '/settings') return null;
+  return (
+    <div role="status" className="mb-6 flex items-center gap-3 p-4 rounded-3xl bg-[#FBEDE5] border border-[#E8C3AE] text-[#7A3E1F]">
+      <Key size={22} weight="duotone" className="shrink-0" aria-hidden="true" />
+      <p className="text-sm font-semibold flex-1">Geçici bir şifreyle giriş yaptınız. Hesabınızın güvenliği için şifrenizi değiştirin.</p>
+      <button onClick={() => navigate('/settings')} className="btn-primary h-10 min-h-0 px-4 text-sm">Şifreyi değiştir</button>
+    </div>
   );
 }

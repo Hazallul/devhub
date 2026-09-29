@@ -6,113 +6,19 @@ import { Info } from '@phosphor-icons/react';
 import Modal from '../ui/Modal';
 import { Segmented } from '../ui/primitives';
 import {
-  useUsers, useMe, useCreateTask, useCreateProject, useAssignProject, useCreateLeave, useCreateAnnouncement,
+  useMe, useCreateProject, useAssignProject, useCreateLeave, useCreateAnnouncement, useHolidayMap, useLeaveBalances,
 } from '../../hooks/api';
-import { TASK_PRIORITY, TASK_PRIORITIES, PROJECT_STATUS, PROJECT_STATUSES, LEAVE_TYPE, LEAVE_TYPES } from '../../lib/meta';
+import { PROJECT_STATUS, PROJECT_STATUSES, LEAVE_TYPE, LEAVE_TYPES } from '../../lib/meta';
 import { leaveDays, leaveDaysLabel, toIsoDay } from '../../lib/format';
-import type { TaskPriority, ProjectStatus, LeaveType, User } from '../../types';
+import type { ProjectStatus, LeaveType, User } from '../../types';
 
-function FieldError({ id, message }: { id: string; message?: string }) {
+export function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
   return <p id={id} role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{message}</p>;
 }
 
-function Required() {
+export function Required() {
   return <span className="text-[#9A3B1B]" aria-hidden="true"> *</span>;
-}
-
-// ---------------- Görev ----------------
-const taskSchema = z.object({
-  content: z.string().trim().min(3, 'Görevi en az 3 karakterle tanımlayın.').max(1000, 'En fazla 1000 karakter.'),
-  userId: z.number({ error: 'Bir kişi seçin.' }).int().positive('Bir kişi seçin.'),
-  priority: z.enum(['DUSUK', 'ORTA', 'YUKSEK']),
-  dueDate: z.string(),
-});
-type TaskForm = z.infer<typeof taskSchema>;
-
-export function TaskFormModal({ open, onClose, defaultUserId }: { open: boolean; onClose: () => void; defaultUserId?: number }) {
-  const me = useMe();
-  const { data: users } = useUsers();
-  const create = useCreateTask();
-  const isAdmin = me.role === 'ADMIN';
-
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TaskForm>({
-    resolver: zodResolver(taskSchema),
-    defaultValues: { content: '', userId: defaultUserId ?? me.id, priority: 'ORTA', dueDate: '' },
-  });
-
-  useEffect(() => {
-    if (open) reset({ content: '', userId: defaultUserId ?? me.id, priority: 'ORTA', dueDate: '' });
-  }, [open, defaultUserId, me.id, reset]);
-
-  const assignee = users?.find(u => u.id === watch('userId'));
-
-  const onSubmit = handleSubmit(async values => {
-    await create.mutateAsync({ ...values, dueDate: values.dueDate || undefined });
-    onClose();
-  });
-
-  return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={isAdmin && assignee && assignee.id !== me.id ? 'Görev Ata' : 'Yeni Görev'}
-      description={isAdmin ? 'Görevi bir ekip üyesine atayın; kişinin görev listesine düşer.' : 'Kendi görev listenize yeni bir madde ekleyin.'}
-      onSubmit={onSubmit}
-      footer={<>
-        <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
-        <button type="submit" disabled={create.isPending} className="btn-primary">{create.isPending ? 'Ekleniyor…' : 'Görevi Ekle'}</button>
-      </>}
-    >
-      <div className="space-y-5">
-        <div>
-          <label htmlFor="task-content" className="label">Görev<Required /></label>
-          <textarea
-            id="task-content"
-            data-autofocus
-            rows={3}
-            placeholder="Örn: Ödeme servisinde hata loglarını incele"
-            aria-invalid={!!errors.content}
-            aria-describedby="task-content-err"
-            className="input resize-none"
-            {...register('content')}
-          />
-          <FieldError id="task-content-err" message={errors.content?.message} />
-        </div>
-
-        {isAdmin && (
-          <div>
-            <label htmlFor="task-user" className="label">Atanan kişi<Required /></label>
-            <select id="task-user" className="input" {...register('userId', { valueAsNumber: true })}>
-              {users?.map(u => <option key={u.id} value={u.id}>{u.fullName}{u.jobTitle ? ` · ${u.jobTitle}` : ''}</option>)}
-            </select>
-            {assignee?.status === 'IZINLI' && (
-              <p className="text-xs font-semibold text-theme-deep mt-2 ml-1 flex items-center gap-1.5">
-                <Info size={14} weight="bold" /> {assignee.fullName} şu an izinli.
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="grid sm:grid-cols-2 gap-5">
-          <div>
-            <span className="label" id="task-priority-label">Öncelik</span>
-            <Segmented<TaskPriority>
-              label="Öncelik"
-              layoutId="task-priority"
-              value={watch('priority')}
-              onChange={v => setValue('priority', v)}
-              options={TASK_PRIORITIES.map(p => ({ value: p, label: TASK_PRIORITY[p].label }))}
-            />
-          </div>
-          <div>
-            <label htmlFor="task-due" className="label">Son tarih</label>
-            <input id="task-due" type="date" min={toIsoDay(new Date())} className="input" {...register('dueDate')} />
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
 }
 
 // ---------------- Proje ----------------
@@ -206,17 +112,17 @@ const leaveSchema = z.object({
 }).refine(v => !v.startDate || !v.endDate || v.endDate >= v.startDate, {
   path: ['endDate'],
   message: 'Bitiş tarihi başlangıçtan önce olamaz.',
-}).refine(v => !v.startDate || !v.endDate || v.endDate < v.startDate || leaveDays(v.startDate, v.endDate).workdays > 0, {
-  path: ['endDate'],
-  message: 'Seçilen tarihler yalnızca hafta sonuna denk geliyor; en az bir iş günü seçin.',
 });
 type LeaveForm = z.infer<typeof leaveSchema>;
 
 /** forUser verilirse (yönetici, durum menüsünden İzinli seçimi) o kişi adına doğrudan onaylı kayıt açılır. */
 export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onClose: () => void; forUser?: User | null }) {
   const create = useCreateLeave();
+  const me = useMe();
+  const holidays = useHolidayMap();
+  const { data: balances } = useLeaveBalances();
   const today = toIsoDay(new Date());
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<LeaveForm>({
+  const { register, handleSubmit, reset, watch, setValue, setError, formState: { errors } } = useForm<LeaveForm>({
     resolver: zodResolver(leaveSchema),
     defaultValues: { type: 'YILLIK', startDate: today, endDate: today, note: '' },
   });
@@ -227,12 +133,24 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
 
   const start = watch('startDate');
   const end = watch('endDate');
+  const type = watch('type');
+  const requested = start && end && end >= start ? leaveDays(start, end, holidays.set).workdays : null;
   const dayLabel = useMemo(() => {
-    if (!start || !end || end < start || leaveDays(start, end).workdays === 0) return null;
-    return leaveDaysLabel(start, end);
-  }, [start, end]);
+    if (!start || !end || end < start || requested === 0) return null;
+    return leaveDaysLabel(start, end, holidays.set);
+  }, [start, end, requested, holidays.set]);
+
+  // Yıllık izin bakiyesi (bu yıl): bekleyen talepler de düşülür; sunucu da aynı kuralla kontrol eder.
+  const target = forUser ?? me;
+  const balance = balances?.find(b => b.userId === target.id);
+  const available = balance ? balance.remaining - balance.pending : null;
+  const overBalance = type === 'YILLIK' && available !== null && requested !== null && requested > available;
 
   const onSubmit = handleSubmit(async values => {
+    if (leaveDays(values.startDate, values.endDate, holidays.set).workdays === 0) {
+      setError('endDate', { message: 'Seçilen tarihler hafta sonu veya resmi tatile denk geliyor; en az bir iş günü seçin.' });
+      return;
+    }
     await create.mutateAsync({ ...values, note: values.note || undefined, userId: forUser?.id });
     onClose();
   });
@@ -248,7 +166,7 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
       onSubmit={onSubmit}
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
-        <button type="submit" disabled={create.isPending} className="btn-primary">
+        <button type="submit" disabled={create.isPending || overBalance} className="btn-primary">
           {create.isPending ? 'Kaydediliyor…' : forUser ? 'İzni Kaydet' : 'Talebi Gönder'}
         </button>
       </>}
@@ -280,6 +198,18 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
         </div>
         {dayLabel && (
           <p className="text-sm font-semibold text-theme-deep -mt-1 ml-1">{dayLabel}</p>
+        )}
+        {type === 'YILLIK' && balance && (
+          <div className={`rounded-2xl p-3.5 text-sm border ${overBalance ? 'bg-[#FBEDE5] border-[#E8C3AE] text-[#7A3E1F]' : 'bg-theme-cream border-theme-light/60 text-theme-text'}`} role={overBalance ? 'alert' : undefined}>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <span className="font-semibold">{forUser ? `${forUser.fullName.split(' ')[0]} için` : 'Bu yıl'} kullanılabilir yıllık izin</span>
+              <span className="font-bold tabular">{Math.max(available ?? 0, 0)} / {balance.entitlement} iş günü</span>
+            </div>
+            <p className="text-xs mt-1 opacity-80">
+              {balance.used} gün kullanıldı{balance.pending ? ` · ${balance.pending} gün onay bekliyor` : ''}
+              {requested ? ` · bu talep ${requested} gün${overBalance ? ' — bakiye yetersiz' : `, sonrasında ${Math.max((available ?? 0) - requested, 0)} gün kalır`}` : ''}
+            </p>
+          </div>
         )}
         <div>
           <label htmlFor="leave-note" className="label">Not</label>

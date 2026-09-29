@@ -1,22 +1,28 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { TaskFormModal, ProjectFormModal, LeaveFormModal, AnnouncementFormModal } from '../forms/FormModals';
+import { useSearchParams } from 'react-router-dom';
+import { ProjectFormModal, LeaveFormModal, AnnouncementFormModal } from '../forms/FormModals';
+import TaskFormModal from '../tasks/TaskFormModal';
+import TaskDrawer from '../tasks/TaskDrawer';
 import LogsModal from './LogsModal';
 import type { User } from '../../types';
 
 interface QuickActionsApi {
-  newTask: (userId?: number) => void;
+  /** userId: kişi önceden seçili gelir; projectId: proje önceden seçili gelir (liste o projenin ekibini gösterir). */
+  newTask: (userId?: number, projectId?: number) => void;
   newProject: (assignUser?: User | null) => void;
   /** forUser: yönetici başka biri adına onaylı izin kaydı açar. */
   newLeave: (forUser?: User) => void;
   newAnnouncement: () => void;
   openLogs: () => void;
+  /** Görev ayrıntı panelini açar (geçmiş ve yorumlar dahil). */
+  openTask: (taskId: number) => void;
 }
 
 const Ctx = createContext<QuickActionsApi | null>(null);
 
 type Open =
-  | { kind: 'task'; userId?: number }
+  | { kind: 'task'; userId?: number; projectId?: number }
   | { kind: 'project'; assignUser?: User | null }
   | { kind: 'leave'; forUser?: User }
   | { kind: 'announcement' }
@@ -26,20 +32,39 @@ type Open =
 /** Uygulamanın her yerinden açılabilen modallar tek bir yerde yönetilir. */
 export function QuickActionsProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<Open>(null);
+  const [taskId, setTaskId] = useState<number | null>(null);
+  const [params, setParams] = useSearchParams();
   const close = useCallback(() => setOpen(null), []);
+  const closeTask = useCallback(() => setTaskId(null), []);
+
+  // Bildirimlerdeki "?task=ID" bağlantısı hangi sayfada olursa olsun görevi açar; parametre adres çubuğundan temizlenir.
+  const linkedTask = params.get('task');
+  useEffect(() => {
+    if (!linkedTask) return;
+    const id = Number(linkedTask);
+    if (Number.isInteger(id) && id > 0) setTaskId(id);
+    setParams(p => { p.delete('task'); return p; }, { replace: true });
+  }, [linkedTask, setParams]);
 
   const api = useMemo<QuickActionsApi>(() => ({
-    newTask: userId => setOpen({ kind: 'task', userId }),
+    newTask: (userId, projectId) => setOpen({ kind: 'task', userId, projectId }),
     newProject: assignUser => setOpen({ kind: 'project', assignUser }),
     newLeave: forUser => setOpen({ kind: 'leave', forUser }),
     newAnnouncement: () => setOpen({ kind: 'announcement' }),
     openLogs: () => setOpen({ kind: 'logs' }),
+    openTask: id => setTaskId(id),
   }), []);
 
   return (
     <Ctx.Provider value={api}>
       {children}
-      <TaskFormModal open={open?.kind === 'task'} onClose={close} defaultUserId={open?.kind === 'task' ? open.userId : undefined} />
+      <TaskDrawer taskId={taskId} onClose={closeTask} />
+      <TaskFormModal
+        open={open?.kind === 'task'}
+        onClose={close}
+        defaultUserId={open?.kind === 'task' ? open.userId : undefined}
+        defaultProjectId={open?.kind === 'task' ? open.projectId : undefined}
+      />
       <ProjectFormModal open={open?.kind === 'project'} onClose={close} assignUser={open?.kind === 'project' ? open.assignUser : null} />
       <LeaveFormModal open={open?.kind === 'leave'} onClose={close} forUser={open?.kind === 'leave' ? open.forUser : null} />
       <AnnouncementFormModal open={open?.kind === 'announcement'} onClose={close} />

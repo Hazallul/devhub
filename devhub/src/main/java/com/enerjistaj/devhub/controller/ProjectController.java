@@ -3,6 +3,7 @@ package com.enerjistaj.devhub.controller;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.entity.Project;
 import com.enerjistaj.devhub.entity.ProjectStatus;
+import com.enerjistaj.devhub.entity.User;
 import com.enerjistaj.devhub.exception.ApiException;
 import com.enerjistaj.devhub.repository.ProjectRepository;
 import com.enerjistaj.devhub.repository.UserRepository;
@@ -34,7 +35,7 @@ public class ProjectController {
 
     @PostMapping
     public ResponseEntity<Project> createProject(@RequestBody Map<String, Object> payload) {
-        currentUser.requireAdmin("Proje yalnızca yöneticiler tarafından oluşturulabilir.");
+        User me = currentUser.requireAdmin("Proje yalnızca yöneticiler tarafından oluşturulabilir.");
         String name = Payloads.requiredText(payload, "name", "Proje adı zorunludur.", 255, "Proje adı");
         if (projectRepository.existsByNameIgnoreCase(name)) throw ApiException.conflict("Bu isimde bir proje zaten var.");
 
@@ -46,7 +47,7 @@ public class ProjectController {
         p.setStatus(status != null ? status : ProjectStatus.PLANLAMA);
         Project saved = projectRepository.save(p);
 
-        actionLogService.log("Yeni '" + name + "' projesi oluşturuldu.");
+        actionLogService.log(me, "Yeni '" + name + "' projesi oluşturuldu.");
         return ResponseEntity.ok(saved);
     }
 

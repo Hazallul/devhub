@@ -45,7 +45,7 @@ public class SecurityConfig {
                 response.getWriter().write("{\"message\":\"Oturum süresi doldu, tekrar giriş yapın.\"}");
             }))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**", "/error").permitAll()
+                .requestMatchers("/api/auth/**", "/api/health", "/error").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             )

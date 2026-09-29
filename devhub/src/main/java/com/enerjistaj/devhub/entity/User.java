@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -40,6 +41,23 @@ public class User {
     @Column(nullable = false)
     private String workMode = "AKTIF";
     private String avatarColor;
+
+    /** Pasif hesaplar giriş yapamaz ve ekip listelerinde görünmez. */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean active = true;
+
+    private LocalDate hireDate;
+
+    /** Yıllık izin hakkı (iş günü). Varsayılan 14; kıdeme göre yönetici değiştirir. */
+    @Builder.Default
+    @Column(nullable = false)
+    private int annualLeaveDays = 14;
+
+    /** Yönetici şifreyi sıfırladıysa kullanıcı ilk girişte şifresini değiştirmelidir. */
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean mustChangePassword = false;
 
     @CreationTimestamp
     @Column(updatable = false)

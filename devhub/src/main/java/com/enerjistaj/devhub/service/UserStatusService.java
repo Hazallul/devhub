@@ -2,6 +2,7 @@ package com.enerjistaj.devhub.service;
 
 import com.enerjistaj.devhub.entity.LeaveRequest;
 import com.enerjistaj.devhub.entity.LeaveState;
+import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.User;
 import com.enerjistaj.devhub.repository.LeaveRequestRepository;
 import com.enerjistaj.devhub.repository.UserRepository;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -28,6 +30,7 @@ public class UserStatusService {
     private final UserRepository userRepository;
     private final ActionLogService actionLogService;
     private final LeaveRequestRepository leaveRepository;
+    private final NotificationService notificationService;
 
     /**
      * Çalışanın kendi seçebileceği durumlar: çalışma şekli (Aktif veya Uzaktan) ile Toplantıda arasında gidip gelir.
@@ -38,7 +41,11 @@ public class UserStatusService {
         return Set.of(user.getWorkMode(), TOPLANTIDA);
     }
 
-    public User change(User user, String newStatus) {
+    private static final Map<String, String> LABELS = Map.of(
+            "AKTIF", "Aktif", "TOPLANTIDA", "Toplantıda", "UZAKTAN", "Uzaktan", IZINLI, "İzinli");
+
+    /** actor: değişikliği yapan kişi; sistem (izin zamanlayıcısı) için null. */
+    public User change(User user, String newStatus, User actor) {
         String oldStatus = user.getStatus();
         if (newStatus.equals(oldStatus)) return user;
 
@@ -49,8 +56,13 @@ public class UserStatusService {
         syncLeaveRecords(saved, oldStatus, newStatus);
 
         if (IZINLI.equals(oldStatus) || IZINLI.equals(newStatus)) {
-            actionLogService.log(user.getFullName() + " durumu '" + (oldStatus != null ? oldStatus : "Belirsiz")
+            actionLogService.log(actor, user.getFullName() + " durumu '" + (oldStatus != null ? oldStatus : "Belirsiz")
                     + "' -> '" + newStatus + "' olarak güncellendi.");
+        }
+        // Başkası (yönetici) değiştirdiyse kişiye haber verilir; kendi değişikliği ve sistem geçişleri için bildirim yok.
+        if (actor != null) {
+            notificationService.notify(user, actor, NotificationType.STATUS_CHANGED,
+                    "Durumunuz \"" + LABELS.getOrDefault(newStatus, newStatus) + "\" olarak güncellendi", null, "/");
         }
         return saved;
     }

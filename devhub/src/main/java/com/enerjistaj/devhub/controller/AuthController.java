@@ -30,16 +30,7 @@ public class AuthController {
         
         User user = userRepository.findByEmail(loginRequest.getEmail()).orElseThrow();
         
-        UserDto userDto = UserDto.builder()
-                .id(user.getId())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .role(user.getRole())
-                .jobTitle(user.getJobTitle())
-                .currentProject(user.getCurrentProject())
-                .status(user.getStatus())
-                .avatarColor(user.getAvatarColor())
-                .build();
+        UserDto userDto = UserDto.from(user);
 
         return LoginResponse.builder()
                 .token(jwt)

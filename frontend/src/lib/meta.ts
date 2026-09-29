@@ -5,9 +5,10 @@ import {
   Umbrella, FirstAid, Clock,
   PencilSimple, Target, Pause, Flag,
   Briefcase, ListDashes, Gear,
+  WarningCircle, XCircle, Question,
 } from '@phosphor-icons/react';
 import type {
-  User, UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState, ActionLogType,
+  User, UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState, ActionLogType, HealthStatus,
 } from '../types';
 
 interface Meta { label: string; icon: Icon; className: string }
@@ -91,3 +92,11 @@ export function projectColor(name: string) {
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return palette[h % palette.length];
 }
+
+/** Sistem İzleme servis durumları; pill metni renkli yüzeyde en az 4.5:1 kontrastlıdır. */
+export const HEALTH_STATUS: Record<HealthStatus, Meta> = {
+  UP: { label: 'Sağlıklı', icon: CheckCircle, className: 'bg-theme-lightest text-theme-deep border-theme-light' },
+  WARN: { label: 'Uyarı', icon: WarningCircle, className: 'bg-[#F7ECD0] text-[#6E5210] border-[#E8D39C]' },
+  DOWN: { label: 'Çalışmıyor', icon: XCircle, className: 'bg-[#FBEDE5] text-[#9A3B1B] border-[#EFC9B5]' },
+  UNKNOWN: { label: 'Bilinmiyor', icon: Question, className: 'bg-gray-100 text-theme-muted border-gray-200' },
+};

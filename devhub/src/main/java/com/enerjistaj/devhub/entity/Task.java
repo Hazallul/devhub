@@ -33,4 +33,27 @@ public class Task {
 
     @Column(name = "due_date")
     private LocalDate dueDate;
+
+    /** Görevin ait olduğu proje (oluşturulurken kişinin o anki projesi). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id")
+    private Project project;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(length = 4000)
+    private String description;
+
+    /** Görevi oluşturan/atayan kişi; null = bilinmiyor (eski kayıtlar). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_id")
+    private User createdBy;
+
+    /** Durum değişince tamamlanma zamanı tutulur (raporlardaki tamamlanan görev sayıları için). */
+    public void changeStatus(TaskStatus newStatus) {
+        if (newStatus == TaskStatus.TAMAMLANDI && status != TaskStatus.TAMAMLANDI) completedAt = LocalDateTime.now();
+        if (newStatus != TaskStatus.TAMAMLANDI) completedAt = null;
+        status = newStatus;
+    }
 }

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwise, CalendarBlank, LockSimple, SealCheck, ChatText, CaretLeft, CaretRight, ArrowRight } from '@phosphor-icons/react';
 import { PageHeader, StatCard, Skeleton, Avatar, Pill, EmptyState } from '../components/ui/primitives';
-import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useUndoLeaveDecision, useFinalizeLeaveDecision } from '../hooks/api';
+import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useUndoLeaveDecision, useFinalizeLeaveDecision, useHolidayMap, useLeaveBalances } from '../hooks/api';
 import Modal from '../components/ui/Modal';
 import { useQuickActions } from '../components/layout/QuickActions';
 import { LEAVE_TYPE, LEAVE_STATE } from '../lib/meta';
@@ -21,9 +21,10 @@ function windowLabel(start: Date, end: Date) {
   return `${dayMonth.format(start)} – ${dayMonth.format(end)} ${end.getFullYear()}`;
 }
 
-function rangeLabel(l: LeaveRequest) {
+/** "1 Eki – 4 Eki · 2 iş günü (toplam 4 gün)"; hafta sonları ve resmi tatiller iş gününden düşülür. */
+function rangeLabel(l: LeaveRequest, holidays: ReadonlySet<string>) {
   const range = l.startDate === l.endDate ? formatDate(l.startDate) : `${formatDate(l.startDate)} – ${formatDate(l.endDate)}`;
-  return `${range} · ${leaveDaysLabel(l.startDate, l.endDate)}`;
+  return `${range} · ${leaveDaysLabel(l.startDate, l.endDate, holidays)}`;
 }
 
 interface TooltipState {
@@ -44,7 +45,7 @@ const EDGE = 12; // ekran kenarı payı
  * Konum animasyonsuz dış kutuda piksel olarak hesaplanır (Framer'ın transform'u konumu ezmesin);
  * ok her zaman çubuktaki noktayı gösterir, üstte yer yoksa balon alta açılır.
  */
-function BarTooltip({ tip }: { tip: TooltipState | null }) {
+function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: ReadonlySet<string> }) {
   const boxRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | null>(null);
 
@@ -91,7 +92,7 @@ function BarTooltip({ tip }: { tip: TooltipState | null }) {
                   {tip.leave.state === 'BEKLIYOR' ? 'Onay bekliyor' : LEAVE_STATE[tip.leave.state].label}
                 </span>
               </div>
-              <p className="text-xs text-white/80 font-medium mt-1">{LEAVE_TYPE[tip.leave.type].label} · {rangeLabel(tip.leave)}</p>
+              <p className="text-xs text-white/80 font-medium mt-1">{LEAVE_TYPE[tip.leave.type].label} · {rangeLabel(tip.leave, holidays)}</p>
               {tip.leave.note && (
                 <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 flex gap-1.5 leading-relaxed">
                   <ChatText size={14} weight="bold" className="shrink-0 mt-px text-theme-light" aria-hidden="true" />
@@ -122,6 +123,9 @@ export default function Leaves() {
   const decide = useDecideLeave();
   const withdraw = useWithdrawLeave();
   const undo = useUndoLeaveDecision();
+  const holidays = useHolidayMap();
+  const { data: balances } = useLeaveBalances();
+  const myBalance = balances?.find(b => b.userId === me.id);
   const finalize = useFinalizeLeaveDecision();
   const [tip, setTip] = useState<TooltipState | null>(null);
   const [confirming, setConfirming] = useState<LeaveRequest | null>(null);
@@ -198,7 +202,12 @@ export default function Leaves() {
         <StatCard label="Bugün izinde" value={onLeaveToday.length} icon={Airplane} hint={onLeaveToday.length ? onLeaveToday.map(l => userById.get(l.userId)?.fullName.split(' ')[0]).join(', ') : 'Herkes görevde'} />
         <StatCard label="Onay bekleyen" value={pending.length} icon={Hourglass} hint={isAdmin ? 'Aşağıdan karar verin' : 'Yönetici onayında'} />
         <StatCard label="Yaklaşan (14 gün)" value={upcoming.length} icon={CalendarCheck} hint="Onaylanmış izinler" />
-        <StatCard label="Taleplerim" value={mine.length} icon={CalendarBlank} hint={`${mine.filter(l => l.state === 'BEKLIYOR').length} bekliyor`} />
+        <StatCard
+          label="Yıllık izin bakiyem"
+          icon={CalendarBlank}
+          value={myBalance ? <>{myBalance.remaining}<span className="text-lg text-theme-muted font-semibold">/{myBalance.entitlement}</span></> : '–'}
+          hint={myBalance ? `${myBalance.used} gün kullanıldı${myBalance.pending ? ` · ${myBalance.pending} gün bekliyor` : ''}` : 'Yükleniyor'}
+        />
       </div>
 
       {/* Ekip takvimi */}
@@ -216,6 +225,9 @@ export default function Leaves() {
                 aria-live="polite"
               >
                 {windowLabel(days[0], days[WINDOW - 1])}
+                {days.some(d => holidays.set.has(toIsoDay(d))) && (
+                  <span className="text-[#8A4B2A]"> · {days.filter(d => holidays.set.has(toIsoDay(d))).map(d => `${dayMonth.format(d)} ${holidays.names.get(toIsoDay(d))}`).join(', ')}</span>
+                )}
               </motion.p>
             </AnimatePresence>
           </div>
@@ -237,6 +249,7 @@ export default function Leaves() {
               <span key={t} className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${LEAVE_TYPE[t].className}`} />{LEAVE_TYPE[t].label}</span>
             ))}
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed border-theme-dark" />Onay bekliyor</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[#F3E1D6]" />Resmi tatil</span>
           </div>
         </div>
         {isLoading ? <Skeleton className="h-48" /> : (
@@ -247,13 +260,17 @@ export default function Leaves() {
                 {days.map((d, i) => {
                   const weekend = d.getDay() === 0 || d.getDay() === 6;
                   const isToday = toIsoDay(d) === today;
+                  const holidayName = holidays.names.get(toIsoDay(d));
                   const showMonth = i === 0 || d.getDate() === 1;
                   return (
                     <div key={toIsoDay(d)} className="text-center">
                       <p className={`text-[10px] font-bold uppercase tracking-wide h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
                         {showMonth ? monthName.format(d) : '·'}
                       </p>
-                      <div className={`py-1.5 rounded-lg ${isToday ? 'bg-theme-deep text-white' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i > 0 ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}>
+                      <div
+                        title={holidayName ? `Resmi tatil: ${holidayName}` : undefined}
+                        className={`py-1.5 rounded-lg ${isToday ? 'bg-theme-deep text-white' : holidayName ? 'bg-[#F3E1D6] text-[#8A4B2A]' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i > 0 ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
+                      >
                         <p className="text-[10px] font-bold uppercase">{weekday.format(d)}</p>
                         <p className="text-sm font-bold tabular">{d.getDate()}</p>
                       </div>
@@ -283,9 +300,17 @@ export default function Leaves() {
                         <span className="text-sm font-semibold truncate">{user.fullName}</span>
                       </div>
                       <div className="relative h-9 rounded-xl bg-theme-cream" style={{ gridColumn: `2 / span ${WINDOW}` }}>
-                        {days.map((d, i) => (d.getDay() === 0 || d.getDay() === 6) && (
-                          <span key={i} className="absolute inset-y-0 bg-theme-lightest/80" style={{ left: `${(i / WINDOW) * 100}%`, width: `${100 / WINDOW}%` }} />
-                        ))}
+                        {days.map((d, i) => {
+                          const holiday = holidays.set.has(toIsoDay(d));
+                          if (!holiday && d.getDay() !== 0 && d.getDay() !== 6) return null;
+                          return (
+                            <span
+                              key={i}
+                              className={`absolute inset-y-0 ${holiday ? 'bg-[#F3E1D6]/70' : 'bg-theme-lightest/80'}`}
+                              style={{ left: `${(i / WINDOW) * 100}%`, width: `${100 / WINDOW}%` }}
+                            />
+                          );
+                        })}
                         {list.map(l => {
                           const rawStart = daysBetween(windowStartDate, toDate(l.startDate));
                           const rawEnd = daysBetween(windowStartDate, toDate(l.endDate));
@@ -301,7 +326,7 @@ export default function Leaves() {
                               animate={{ scaleX: 1, opacity: 1 }}
                               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                               tabIndex={0}
-                              aria-label={`${user.fullName}: ${LEAVE_TYPE[l.type].label}, ${rangeLabel(l)}${pendingBar ? ', onay bekliyor' : ''}${l.note ? `. Not: ${l.note}` : ''}`}
+                              aria-label={`${user.fullName}: ${LEAVE_TYPE[l.type].label}, ${rangeLabel(l, holidays.set)}${pendingBar ? ', onay bekliyor' : ''}${l.note ? `. Not: ${l.note}` : ''}`}
                               aria-describedby={tip?.leave.id === l.id ? 'leave-tooltip' : undefined}
                               onMouseEnter={e => showTip(e.currentTarget, l, user)}
                               onMouseLeave={() => setTip(null)}
@@ -367,7 +392,7 @@ export default function Leaves() {
                         {u && <Avatar user={u} size="sm" />}
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold truncate">{u?.fullName}</p>
-                          <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 mt-0.5"><Meta.icon size={13} weight="bold" /> {Meta.label} · {rangeLabel(l)}</p>
+                          <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 mt-0.5"><Meta.icon size={13} weight="bold" /> {Meta.label} · {rangeLabel(l, holidays.set)}</p>
                           {l.note && <p className="text-xs text-theme-text mt-1.5 italic">“{l.note}”</p>}
                           <button type="button" onClick={() => showInCalendar(l)} className="text-xs font-bold text-theme-deep hover:underline underline-offset-4 mt-1.5 inline-flex items-center gap-1">
                             <CalendarBlank size={12} weight="bold" /> Takvimde göster
@@ -407,7 +432,7 @@ export default function Leaves() {
                           {u && <Avatar user={u} size="sm" />}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-bold truncate">{u?.fullName}</p>
-                            <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 mt-0.5"><Meta.icon size={13} weight="bold" /> {Meta.label} · {rangeLabel(l)}</p>
+                            <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 mt-0.5"><Meta.icon size={13} weight="bold" /> {Meta.label} · {rangeLabel(l, holidays.set)}</p>
                             {l.note && <p className="text-xs text-theme-text mt-1.5 italic">“{l.note}”</p>}
                           </div>
                           <Pill className={state.className}>{state.label}</Pill>
@@ -430,7 +455,9 @@ export default function Leaves() {
         )}
 
         <section aria-labelledby="mine-title">
-          <h2 id="mine-title" className="text-lg font-bold tracking-tight mb-4">Taleplerim</h2>
+          <h2 id="mine-title" className="text-lg font-bold tracking-tight mb-4 flex items-center gap-2">
+            Taleplerim <Pill className="bg-theme-lightest text-theme-deep border border-theme-light">{mine.length}</Pill>
+          </h2>
           {mine.length === 0 ? (
             <EmptyState icon={Airplane} title="Henüz talebiniz yok" description="İzin planlıyorsanız talep oluşturun; onaylandığında durumunuz otomatik güncellenir." action={<button onClick={() => actions.newLeave()} className="btn-secondary"><Plus size={16} weight="bold" /> İzin talebi</button>} />
           ) : (
@@ -444,7 +471,7 @@ export default function Leaves() {
                       <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${Meta.className}`}><Meta.icon size={18} weight="bold" className="text-theme-text" /></span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold">{Meta.label}</p>
-                        <p className="text-xs text-theme-muted font-medium mt-0.5">{rangeLabel(l)}</p>
+                        <p className="text-xs text-theme-muted font-medium mt-0.5">{rangeLabel(l, holidays.set)}</p>
                         {l.note && <p className="text-xs text-theme-text mt-1 italic truncate">“{l.note}”</p>}
                       </div>
                       <Pill className={state.className}>
@@ -465,7 +492,7 @@ export default function Leaves() {
         </section>
       </div>
 
-      <BarTooltip tip={tip} />
+      <BarTooltip tip={tip} holidays={holidays.set} />
 
       <Modal
         open={!!confirming}
@@ -489,7 +516,7 @@ export default function Leaves() {
           <div className="space-y-4">
             <p className="text-sm text-theme-text leading-relaxed">
               <strong>{userById.get(confirming.userId)?.fullName}</strong> için <strong>{LEAVE_TYPE[confirming.type].label}</strong> talebi
-              ({rangeLabel(confirming)}) <strong>{confirming.state === 'ONAYLANDI' ? 'onaylandı' : 'reddedildi'}</strong> olarak kesinleşecek.
+              ({rangeLabel(confirming, holidays.set)}) <strong>{confirming.state === 'ONAYLANDI' ? 'onaylandı' : 'reddedildi'}</strong> olarak kesinleşecek.
             </p>
             <p className="text-sm font-semibold text-[#7A3E1F] bg-[#FBEDE5] rounded-2xl p-3.5 flex gap-2">
               <LockSimple size={18} weight="bold" className="shrink-0 mt-px" />

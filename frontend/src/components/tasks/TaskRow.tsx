@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { PencilSimple, FloppyDisk, Trash, X, CalendarBlank, Check } from '@phosphor-icons/react';
+import { PencilSimple, FloppyDisk, Trash, X, CalendarBlank, Check, ChatCircleText, TextAlignLeft } from '@phosphor-icons/react';
 import type { Task } from '../../types';
 import { PriorityBadge } from '../ui/primitives';
 import { useUpdateTask, useDeleteTask } from '../../hooks/api';
+import { useQuickActions } from '../layout/QuickActions';
 import { dueLabel } from '../../lib/format';
 
 interface TaskRowProps {
@@ -15,6 +16,7 @@ interface TaskRowProps {
 export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
   const update = useUpdateTask();
   const remove = useDeleteTask();
+  const { openTask } = useQuickActions();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.content);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -83,17 +85,28 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
             className="w-full px-2.5 py-1.5 -ml-1 rounded-xl bg-theme-lightest/60 border border-theme-light focus:outline-none focus:ring-2 focus:ring-theme-medium text-sm font-medium text-theme-text"
           />
         ) : (
-          <p className={`text-sm font-medium leading-snug transition-colors ${done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>
+          <button
+            type="button"
+            onClick={() => openTask(task.id)}
+            title="Ayrıntıyı aç"
+            className={`block w-full text-left text-sm font-medium leading-snug transition-colors rounded-md hover:underline decoration-theme-medium underline-offset-4 ${done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}
+          >
             {task.content}
-          </p>
+          </button>
         )}
-        {(showOwner || task.priority || due) && !editing && (
+        {(showOwner || task.priority || due || task.description || task.commentCount) && !editing && (
           <div className="flex flex-wrap items-center gap-2 mt-1.5">
             {showOwner}
             {task.priority && !done && <PriorityBadge priority={task.priority} />}
             {due && (
               <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${due.tone === 'danger' ? 'text-[#9A3B1B]' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
                 <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}
+              </span>
+            )}
+            {task.description && <TextAlignLeft size={13} weight="bold" className="text-theme-muted" aria-label="Açıklaması var" />}
+            {!!task.commentCount && (
+              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-theme-muted tabular" aria-label={`${task.commentCount} yorum`}>
+                <ChatCircleText size={13} weight="bold" aria-hidden="true" /> {task.commentCount}
               </span>
             )}
           </div>

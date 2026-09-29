@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Data;
 import com.enerjistaj.devhub.entity.Role;
 import com.enerjistaj.devhub.entity.User;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -17,6 +18,10 @@ public class UserDto {
     private String status;
     private String workMode;
     private String avatarColor;
+    private boolean active;
+    private LocalDate hireDate;
+    private int annualLeaveDays;
+    private boolean mustChangePassword;
 
     public static UserDto from(User u) {
         return UserDto.builder()
@@ -29,6 +34,10 @@ public class UserDto {
             .status(u.getStatus())
             .workMode(u.getWorkMode())
             .avatarColor(u.getAvatarColor())
+            .active(u.isActive())
+            .hireDate(u.getHireDate())
+            .annualLeaveDays(u.getAnnualLeaveDays())
+            .mustChangePassword(u.isMustChangePassword())
             .build();
     }
 }

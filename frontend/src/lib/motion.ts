@@ -23,6 +23,30 @@ export const page: Variants = {
   exit: { opacity: 0, y: -6, transition: { duration: 0.15, ease: [0.4, 0, 1, 1] } },
 };
 
+/**
+ * Sayfa geçişi (deneme): yeni sayfa soldaki menünün kenarından başlayıp sağa doğru açılarak alanı doldurur.
+ * clip-path yalnızca geçiş sırasında uygulanır; bitince kaldırılır ki gölgeler/taşan öğeler kırpılmasın.
+ * Eski hâline dönmek için AppLayout'ta pageWipe yerine page kullanmak yeterli.
+ */
+const WIPE_EASE = [0.65, 0, 0.35, 1] as const;
+export const WIPE_DURATION = 0.6;
+
+export const pageWipe: Variants = {
+  hidden: { clipPath: 'inset(0% 100% 0% 0%)' },
+  visible: { clipPath: 'inset(0% 0% 0% 0%)', transition: { duration: WIPE_DURATION, ease: WIPE_EASE }, transitionEnd: { clipPath: 'none' } },
+  exit: { opacity: 0, transition: { duration: 0.12, ease: [0.4, 0, 1, 1] } },
+};
+
+/** Açılan sayfanın önünden giden ince ışık kenarı */
+export const wipeEdge: Variants = {
+  hidden: { left: '0%', opacity: 1 },
+  visible: {
+    left: '100%',
+    opacity: 0,
+    transition: { left: { duration: WIPE_DURATION, ease: WIPE_EASE }, opacity: { delay: WIPE_DURATION * 0.75, duration: WIPE_DURATION * 0.25 } },
+  },
+};
+
 // Liste öğeleri 40ms arayla gelir.
 export const listContainer: Variants = {
   hidden: {},

@@ -37,13 +37,13 @@ public class LeaveStatusScheduler {
         LocalDate today = LocalDate.now(ActionLogService.ZONE);
 
         for (LeaveRequest leave : leaveRepository.findByStateAndStartDate(LeaveState.ONAYLANDI, today)) {
-            userStatusService.change(leave.getUser(), UserStatusService.IZINLI);
+            userStatusService.change(leave.getUser(), UserStatusService.IZINLI, null);
         }
 
         for (LeaveRequest leave : leaveRepository.findByStateAndEndDate(LeaveState.ONAYLANDI, today.minusDays(1))) {
             User user = leave.getUser();
             if (UserStatusService.IZINLI.equals(user.getStatus()) && !leaveRepository.existsApprovedOn(user.getId(), today)) {
-                userStatusService.change(user, user.getWorkMode());
+                userStatusService.change(user, user.getWorkMode(), null);
             }
         }
         log.debug("İzin durumları eşitlendi ({})", today);

@@ -1,0 +1,388 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, ShieldCheck, Warning, Sparkle,
+} from '@phosphor-icons/react';
+import { PageHeader, Segmented, Skeleton, EmptyState, Avatar, Pill } from '../components/ui/primitives';
+import { Menu, MenuItem, MenuDivider } from '../components/ui/Menu';
+import type { MenuPoint } from '../components/ui/Menu';
+import Modal from '../components/ui/Modal';
+import {
+  useMe, useAdminUsers, useProjects, useLeaveBalances, useCreateUser, useUpdateUser, useSetUserActive, useResetPassword,
+} from '../hooks/api';
+import type { UserInput } from '../hooks/api';
+import { formatDate, seniorityLabel, suggestedLeaveDays, trLower } from '../lib/format';
+import { listContainer, listItem } from '../lib/motion';
+import type { Role, User } from '../types';
+
+type Filter = 'ACTIVE' | 'INACTIVE' | 'ALL';
+
+/** Yönetici için kullanıcı yönetimi. */
+export default function Users() {
+  const me = useMe();
+  if (me.role !== 'ADMIN') return <Navigate to="/" replace />;
+  return <UsersPage />;
+}
+
+function UsersPage() {
+  const me = useMe();
+  const { data: users, isLoading } = useAdminUsers();
+  const { data: balances } = useLeaveBalances();
+  const setActive = useSetUserActive();
+  const resetPassword = useResetPassword();
+
+  const [filter, setFilter] = useState<Filter>('ACTIVE');
+  const [search, setSearch] = useState('');
+  const [editing, setEditing] = useState<User | 'new' | null>(null);
+  const [menu, setMenu] = useState<{ user: User; point: MenuPoint } | null>(null);
+  const [confirm, setConfirm] = useState<{ kind: 'deactivate' | 'reset'; user: User } | null>(null);
+  const [tempPassword, setTempPassword] = useState<{ user: Pick<User, 'fullName' | 'email'>; password: string } | null>(null);
+
+  const balanceOf = useMemo(() => new Map((balances ?? []).map(b => [b.userId, b])), [balances]);
+
+  const counts = {
+    ACTIVE: users?.filter(u => u.active).length ?? 0,
+    INACTIVE: users?.filter(u => !u.active).length ?? 0,
+    ALL: users?.length ?? 0,
+  };
+
+  const q = trLower(search.trim());
+  const visible = (users ?? []).filter(u =>
+    (filter === 'ALL' || (filter === 'ACTIVE' ? u.active : !u.active)) &&
+    (!q || trLower(`${u.fullName} ${u.email} ${u.jobTitle ?? ''} ${u.currentProject ?? ''}`).includes(q)),
+  );
+
+  const doConfirm = () => {
+    if (!confirm) return;
+    const { kind, user } = confirm;
+    if (kind === 'deactivate') {
+      setActive.mutate({ id: user.id, active: false }, { onSuccess: () => setConfirm(null) });
+    } else {
+      resetPassword.mutate(user.id, {
+        onSuccess: ({ temporaryPassword }) => {
+          setConfirm(null);
+          setTempPassword({ user, password: temporaryPassword });
+        },
+      });
+    }
+  };
+
+  return (
+    <>
+      <PageHeader
+        eyebrow="Sistem"
+        title="Kullanıcılar"
+        description="Çalışan ekleyin, rol ve izin hakkını düzenleyin, ayrılan çalışanların hesabını pasifleştirin."
+        actions={<button onClick={() => setEditing('new')} className="btn-primary"><UserPlus size={18} weight="bold" /> Yeni Kullanıcı</button>}
+      />
+
+      <div className="flex flex-col lg:flex-row gap-3 mb-6 lg:items-center">
+        <Segmented<Filter>
+          label="Hesap durumu"
+          layoutId="users-filter"
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: 'ACTIVE', label: 'Aktif', count: counts.ACTIVE },
+            { value: 'INACTIVE', label: 'Pasif', count: counts.INACTIVE },
+            { value: 'ALL', label: 'Tümü', count: counts.ALL },
+          ]}
+        />
+        <div className="relative flex-1">
+          <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted" size={18} aria-hidden="true" />
+          <input type="search" aria-label="Kullanıcı ara" placeholder="İsim, e-posta, unvan veya proje ara…" value={search} onChange={e => setSearch(e.target.value)} className="input pl-11 shadow-soft" />
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-3">{[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 rounded-3xl" />)}</div>
+      ) : visible.length === 0 ? (
+        <EmptyState icon={UserPlus} title="Kullanıcı bulunamadı" description={filter === 'INACTIVE' ? 'Pasifleştirilmiş hesap yok.' : 'Arama ölçütlerini değiştirin.'} />
+      ) : (
+        <motion.ul variants={listContainer} initial="hidden" animate="visible" className="space-y-3 pb-10">
+          {visible.map(u => {
+            const b = balanceOf.get(u.id);
+            const seniority = seniorityLabel(u.hireDate);
+            return (
+              <motion.li
+                key={u.id}
+                variants={listItem}
+                layout="position"
+                onContextMenu={e => { e.preventDefault(); setMenu({ user: u, point: { x: e.clientX, y: e.clientY } }); }}
+                className={`card p-4 sm:p-5 flex items-center gap-4 ${u.active ? '' : 'opacity-70'}`}
+              >
+                <Avatar user={u.active ? u : { ...u, status: null }} />
+                <div className="min-w-0 flex-1 sm:flex-none sm:w-64">
+                  <div className="flex items-center gap-2">
+                    <p className="font-bold truncate">{u.fullName}</p>
+                    {u.id === me.id && <span className="text-[10px] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md">Sen</span>}
+                  </div>
+                  <p className="text-xs text-theme-muted font-medium truncate">{u.email}</p>
+                </div>
+                <div className="hidden md:block w-44 min-w-0">
+                  <p className="eyebrow mb-0.5">Unvan · Proje</p>
+                  <p className="text-sm font-semibold truncate">{u.jobTitle || '—'}</p>
+                  <p className="text-xs text-theme-muted truncate">{u.currentProject || 'Boşta'}</p>
+                </div>
+                <div className="hidden lg:block w-36">
+                  <p className="eyebrow mb-0.5">İşe giriş</p>
+                  <p className="text-sm font-semibold">{u.hireDate ? formatDate(u.hireDate) : '—'}</p>
+                  {seniority && <p className="text-xs text-theme-muted">{seniority}</p>}
+                </div>
+                <div className="hidden lg:block w-32">
+                  <p className="eyebrow mb-0.5">Yıllık izin</p>
+                  {b ? (
+                    <p className="text-sm font-semibold tabular">{b.remaining} <span className="text-theme-muted font-medium">/ {b.entitlement} gün</span></p>
+                  ) : <p className="text-sm font-semibold tabular">{u.annualLeaveDays} gün</p>}
+                  {b && b.pending > 0 && <p className="text-xs text-theme-muted">{b.pending} gün bekliyor</p>}
+                </div>
+                <div className="ml-auto flex items-center gap-2 shrink-0">
+                  {u.role === 'ADMIN' && <Pill className="bg-theme-deep text-white"><ShieldCheck size={11} weight="bold" /> Yönetici</Pill>}
+                  {!u.active && <Pill className="bg-gray-100 text-theme-muted"><Prohibit size={11} weight="bold" /> Pasif</Pill>}
+                  {u.mustChangePassword && u.active && <Pill className="bg-[#FBEDE5] text-[#7A3E1F]"><Key size={11} weight="bold" /> Geçici şifre</Pill>}
+                  <button
+                    onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ user: u, point: { x: r.right - 230, y: r.bottom + 8 } }); }}
+                    className="icon-btn"
+                    aria-label={`${u.fullName} için işlemler`}
+                    aria-haspopup="menu"
+                  >
+                    <DotsThree size={22} weight="bold" />
+                  </button>
+                </div>
+              </motion.li>
+            );
+          })}
+        </motion.ul>
+      )}
+
+      <Menu open={!!menu} onClose={() => setMenu(null)} point={menu?.point} width={230} label="Kullanıcı işlemleri">
+        {menu && <>
+          <MenuItem icon={PencilSimple} onSelect={() => { setEditing(menu.user); setMenu(null); }}>Düzenle</MenuItem>
+          <MenuItem icon={Key} disabled={!menu.user.active} onSelect={() => { setConfirm({ kind: 'reset', user: menu.user }); setMenu(null); }}>Şifreyi sıfırla</MenuItem>
+          <MenuDivider />
+          {menu.user.active ? (
+            <MenuItem icon={Prohibit} tone="danger" disabled={menu.user.id === me.id} onSelect={() => { setConfirm({ kind: 'deactivate', user: menu.user }); setMenu(null); }}>
+              Hesabı pasifleştir
+            </MenuItem>
+          ) : (
+            <MenuItem icon={ArrowCounterClockwise} onSelect={() => { setActive.mutate({ id: menu.user.id, active: true }); setMenu(null); }}>
+              Hesabı aktifleştir
+            </MenuItem>
+          )}
+        </>}
+      </Menu>
+
+      <UserFormModal
+        target={editing}
+        onClose={() => setEditing(null)}
+        onCreated={(user, password) => { setEditing(null); setTempPassword({ user, password }); }}
+      />
+
+      <Modal
+        open={!!confirm}
+        onClose={() => setConfirm(null)}
+        size="sm"
+        title={confirm?.kind === 'deactivate' ? 'Hesabı pasifleştir' : 'Şifreyi sıfırla'}
+        footer={<>
+          <button type="button" onClick={() => setConfirm(null)} className="btn-ghost">Vazgeç</button>
+          <button type="button" onClick={doConfirm} disabled={setActive.isPending || resetPassword.isPending} className="btn-primary">
+            {confirm?.kind === 'deactivate' ? 'Pasifleştir' : 'Geçici şifre oluştur'}
+          </button>
+        </>}
+      >
+        {confirm && (
+          <p className="text-sm leading-relaxed">
+            {confirm.kind === 'deactivate' ? (
+              <><strong>{confirm.user.fullName}</strong> artık giriş yapamayacak ve ekip listelerinde görünmeyecek. Görev ve izin geçmişi korunur; hesabı istediğiniz zaman yeniden aktifleştirebilirsiniz.</>
+            ) : (
+              <><strong>{confirm.user.fullName}</strong> için yeni bir geçici şifre oluşturulacak. Mevcut şifresi geçersiz olur ve ilk girişte şifresini değiştirmesi istenir.</>
+            )}
+          </p>
+        )}
+      </Modal>
+
+      <TempPasswordModal value={tempPassword} onClose={() => setTempPassword(null)} />
+    </>
+  );
+}
+
+// ---------------- Kullanıcı formu ----------------
+interface FormState { fullName: string; email: string; role: Role; jobTitle: string; hireDate: string; annualLeaveDays: string; currentProject: string }
+const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', hireDate: '', annualLeaveDays: '14', currentProject: '' };
+
+function UserFormModal({ target, onClose, onCreated }: {
+  target: User | 'new' | null;
+  onClose: () => void;
+  onCreated: (user: Pick<User, 'fullName' | 'email'>, password: string) => void;
+}) {
+  const me = useMe();
+  const { data: projects } = useProjects();
+  const create = useCreateUser();
+  const update = useUpdateUser();
+  const isNew = target === 'new';
+  const [form, setForm] = useState<FormState>(EMPTY);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+
+  useEffect(() => {
+    if (!target) return;
+    setErrors({});
+    setForm(target === 'new' ? EMPTY : {
+      fullName: target.fullName, email: target.email, role: target.role, jobTitle: target.jobTitle ?? '',
+      hireDate: target.hireDate ?? '', annualLeaveDays: String(target.annualLeaveDays), currentProject: target.currentProject ?? '',
+    });
+  }, [target]);
+
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
+  const suggestion = suggestedLeaveDays(form.hireDate || null);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const errs: typeof errors = {};
+    if (form.fullName.trim().length < 3) errs.fullName = 'Ad soyad en az 3 karakter olmalı.';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) errs.email = 'Geçerli bir e-posta adresi girin.';
+    const days = Number(form.annualLeaveDays);
+    if (!Number.isInteger(days) || days < 0 || days > 60) errs.annualLeaveDays = '0 ile 60 arasında tam sayı girin.';
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
+
+    const body: UserInput = {
+      fullName: form.fullName.trim(), email: form.email.trim(), role: form.role, jobTitle: form.jobTitle.trim() || undefined,
+      hireDate: form.hireDate || undefined, annualLeaveDays: days,
+    };
+    if (isNew) {
+      create.mutate({ ...body, currentProject: form.currentProject || undefined }, {
+        onSuccess: ({ user, temporaryPassword }) => onCreated(user, temporaryPassword),
+      });
+    } else if (target) {
+      update.mutate({ id: target.id, ...body, hireDate: form.hireDate }, { onSuccess: onClose });
+    }
+  };
+
+  const editingSelf = target !== 'new' && target?.id === me.id;
+  const pending = create.isPending || update.isPending;
+
+  return (
+    <Modal
+      open={!!target}
+      onClose={onClose}
+      title={isNew ? 'Yeni Kullanıcı' : 'Kullanıcıyı Düzenle'}
+      description={isNew ? 'Hesap geçici bir şifreyle oluşturulur; kişi ilk girişte şifresini değiştirir.' : undefined}
+      onSubmit={submit}
+      footer={<>
+        <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
+        <button type="submit" disabled={pending} className="btn-primary">{pending ? 'Kaydediliyor…' : isNew ? 'Kullanıcıyı Oluştur' : 'Kaydet'}</button>
+      </>}
+    >
+      <div className="space-y-5">
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Field id="u-name" label="Ad soyad" required error={errors.fullName}>
+            <input id="u-name" data-autofocus className="input" value={form.fullName} onChange={e => set('fullName', e.target.value)} autoComplete="off" />
+          </Field>
+          <Field id="u-email" label="E-posta" required error={errors.email}>
+            <input id="u-email" type="email" className="input" value={form.email} onChange={e => set('email', e.target.value)} autoComplete="off" placeholder="ad.soyad@devhub.local" />
+          </Field>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Field id="u-title" label="Unvan">
+            <input id="u-title" className="input" value={form.jobTitle} onChange={e => set('jobTitle', e.target.value)} placeholder="Örn: Backend Developer" />
+          </Field>
+          <div>
+            <span className="label">Rol</span>
+            <Segmented<Role>
+              label="Rol"
+              layoutId="user-role"
+              value={form.role}
+              onChange={v => { if (!editingSelf) set('role', v); }}
+              options={[{ value: 'EMPLOYEE', label: 'Çalışan' }, { value: 'ADMIN', label: 'Yönetici' }]}
+            />
+            {editingSelf && <p className="text-xs text-theme-muted mt-1.5">Kendi yönetici yetkinizi kaldıramazsınız.</p>}
+          </div>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-5">
+          <Field id="u-hire" label="İşe giriş tarihi">
+            <input id="u-hire" type="date" className="input" value={form.hireDate} onChange={e => set('hireDate', e.target.value)} />
+          </Field>
+          <Field id="u-leave" label="Yıllık izin hakkı (iş günü)" error={errors.annualLeaveDays}>
+            <input id="u-leave" type="number" min={0} max={60} className="input tabular" value={form.annualLeaveDays} onChange={e => set('annualLeaveDays', e.target.value)} />
+          </Field>
+        </div>
+        {suggestion && String(suggestion.days) !== form.annualLeaveDays && (
+          <button
+            type="button"
+            onClick={() => set('annualLeaveDays', String(suggestion.days))}
+            className="w-full text-left text-sm rounded-2xl p-3.5 bg-theme-lightest/70 border border-theme-light hover:bg-theme-lightest transition-colors flex items-center gap-2.5"
+          >
+            <Sparkle size={18} weight="duotone" className="text-theme-deep shrink-0" />
+            <span className="flex-1"><strong>Kıdeme göre öneri: {suggestion.days} gün</strong> <span className="text-theme-muted">({suggestion.note})</span></span>
+            <span className="text-xs font-bold text-theme-deep">Uygula</span>
+          </button>
+        )}
+        {isNew && (
+          <Field id="u-project" label="Proje">
+            <select id="u-project" className="input" value={form.currentProject} onChange={e => set('currentProject', e.target.value)}>
+              <option value="">Boşta (proje yok)</option>
+              {projects?.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+            </select>
+          </Field>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function Field({ id, label, required, error, children }: { id: string; label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label htmlFor={id} className="label">{label}{required && <span className="text-[#9A3B1B]" aria-hidden="true"> *</span>}</label>
+      {children}
+      {error && <p role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{error}</p>}
+    </div>
+  );
+}
+
+// ---------------- Geçici şifre ----------------
+function TempPasswordModal({ value, onClose }: { value: { user: Pick<User, 'fullName' | 'email'>; password: string } | null; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  useEffect(() => { if (value) setCopied(false); }, [value]);
+
+  const copy = async () => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value.password);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <Modal
+      open={!!value}
+      onClose={onClose}
+      size="sm"
+      title="Geçici şifre"
+      description={value ? `${value.user.fullName} (${value.user.email})` : undefined}
+      footer={<button type="button" onClick={onClose} className="btn-primary">Tamam</button>}
+    >
+      {value && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 p-2 pl-4 rounded-2xl bg-theme-cream border border-theme-light">
+            <code className="flex-1 font-mono text-lg font-bold tracking-wider select-all">{value.password}</code>
+            <button type="button" onClick={copy} className="btn-secondary h-10 min-h-0 px-3 text-sm" aria-live="polite">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span key={copied ? 'ok' : 'copy'} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="inline-flex items-center gap-1.5">
+                  {copied ? <><Check size={16} weight="bold" /> Kopyalandı</> : <><Copy size={16} weight="bold" /> Kopyala</>}
+                </motion.span>
+              </AnimatePresence>
+            </button>
+          </div>
+          <p className="text-sm text-[#7A3E1F] bg-[#FBEDE5] rounded-2xl p-3.5 flex gap-2">
+            <Warning size={18} weight="bold" className="shrink-0 mt-px" />
+            Bu şifre yalnızca şimdi gösteriliyor. Kişiye güvenli bir yoldan iletin; ilk girişte değiştirmesi istenecek.
+          </p>
+        </div>
+      )}
+    </Modal>
+  );
+}

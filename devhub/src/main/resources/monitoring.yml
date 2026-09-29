@@ -1,0 +1,59 @@
+# =====================================================================
+# Sistem İzleme (yalnızca yönetici) — izlenen servisler
+#
+# Yeni bir sistem eklemek için services listesine bir kayıt eklemeniz yeterli:
+#   container : Docker konteyner adı → CPU, bellek, ağ, disk ve yeniden başlama bilgisi
+#   check     : HTTP | TCP | JDBC   → sağlık kontrolü (target: HTTP için URL, TCP için host:port)
+#   probe     : JVM | MYSQL         → servise özel metrikler
+# container vermeden yalnızca check ile Docker dışındaki bir sistemi de izleyebilirsiniz (ör. dış bir API).
+# Compose projesinde bulunup burada tanımlı olmayan konteynerler de sayfada otomatik listelenir.
+# Yeni kontrol/metrik türü: monitoring paketinde HealthCheck veya MetricProbe uygulayan bir @Component yazın.
+# =====================================================================
+devhub:
+  monitoring:
+    docker-url: ${DEVHUB_MONITORING_DOCKER_URL:http://localhost:2375}
+    compose-project: devhub
+    sample-seconds: 10
+    history-minutes: 60
+    warn-percent: 85
+    slow-latency-ms: 1000
+    services:
+      - id: backend
+        name: Backend API
+        kind: API
+        description: "Spring Boot REST API: kimlik doğrulama, iş kuralları, zamanlanmış görevler"
+        container: devhub-backend
+        check: HTTP
+        target: http://localhost:8081/api/health
+        probe: JVM
+
+      - id: mysql
+        name: Veritabanı
+        kind: Veritabanı
+        description: "MySQL 8: tüm uygulama verisi (şema Flyway ile yönetilir)"
+        container: devhub-mysql
+        check: JDBC
+        probe: MYSQL
+
+      - id: frontend
+        name: Web Arayüzü
+        kind: Web
+        description: React uygulamasını sunan Vite sunucusu
+        container: devhub-frontend
+        check: HTTP
+        target: http://frontend:5173/
+
+      - id: docker-proxy
+        name: Docker İzleme Vekili
+        kind: Altyapı
+        description: Bu sayfanın konteyner bilgilerini okuduğu salt okunur Docker API vekili
+        container: devhub-docker-proxy
+        check: TCP
+        target: docker-proxy:2375
+
+      # Örnek: Docker dışında çalışan bir sistem
+      # - id: odeme-api
+      #   name: Ödeme Sağlayıcısı
+      #   kind: Dış servis
+      #   check: HTTP
+      #   target: https://status.example.com/health

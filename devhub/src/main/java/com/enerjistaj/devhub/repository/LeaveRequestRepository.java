@@ -2,6 +2,7 @@ package com.enerjistaj.devhub.repository;
 
 import com.enerjistaj.devhub.entity.LeaveRequest;
 import com.enerjistaj.devhub.entity.LeaveState;
+import com.enerjistaj.devhub.entity.LeaveType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -9,11 +10,18 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
     List<LeaveRequest> findAllByOrderByCreatedAtDesc();
+
+    /** Bir yılla kesişen, belirli türdeki onaylı/bekleyen izinler (bakiye hesabı için). */
+    @Query("select l from LeaveRequest l where l.type = :type and l.state in :states"
+            + " and l.startDate <= :to and l.endDate >= :from")
+    List<LeaveRequest> findByTypeAndStatesBetween(@Param("type") LeaveType type, @Param("states") Collection<LeaveState> states,
+                                                  @Param("from") LocalDate from, @Param("to") LocalDate to);
 
     @EntityGraph(attributePaths = "user")
     List<LeaveRequest> findByStateAndStartDate(LeaveState state, LocalDate startDate);

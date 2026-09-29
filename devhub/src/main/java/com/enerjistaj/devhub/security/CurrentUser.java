@@ -22,8 +22,10 @@ public class CurrentUser {
         if (auth == null || auth.getName() == null) {
             throw new ApiException(HttpStatus.UNAUTHORIZED, "Oturum süresi doldu, tekrar giriş yapın.");
         }
-        return userRepository.findByEmail(auth.getName())
+        User user = userRepository.findByEmail(auth.getName())
                 .orElseThrow(() -> new ApiException(HttpStatus.UNAUTHORIZED, "Oturum süresi doldu, tekrar giriş yapın."));
+        if (!user.isActive()) throw new ApiException(HttpStatus.UNAUTHORIZED, "Hesabınız pasifleştirilmiş.");
+        return user;
     }
 
     public static boolean isAdmin(User user) {

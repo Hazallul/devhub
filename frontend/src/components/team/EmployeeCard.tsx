@@ -89,7 +89,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
     e.preventDefault();
     const content = newTask.trim();
     if (!content) return;
-    createTask.mutate({ userId: user.id, content, priority: newPriority }, {
+    createTask.mutate({ userIds: [user.id], content, priority: newPriority }, {
       onSuccess: () => { setNewTask(''); setNewPriority('ORTA'); },
     });
   };

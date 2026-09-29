@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, PencilSimple, CalendarBlank, Users, UserMinus, UserPlus, CheckCircle, Briefcase } from '@phosphor-icons/react';
+import { X, PencilSimple, CalendarBlank, Users, UserMinus, UserPlus, CheckCircle, Briefcase, Plus, CaretRight, ChatCircleText } from '@phosphor-icons/react';
 import type { Project, ProjectStatus, Task, User } from '../../types';
 import { Avatar, Pill, ProgressBar, StatusBadge, Segmented, PriorityBadge } from '../ui/primitives';
+import { useQuickActions } from '../layout/QuickActions';
 import { useMe, useUsers, useAssignProject, useUpdateProject } from '../../hooks/api';
-import { PROJECT_STATUS, PROJECT_STATUSES, TASK_PRIORITY, projectColor } from '../../lib/meta';
+import { PROJECT_STATUS, PROJECT_STATUSES, TASK_PRIORITY, TASK_STATUS, projectColor } from '../../lib/meta';
 import { dueLabel, formatDate, firstName } from '../../lib/format';
 
 interface Props {
@@ -20,7 +21,8 @@ interface Props {
 export default function ProjectDrawer({ project, members, tasks, onClose }: Props) {
   useEffect(() => {
     if (!project) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    // Üstünde görev paneli açıksa Esc önce onu kapatır.
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('[data-drawer="task"]')) onClose(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [project, onClose]);
@@ -68,11 +70,9 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
   const [addUserId, setAddUserId] = useState('');
 
   const memberIds = new Set(members.map(m => m.id));
-  const memberTasks = tasks.filter(t => memberIds.has(t.userId));
+  // Projeye bağlı görevler (üye sonradan başka projeye geçmiş olsa da burada kalır)
+  const memberTasks = tasks.filter(t => t.projectId === project.id);
   const done = memberTasks.filter(t => t.status === 'TAMAMLANDI').length;
-  const openTasks = memberTasks
-    .filter(t => t.status !== 'TAMAMLANDI')
-    .sort((a, b) => TASK_PRIORITY[a.priority ?? 'ORTA'].rank - TASK_PRIORITY[b.priority ?? 'ORTA'].rank);
   const statusMeta = PROJECT_STATUS[project.status ?? 'AKTIF'];
   const due = project.deadline && project.status !== 'TAMAMLANDI' ? dueLabel(project.deadline) : null;
   const candidates = users?.filter(u => !memberIds.has(u.id)) ?? [];
@@ -163,7 +163,7 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
                 <ul className="space-y-2">
                   <AnimatePresence initial={false}>
                     {members.map(m => {
-                      const open = tasks.filter(t => t.userId === m.id && t.status !== 'TAMAMLANDI').length;
+                      const open = memberTasks.filter(t => t.userId === m.id && t.status !== 'TAMAMLANDI').length;
                       return (
                         <motion.li key={m.id} layout initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12, transition: { duration: 0.12 } }}
                           className="group flex items-center gap-3 p-2.5 pr-3 rounded-2xl bg-white border border-theme-light/40">
@@ -171,7 +171,7 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
                             <Avatar user={m} size="sm" />
                             <span className="min-w-0">
                               <span className="block text-sm font-bold text-theme-text truncate">{m.fullName}</span>
-                              <span className="block text-xs text-theme-muted truncate">{m.jobTitle} · {open} açık görev</span>
+                              <span className="block text-xs text-theme-muted truncate">{m.jobTitle} · {open ? `projede ${open} açık görev` : 'projede açık görevi yok'}</span>
                             </span>
                           </button>
                           <StatusBadge status={m.status} size="sm" />
@@ -204,33 +204,75 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
                 )}
               </section>
 
-              <section>
-                <h3 className="eyebrow mb-3">Açık görevler ({openTasks.length})</h3>
-                {openTasks.length === 0 ? (
-                  <p className="text-sm text-theme-muted">Ekibin açık görevi yok.</p>
-                ) : (
-                  <ul className="space-y-2">
-                    {openTasks.slice(0, 12).map(t => {
-                      const owner = members.find(m => m.id === t.userId);
-                      const d = t.dueDate ? dueLabel(t.dueDate) : null;
-                      return (
-                        <li key={t.id} className="p-3 rounded-2xl bg-white border border-theme-light/40">
-                          <p className="text-sm font-medium text-theme-text">{t.content}</p>
-                          <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                            {owner && <span className="text-[11px] font-bold text-theme-muted">{firstName(owner.fullName)}</span>}
-                            {t.priority && <PriorityBadge priority={t.priority} />}
-                            {d && <span className={`text-[11px] font-bold ${d.tone === 'danger' ? 'text-[#9A3B1B]' : 'text-theme-muted'}`}>{d.text}</span>}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </section>
+              <ProjectTasks projectId={project.id} tasks={memberTasks} users={users ?? []} canAssign={isAdmin} />
             </motion.div>
           )}
         </AnimatePresence>
       </div>
     </>
+  );
+}
+
+type TaskTab = 'OPEN' | 'DONE';
+
+/** Projeye bağlı görevler: açık / tamamlanan sekmeleri; satıra tıklayınca görev ayrıntısı açılır. */
+function ProjectTasks({ projectId, tasks, users, canAssign }: { projectId: number; tasks: Task[]; users: User[]; canAssign: boolean }) {
+  const actions = useQuickActions();
+  const [tab, setTab] = useState<TaskTab>('OPEN');
+  const open = tasks.filter(t => t.status !== 'TAMAMLANDI').sort((a, b) =>
+    TASK_PRIORITY[a.priority ?? 'ORTA'].rank - TASK_PRIORITY[b.priority ?? 'ORTA'].rank || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999'));
+  const done = tasks.filter(t => t.status === 'TAMAMLANDI').sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
+  const list = tab === 'OPEN' ? open : done;
+
+  return (
+    <section>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h3 className="eyebrow">Görevler</h3>
+        {canAssign && (
+          <button onClick={() => actions.newTask(undefined, projectId)} className="inline-flex items-center gap-1.5 text-xs font-bold text-theme-deep hover:underline underline-offset-4 rounded">
+            <Plus size={13} weight="bold" /> Görev ata
+          </button>
+        )}
+      </div>
+      <Segmented<TaskTab>
+        label="Görev sekmesi"
+        layoutId={`pd-tasks-${projectId}`}
+        value={tab}
+        onChange={setTab}
+        options={[{ value: 'OPEN', label: 'Açık', count: open.length }, { value: 'DONE', label: 'Tamamlanan', count: done.length }]}
+      />
+      {list.length === 0 ? (
+        <p className="text-sm text-theme-muted mt-4">{tab === 'OPEN' ? 'Projenin açık görevi yok.' : 'Henüz tamamlanan görev yok.'}</p>
+      ) : (
+        <ul className="space-y-2 mt-3">
+          {list.map(t => {
+            const owner = users.find(u => u.id === t.userId);
+            const d = t.dueDate && t.status !== 'TAMAMLANDI' ? dueLabel(t.dueDate) : null;
+            const status = TASK_STATUS[t.status ?? 'YAPILACAK'];
+            return (
+              <li key={t.id}>
+                <button onClick={() => actions.openTask(t.id)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white border border-theme-light/40 hover:border-theme-light hover:shadow-soft transition-[border-color,box-shadow] text-left">
+                  <status.icon size={18} weight={t.status === 'TAMAMLANDI' ? 'fill' : 'bold'} className={`shrink-0 ${status.className}`} aria-label={status.label} />
+                  <span className="min-w-0 flex-1">
+                    <span className={`block text-sm font-medium ${t.status === 'TAMAMLANDI' ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{t.content}</span>
+                    <span className="flex flex-wrap items-center gap-2 mt-1.5">
+                      {owner && <span className="flex items-center gap-1.5 text-[11px] font-bold text-theme-muted"><Avatar user={owner} size="xs" /> {firstName(owner.fullName)}</span>}
+                      {t.priority && t.status !== 'TAMAMLANDI' && <PriorityBadge priority={t.priority} />}
+                      {d && <span className={`text-[11px] font-bold ${d.tone === 'danger' ? 'text-[#9A3B1B]' : 'text-theme-muted'}`}>{d.text}</span>}
+                      {!!t.commentCount && (
+                        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-theme-muted tabular" aria-label={`${t.commentCount} yorum`}>
+                          <ChatCircleText size={13} weight="bold" aria-hidden="true" /> {t.commentCount}
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                  <CaretRight size={16} weight="bold" className="text-theme-muted shrink-0" aria-hidden="true" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }

@@ -2,6 +2,7 @@ package com.enerjistaj.devhub.controller;
 
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.dto.UserDto;
+import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.User;
 import com.enerjistaj.devhub.exception.ApiException;
 import com.enerjistaj.devhub.repository.LeaveRequestRepository;
@@ -9,8 +10,10 @@ import com.enerjistaj.devhub.repository.ProjectRepository;
 import com.enerjistaj.devhub.repository.UserRepository;
 import com.enerjistaj.devhub.security.CurrentUser;
 import com.enerjistaj.devhub.service.ActionLogService;
+import com.enerjistaj.devhub.service.NotificationService;
 import com.enerjistaj.devhub.service.UserStatusService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,15 +33,33 @@ public class UserController {
     private final UserStatusService userStatusService;
     private final CurrentUser currentUser;
     private final LeaveRequestRepository leaveRepository;
+    private final NotificationService notificationService;
+    private final PasswordEncoder passwordEncoder;
 
+    /** Aktif kullanıcılar; pasif hesaplar ekip listelerinde görünmez (tümü için /api/admin/users). */
     @GetMapping
     public ResponseEntity<List<UserDto>> getAllUsers() {
-        return ResponseEntity.ok(userRepository.findAll().stream().map(UserDto::from).toList());
+        return ResponseEntity.ok(userRepository.findByActiveTrue().stream().map(UserDto::from).toList());
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<UserDto> changePassword(@RequestBody Map<String, Object> payload) {
+        User me = currentUser.get();
+        String current = payload.get("currentPassword") == null ? "" : payload.get("currentPassword").toString();
+        String next = payload.get("newPassword") == null ? "" : payload.get("newPassword").toString();
+        if (!passwordEncoder.matches(current, me.getPasswordHash())) throw ApiException.badRequest("Mevcut şifre hatalı.");
+        if (next.length() < 8 || !next.matches(".*[A-Za-zÇĞİÖŞÜçğıöşü].*") || !next.matches(".*\\d.*")) {
+            throw ApiException.badRequest("Yeni şifre en az 8 karakter olmalı ve harf ile rakam içermeli.");
+        }
+        if (passwordEncoder.matches(next, me.getPasswordHash())) throw ApiException.badRequest("Yeni şifre mevcut şifreyle aynı olamaz.");
+        me.setPasswordHash(passwordEncoder.encode(next));
+        me.setMustChangePassword(false);
+        return ResponseEntity.ok(UserDto.from(userRepository.save(me)));
     }
 
     @PutMapping("/{id}/project")
     public ResponseEntity<UserDto> updateUserProject(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
-        currentUser.requireAdmin("Proje ataması yalnızca yöneticiler tarafından yapılabilir.");
+        User me = currentUser.requireAdmin("Proje ataması yalnızca yöneticiler tarafından yapılabilir.");
         User user = findUser(id);
         String oldProject = user.getCurrentProject();
         String newProject = Payloads.text(payload, "currentProject"); // null → projeden çıkar
@@ -50,9 +71,13 @@ public class UserController {
         User saved = userRepository.save(user);
 
         if (newProject == null) {
-            actionLogService.log(user.getFullName() + ", " + (oldProject != null ? oldProject : "Mevcut") + " projesinden çıkarıldı ve boşa alındı.");
+            actionLogService.log(me, user.getFullName() + ", " + (oldProject != null ? oldProject : "Mevcut") + " projesinden çıkarıldı ve boşa alındı.");
+            notificationService.notify(user, me, NotificationType.PROJECT_ASSIGNED,
+                    "\"" + (oldProject != null ? oldProject : "Proje") + "\" projesinden çıkarıldınız", null, "/projects");
         } else {
-            actionLogService.log(user.getFullName() + ", " + newProject + " projesine atandı.");
+            actionLogService.log(me, user.getFullName() + ", " + newProject + " projesine atandı.");
+            notificationService.notify(user, me, NotificationType.PROJECT_ASSIGNED,
+                    "\"" + newProject + "\" projesine atandınız", null, "/projects");
         }
         return ResponseEntity.ok(UserDto.from(saved));
     }
@@ -77,7 +102,7 @@ public class UserController {
         if (UserStatusService.IZINLI.equals(newStatus) && !leaveRepository.existsApprovedOn(user.getId(), LocalDate.now(ActionLogService.ZONE))) {
             throw ApiException.badRequest("Kişiyi İzinli yapmak için izin türü ve tarihleriyle bir izin kaydı oluşturun.");
         }
-        return ResponseEntity.ok(UserDto.from(userStatusService.change(user, newStatus)));
+        return ResponseEntity.ok(UserDto.from(userStatusService.change(user, newStatus, me)));
     }
 
     @PutMapping("/{id}/profile")

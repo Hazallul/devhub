@@ -63,8 +63,7 @@ export default function Overview() {
     .slice(0, 4)
     .map(p => {
       const members = users?.filter(u => u.currentProject === p.name) ?? [];
-      const ids = new Set(members.map(m => m.id));
-      const own = tasks?.filter(t => ids.has(t.userId)) ?? [];
+      const own = tasks?.filter(t => t.projectId === p.id) ?? [];
       return { project: p, members, done: own.filter(t => t.status === 'TAMAMLANDI').length, total: own.length };
     }), [projects, users, tasks]);
 
@@ -271,7 +270,7 @@ export default function Overview() {
                     <span className="w-2 h-2 rounded-full bg-theme-medium mt-1.5 shrink-0" aria-hidden="true" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium leading-snug">{p.text}</p>
-                      <p className="text-[11px] font-semibold text-theme-muted mt-0.5">{ago(l.createdAt)}</p>
+                      <p className="text-[11px] font-semibold text-theme-muted mt-0.5">{l.actorName ?? 'Sistem'} · {ago(l.createdAt)}</p>
                     </div>
                   </li>
                 );

@@ -61,8 +61,8 @@ export default function Projects() {
   [users, tasks]);
 
   const progressOf = (project: Project) => {
-    const ids = new Set((members.get(project.name) ?? []).map(u => u.id));
-    const own = tasks?.filter(t => ids.has(t.userId)) ?? [];
+    // Görev kendi projesine bağlıdır: kişi proje değiştirse de ilerleme doğru kalır.
+    const own = tasks?.filter(t => t.projectId === project.id) ?? [];
     if (!own.length) return null;
     return { done: own.filter(t => t.status === 'TAMAMLANDI').length, total: own.length };
   };
@@ -244,7 +244,7 @@ export default function Projects() {
 
                     <div>
                       <div className="flex items-center justify-between text-xs font-semibold mb-2">
-                        <span className="text-theme-muted">Ekip görev ilerlemesi</span>
+                        <span className="text-theme-muted">Görev ilerlemesi</span>
                         <span className="text-theme-text tabular">{progress ? `${progress.done}/${progress.total}` : 'Görev yok'}</span>
                       </div>
                       <ProgressBar value={progress ? progress.done / progress.total : 0} />

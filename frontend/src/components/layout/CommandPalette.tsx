@@ -3,18 +3,19 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
-import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes } from '@phosphor-icons/react';
+import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText } from '@phosphor-icons/react';
+import { DOCS, DOC_CATEGORIES } from '../../docs';
 import { useUsers, useProjects, useMe } from '../../hooks/api';
 import { trLower } from '../../lib/format';
 import { Avatar, StatusBadge } from '../ui/primitives';
-import { NAV_ITEMS } from './nav';
+import { navFor, systemNavFor } from './nav';
 import { useQuickActions } from './QuickActions';
 import { modal } from '../../lib/motion';
 import type { User } from '../../types';
 
 interface Item {
   id: string;
-  group: 'Sayfalar' | 'Kişiler' | 'Projeler' | 'İşlemler';
+  group: 'Sayfalar' | 'Kişiler' | 'Projeler' | 'Dokümanlar' | 'İşlemler';
   label: string;
   hint?: string;
   icon?: Icon;
@@ -44,7 +45,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
   const items = useMemo<Item[]>(() => {
     const go = (fn: () => void) => () => { onClose(); fn(); };
     const all: Item[] = [
-      ...NAV_ITEMS.map(n => ({ id: `nav-${n.to}`, group: 'Sayfalar' as const, label: n.label, icon: n.icon, run: go(() => navigate(n.to)) })),
+      ...[...navFor(me), ...systemNavFor(me)].map(n => ({ id: `nav-${n.to}`, group: 'Sayfalar' as const, label: n.label, icon: n.icon, run: go(() => navigate(n.to)) })),
       { id: 'act-task', group: 'İşlemler', label: 'Yeni görev ekle', icon: Plus, run: go(() => actions.newTask()) },
       { id: 'act-leave', group: 'İşlemler', label: 'İzin talebi oluştur', icon: Airplane, run: go(() => actions.newLeave()) },
       { id: 'act-logs', group: 'İşlemler', label: 'Sistem loglarını aç', icon: ListDashes, run: go(() => actions.openLogs()) },
@@ -60,11 +61,16 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
         id: `project-${p.id}`, group: 'Projeler' as const, label: p.name, icon: Briefcase,
         run: go(() => navigate('/projects', { state: { openProjectId: p.id } })),
       })),
+      ...DOCS.map(d => ({
+        id: `doc-${d.slug}`, group: 'Dokümanlar' as const, label: d.title, icon: BookOpenText,
+        hint: [DOC_CATEGORIES.find(c => c.id === d.category)?.name, ...d.tags].filter(Boolean).join(' · '),
+        run: go(() => navigate(`/docs/${d.slug}`)),
+      })),
     ];
     const q = trLower(query.trim());
-    if (!q) return all.filter(i => i.group !== 'Kişiler' && i.group !== 'Projeler');
+    if (!q) return all.filter(i => i.group !== 'Kişiler' && i.group !== 'Projeler' && i.group !== 'Dokümanlar');
     return all.filter(i => trLower(`${i.label} ${i.hint ?? ''}`).includes(q)).slice(0, 12);
-  }, [query, users, projects, me.role, navigate, onClose, actions]);
+  }, [query, users, projects, me, navigate, onClose, actions]);
 
   useEffect(() => { setActive(0); }, [query]);
 

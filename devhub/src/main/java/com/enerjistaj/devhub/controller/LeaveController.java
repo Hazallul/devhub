@@ -1,26 +1,32 @@
 package com.enerjistaj.devhub.controller;
 
+import com.enerjistaj.devhub.dto.LeaveBalanceDto;
 import com.enerjistaj.devhub.dto.LeaveDto;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.entity.LeaveRequest;
 import com.enerjistaj.devhub.entity.LeaveState;
 import com.enerjistaj.devhub.entity.LeaveType;
+import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.User;
 import com.enerjistaj.devhub.exception.ApiException;
 import com.enerjistaj.devhub.repository.LeaveRequestRepository;
 import com.enerjistaj.devhub.repository.UserRepository;
 import com.enerjistaj.devhub.security.CurrentUser;
 import com.enerjistaj.devhub.service.ActionLogService;
+import com.enerjistaj.devhub.service.LeaveBalanceService;
+import com.enerjistaj.devhub.service.NotificationService;
+import com.enerjistaj.devhub.service.WorkdayService;
 import com.enerjistaj.devhub.service.UserStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -32,6 +38,22 @@ public class LeaveController {
     private final UserStatusService userStatusService;
     private final CurrentUser currentUser;
     private final UserRepository userRepository;
+    private final WorkdayService workdayService;
+    private final LeaveBalanceService leaveBalanceService;
+    private final NotificationService notificationService;
+
+    private static final Map<LeaveType, String> TYPE_LABELS = Map.of(
+            LeaveType.YILLIK, "Yıllık izin", LeaveType.HASTALIK, "Hastalık izni", LeaveType.MAZERET, "Mazeret izni");
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM", Locale.forLanguageTag("tr"));
+
+    /** Yıllık izin bakiyeleri: yönetici herkesinkini, çalışan yalnızca kendisininkini görür. */
+    @GetMapping("/balances")
+    public ResponseEntity<List<LeaveBalanceDto>> balances(@RequestParam(required = false) Integer year) {
+        User me = currentUser.get();
+        int y = year != null ? year : LocalDate.now(ActionLogService.ZONE).getYear();
+        List<User> users = CurrentUser.isAdmin(me) ? userRepository.findByActiveTrue() : List.of(me);
+        return ResponseEntity.ok(leaveBalanceService.balances(users, y));
+    }
 
     /** Ekip takvimi herkese açıktır; notlar dahil tüm talepler döner. */
     @GetMapping
@@ -67,9 +89,10 @@ public class LeaveController {
         if (type == null) throw ApiException.badRequest("İzin türü seçin.");
         if (start == null || end == null) throw ApiException.badRequest("Başlangıç ve bitiş tarihi zorunludur.");
         if (end.isBefore(start)) throw ApiException.badRequest("Bitiş tarihi başlangıçtan önce olamaz.");
-        boolean hasWorkday = start.datesUntil(end.plusDays(1))
-                .anyMatch(d -> d.getDayOfWeek() != DayOfWeek.SATURDAY && d.getDayOfWeek() != DayOfWeek.SUNDAY);
-        if (!hasWorkday) throw ApiException.badRequest("Seçilen tarihler yalnızca hafta sonuna denk geliyor; en az bir iş günü seçin.");
+        if (workdayService.count(start, end) == 0) {
+            throw ApiException.badRequest("Seçilen tarihler hafta sonu veya resmi tatile denk geliyor; en az bir iş günü seçin.");
+        }
+        if (type == LeaveType.YILLIK) leaveBalanceService.ensureAnnualAllowance(target, start, end, null);
         if (leaveRepository.existsOverlapping(target.getId(), start, end)) {
             throw ApiException.conflict(onBehalf ? target.getFullName() + " için bu tarihlerle çakışan bir izin var." : "Bu tarihlerle çakışan bir izin talebiniz var.");
         }
@@ -87,7 +110,12 @@ public class LeaveController {
         }
         LeaveRequest saved = leaveRepository.save(leave);
         if (onBehalf && saved.covers(LocalDate.now(ActionLogService.ZONE))) {
-            userStatusService.change(target, UserStatusService.IZINLI);
+            userStatusService.change(target, UserStatusService.IZINLI, me);
+        }
+        if (onBehalf) {
+            notificationService.notify(target, me, NotificationType.LEAVE_DECIDED, "Adınıza izin kaydedildi", summary(saved), "/leaves");
+        } else {
+            notificationService.notifyAdmins(me, NotificationType.LEAVE_REQUESTED, me.getFullName() + " izin talebinde bulundu", summary(saved), "/leaves");
         }
         return ResponseEntity.ok(LeaveDto.from(saved));
     }
@@ -100,6 +128,10 @@ public class LeaveController {
         LeaveState decision = Payloads.enumValue(payload, "decision", LeaveState.class, "karar");
         if (decision == null || decision == LeaveState.BEKLIYOR) throw ApiException.badRequest("Karar ONAYLANDI veya REDDEDILDI olmalı.");
         if (leave.getState() != LeaveState.BEKLIYOR) throw ApiException.conflict("Bu talep zaten sonuçlandırılmış.");
+        // Talep açıldıktan sonra hak değişmiş veya başka izinler onaylanmış olabilir.
+        if (decision == LeaveState.ONAYLANDI && leave.getType() == LeaveType.YILLIK) {
+            leaveBalanceService.ensureAnnualAllowance(leave.getUser(), leave.getStartDate(), leave.getEndDate(), leave.getId());
+        }
 
         leave.setState(decision);
         leave.setDecidedBy(me);
@@ -108,8 +140,10 @@ public class LeaveController {
 
         // Bugünü kapsayan bir izin onaylanırsa kişi hemen İzinli olur; ileri tarihliler LeaveStatusScheduler'a kalır.
         if (decision == LeaveState.ONAYLANDI && leave.covers(LocalDate.now(ActionLogService.ZONE))) {
-            userStatusService.change(leave.getUser(), UserStatusService.IZINLI);
+            userStatusService.change(leave.getUser(), UserStatusService.IZINLI, me);
         }
+        notificationService.notify(leave.getUser(), me, NotificationType.LEAVE_DECIDED,
+                decision == LeaveState.ONAYLANDI ? "İzin talebiniz onaylandı" : "İzin talebiniz reddedildi", summary(leave), "/leaves");
         return ResponseEntity.ok(LeaveDto.from(leave));
     }
 
@@ -117,7 +151,7 @@ public class LeaveController {
     @PutMapping("/{id}/undo")
     @Transactional
     public ResponseEntity<LeaveDto> undoDecision(@PathVariable Long id) {
-        currentUser.requireAdmin("Kararı yalnızca yöneticiler geri alabilir.");
+        User me = currentUser.requireAdmin("Kararı yalnızca yöneticiler geri alabilir.");
         LeaveRequest leave = findDecidedOpen(id);
         boolean wasApproved = leave.getState() == LeaveState.ONAYLANDI;
 
@@ -130,8 +164,10 @@ public class LeaveController {
         User user = leave.getUser();
         LocalDate today = LocalDate.now(ActionLogService.ZONE);
         if (wasApproved && UserStatusService.IZINLI.equals(user.getStatus()) && !leaveRepository.existsApprovedOn(user.getId(), today)) {
-            userStatusService.change(user, user.getWorkMode());
+            userStatusService.change(user, user.getWorkMode(), me);
         }
+        notificationService.notify(user, me, NotificationType.LEAVE_REOPENED,
+                "İzin kararı geri alındı; talebiniz yeniden değerlendirilecek", summary(leave), "/leaves");
         return ResponseEntity.ok(LeaveDto.from(leave));
     }
 
@@ -144,6 +180,14 @@ public class LeaveController {
         leave.setFinalized(true);
         leave.setFinalizedAt(LocalDateTime.now());
         return ResponseEntity.ok(LeaveDto.from(leaveRepository.save(leave)));
+    }
+
+    /** "Yıllık izin · 1 Eki – 4 Eki · 2 iş günü" */
+    private String summary(LeaveRequest l) {
+        String range = l.getStartDate().equals(l.getEndDate())
+                ? l.getStartDate().format(DAY)
+                : l.getStartDate().format(DAY) + " – " + l.getEndDate().format(DAY);
+        return TYPE_LABELS.get(l.getType()) + " · " + range + " · " + workdayService.count(l.getStartDate(), l.getEndDate()) + " iş günü";
     }
 
     private LeaveRequest findDecidedOpen(Long id) {

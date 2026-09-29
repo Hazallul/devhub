@@ -8,5 +8,7 @@ export default defineConfig({
     // Windows'taki Docker bind mount dosya değişikliği olaylarını container'a iletmez;
     // polling olmadan Vite değişiklikleri görmez ve eski kodu sunar.
     watch: { usePolling: true, interval: 300 },
+    // Sistem İzleme'nin sağlık kontrolü compose ağı içinden "frontend" adıyla gelir.
+    allowedHosts: ['frontend'],
   },
 })

@@ -3,10 +3,12 @@ package com.enerjistaj.devhub.controller;
 import com.enerjistaj.devhub.dto.AnnouncementDto;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.entity.Announcement;
+import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.User;
 import com.enerjistaj.devhub.exception.ApiException;
 import com.enerjistaj.devhub.repository.AnnouncementRepository;
 import com.enerjistaj.devhub.security.CurrentUser;
+import com.enerjistaj.devhub.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ public class AnnouncementController {
 
     private final AnnouncementRepository announcementRepository;
     private final CurrentUser currentUser;
+    private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<AnnouncementDto>> getAnnouncements() {
@@ -39,7 +42,9 @@ public class AnnouncementController {
         a.setContent(content);
         a.setAuthor(me);
         a.setPinned(Payloads.flag(payload, "pinned"));
-        return ResponseEntity.ok(AnnouncementDto.from(announcementRepository.save(a)));
+        Announcement saved = announcementRepository.save(a);
+        notificationService.notifyAll(me, NotificationType.ANNOUNCEMENT, "Yeni duyuru: " + title, content, "/");
+        return ResponseEntity.ok(AnnouncementDto.from(saved));
     }
 
     @DeleteMapping("/{id}")
