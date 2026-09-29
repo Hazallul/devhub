@@ -1,0 +1,15 @@
+CREATE TABLE users (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    role ENUM('ADMIN', 'EMPLOYEE') NOT NULL,
+    job_title VARCHAR(100),
+    current_project VARCHAR(100),
+    status VARCHAR(50),
+    avatar_color VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );

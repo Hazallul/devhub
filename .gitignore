@@ -1,0 +1,17 @@
+# Bağımlılıklar ve derleme çıktıları
+node_modules/
+dist/
+build/
+.gradle/
+*.log
+
+# Yerel yedekler (veritabanı dökümleri) ve kişisel araç dosyaları
+_yedek/
+CLAUDE.md
+.claude/
+.vscode/
+.idea/
+
+# Ortam dosyaları (.env.example ve .env.development geliştirme içindir, depoda kalır)
+.env
+.env.local

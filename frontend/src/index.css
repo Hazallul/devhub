@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-theme-cream text-theme-text font-sans antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-theme-deep ring-offset-2 ring-offset-white;
+  }
+
+  ::selection {
+    @apply bg-theme-light text-theme-text;
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full px-4 py-3 rounded-2xl bg-white border border-theme-light/70 text-theme-text font-medium
+      placeholder:text-theme-muted/60 transition-shadow
+      focus:outline-none focus:ring-2 focus:ring-theme-medium focus:border-transparent;
+  }
+
+  .label {
+    @apply block text-sm font-semibold text-theme-text mb-2;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl font-semibold whitespace-nowrap transition-colors
+      disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] px-5;
+  }
+
+  .btn-primary {
+    @apply btn bg-theme-deep text-white hover:bg-theme-text;
+  }
+
+  .btn-secondary {
+    @apply btn bg-theme-lightest text-theme-deep hover:bg-theme-light;
+  }
+
+  .btn-ghost {
+    @apply btn bg-transparent text-theme-muted hover:bg-theme-lightest hover:text-theme-deep;
+  }
+
+  .icon-btn {
+    @apply inline-flex items-center justify-center w-10 h-10 rounded-xl text-theme-muted
+      hover:bg-theme-lightest hover:text-theme-deep transition-colors;
+  }
+
+  .card {
+    @apply bg-white rounded-3xl border border-theme-light/40 shadow-soft;
+  }
+
+  .eyebrow {
+    @apply text-[11px] font-bold uppercase tracking-wider text-theme-muted;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #C5D89D transparent;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
+}
