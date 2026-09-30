@@ -11,6 +11,8 @@ DELETE FROM notifications;
 DELETE FROM task_activity;
 DELETE FROM profile_change_requests;
 DELETE FROM user_links;
+DELETE FROM todo_stars;
+DELETE FROM todo_comments;
 DELETE FROM todo_list_members;
 DELETE FROM todo_steps;
 DELETE FROM todo_items;
@@ -22,6 +24,8 @@ DELETE FROM tasks;
 DELETE FROM projects;
 ALTER TABLE notifications AUTO_INCREMENT = 1;
 ALTER TABLE task_activity AUTO_INCREMENT = 1;
+ALTER TABLE todo_stars AUTO_INCREMENT = 1;
+ALTER TABLE todo_comments AUTO_INCREMENT = 1;
 ALTER TABLE todo_list_members AUTO_INCREMENT = 1;
 ALTER TABLE todo_steps AUTO_INCREMENT = 1;
 ALTER TABLE todo_items AUTO_INCREMENT = 1;
@@ -541,6 +545,23 @@ FROM (
   UNION ALL SELECT 'Demo ortamını kontrol et', 'Staging verisini yenile', FALSE, 0
   UNION ALL SELECT 'Demo ortamını kontrol et', 'Giriş ve izin akışını dene', FALSE, 1
 ) x JOIN todo_items ti ON ti.title = x.title;
+
+-- "Önemli" yıldızı kişiye özeldir: kartı ekleyenin yıldızı olarak yazılır.
+INSERT INTO todo_stars (item_id, user_id) SELECT id, user_id FROM todo_items WHERE important = b'1';
+
+-- Tamamlayan kişi: kendi kartlarını sahipleri tamamlamıştır; ortak listedeki bir kartı başka bir üye (Ayşe) tamamlamıştır.
+UPDATE todo_items SET done_by_id = user_id WHERE done = b'1';
+UPDATE todo_items ti JOIN users us ON us.email = 'ayse.kaya@devhub.local'
+SET ti.done_by_id = us.id WHERE ti.title = 'Giriş ekranı erişilebilirlik kontrolü';
+
+-- Ortak listedeki kartlarda yorumlar
+INSERT INTO todo_comments (item_id, user_id, body, created_at)
+SELECT ti.id, us.id, x.body, NOW() - INTERVAL x.ago HOUR
+FROM (
+  SELECT 'Auth servisinin yük testini çalıştır' AS title, 'ali.yilmaz' AS k, 'Staging ortamında çalıştıralım, canlıya dokunmayalım.' AS body, 5 AS ago
+  UNION ALL SELECT 'Auth servisinin yük testini çalıştır', 'ayse.kaya', 'Tamam, senaryoları yarın sabah hazır ederim.', 3
+  UNION ALL SELECT 'Giriş ekranı erişilebilirlik kontrolü', 'ayse.kaya', 'Kontrast ve klavye gezintisini doğruladım, kapattım.', 20
+) x JOIN todo_items ti ON ti.title = x.title JOIN users us ON us.email = CONCAT(x.k, '@devhub.local');
 
 -- Saatli ve tekrarlayan kartlar (haftalık plan, hatırlatma)
 UPDATE todo_items SET due_time = '16:30', repeat_rule = 'WEEKLY' WHERE title = 'Haftalık durum raporunu gönder';

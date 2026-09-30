@@ -7,6 +7,7 @@ import {
 import { StatCard, Skeleton, StatusBadge, ProgressBar, AvatarStack, EmptyState, Pill } from '../components/ui/primitives';
 import { Menu, MenuItem, MenuLabel } from '../components/ui/Menu';
 import TaskRow from '../components/tasks/TaskRow';
+import MyDay from '../components/overview/MyDay';
 import {
   useMe, useUsers, useAllTasks, useProjects, useLeaves, useLogs, useAnnouncements, useDeleteAnnouncement, useUpdateStatus,
 } from '../hooks/api';
@@ -98,6 +99,8 @@ export default function Overview() {
           </Menu>
         </div>
       </div>
+
+      <MyDay />
 
       {/* KPI */}
       <motion.div variants={listContainer} initial="hidden" animate="visible" className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

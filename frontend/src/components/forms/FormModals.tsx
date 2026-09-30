@@ -185,7 +185,7 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
         <div className="grid sm:grid-cols-2 gap-5">
           <div>
             <label htmlFor="leave-start" className="label">Başlangıç<Required /></label>
-            <input id="leave-start" data-autofocus type="date" className="input" aria-describedby="leave-start-err" {...register('startDate', {
+            <input id="leave-start" data-autofocus type="date" min={!forUser && type !== 'HASTALIK' ? today : undefined} className="input" aria-describedby="leave-start-err" {...register('startDate', {
               onChange: e => { if (end < e.target.value) setValue('endDate', e.target.value); },
             })} />
             <FieldError id="leave-start-err" message={errors.startDate?.message} />
@@ -196,6 +196,7 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
             <FieldError id="leave-end-err" message={errors.endDate?.message} />
           </div>
         </div>
+        {!forUser && type === 'HASTALIK' && <p className="text-xs font-medium text-theme-muted -mt-2 ml-1">Hastalık izni geçmiş tarihli de bildirilebilir.</p>}
         {dayLabel && (
           <p className="text-sm font-semibold text-theme-deep -mt-1 ml-1">{dayLabel}</p>
         )}

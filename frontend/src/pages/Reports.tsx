@@ -95,7 +95,7 @@ function ReportsPage() {
         const d = addDays(s, i);
         if (d.getFullYear() !== year || d.getDay() === 0 || d.getDay() === 6 || holidays.set.has(toIsoDay(d))) continue;
         perMonth[d.getMonth()].total += 1;
-        perMonth[d.getMonth()].byType[l.type] += 1;
+        if (l.type) perMonth[d.getMonth()].byType[l.type] += 1; // yönetici her iznin türünü görür
       }
     });
     return perMonth;

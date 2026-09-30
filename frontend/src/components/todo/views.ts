@@ -101,6 +101,12 @@ export function buildViews(lists: TodoList[], today: string): { smart: ViewDef[]
   return { smart, own };
 }
 
+/** Ortak listede başkasının eklediği kartı yalnızca liste yöneticisi silebilir (sunucu da aynı kuralı uygular). */
+export function canDeleteCard(item: TodoItem, lists: TodoList[], meId: number) {
+  if (item.listId === null || item.ownerId === meId) return true;
+  return lists.find(l => l.id === item.listId)?.myRole === 'ADMIN';
+}
+
 export const listIdOf = (view: ViewId): number | null => (view.startsWith('list-') ? Number(view.slice(5)) : null);
 
 /** Planlanan görünümü için gün grupları (yalnızca açık kartlar). */

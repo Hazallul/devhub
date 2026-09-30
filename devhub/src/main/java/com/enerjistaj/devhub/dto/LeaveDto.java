@@ -24,6 +24,15 @@ public class LeaveDto {
     private String decisionNote;
     private String decidedByName;
 
+    /** Başkasının izni: takvim için yalnızca tarihler yeter; izin türü (ör. hastalık), talep notu ve karar açıklaması kişiye özeldir. */
+    public LeaveDto forColleague() {
+        type = null;
+        note = null;
+        decisionNote = null;
+        decidedByName = null;
+        return this;
+    }
+
     public static LeaveDto from(LeaveRequest l) {
         return LeaveDto.builder()
             .id(l.getId())

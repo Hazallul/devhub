@@ -14,11 +14,11 @@ import java.util.Optional;
  * Tüm sorgular buna göre süzülür; başkasının özel kartı hiçbir zaman dönmez.
  */
 public interface TodoItemRepository extends JpaRepository<TodoItem, Long> {
-    @EntityGraph(attributePaths = {"list", "sentBy", "user"})
+    @EntityGraph(attributePaths = {"list", "sentBy", "user", "doneBy"})
     @Query("select i from TodoItem i where ((i.list is null and i.user.id = :me) or i.list.id in (select m.list.id from TodoListMember m where m.user.id = :me)) order by i.position asc, i.id desc")
     List<TodoItem> findVisible(Long me);
 
-    @EntityGraph(attributePaths = {"list", "sentBy", "user"})
+    @EntityGraph(attributePaths = {"list", "sentBy", "user", "doneBy"})
     @Query("select i from TodoItem i where i.id = :id and ((i.list is null and i.user.id = :me) or i.list.id in (select m.list.id from TodoListMember m where m.user.id = :me))")
     Optional<TodoItem> findVisibleById(Long id, Long me);
 
@@ -34,6 +34,9 @@ public interface TodoItemRepository extends JpaRepository<TodoItem, Long> {
     int minPosition(Long userId);
 
     long countByUserIdAndSeenFalse(Long userId);
+
+    /** Bir DevHub görevine bağlı açık kartlar (görev tamamlanınca onlar da tamamlanır). */
+    List<TodoItem> findByTaskIdAndDoneFalse(Long taskId);
 
     /** Saati verilmiş, henüz hatırlatılmamış açık kartlar (saat karşılaştırması çağıranda yapılır). */
     @EntityGraph(attributePaths = {"user", "list"})

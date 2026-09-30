@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Star, CalendarBlank, ListChecks, NoteBlank, PaperPlaneTilt, Repeat, CheckSquare, User } from '@phosphor-icons/react';
+import { Check, Star, CalendarBlank, ListChecks, NoteBlank, PaperPlaneTilt, Repeat, CheckSquare, User, ChatCircleText } from '@phosphor-icons/react';
 import { useUpdateTodo } from '../../hooks/todos';
+import { useMe } from '../../hooks/api';
 import { dueLabel, firstName } from '../../lib/format';
 import { REPEAT } from './views';
 import { useTodoCardMenu } from './cardMenu';
@@ -46,9 +47,12 @@ interface Props {
 export default function TodoCard({ item, selected, listName, ownerLabel, onSelect, onSend, handle }: Props) {
   const update = useUpdateTodo();
   const menu = useTodoCardMenu();
+  const me = useMe();
+  // Ortak listede kartı başkası tamamladıysa kim olduğu yazar.
+  const doneBy = item.done && item.doneById !== null && item.doneById !== me.id && item.doneByName ? firstName(item.doneByName) : null;
   const due = item.dueDate && !item.done ? dueLabel(item.dueDate) : null;
   const stepsDone = item.steps.filter(s => s.done).length;
-  const hasMeta = listName || due || item.steps.length > 0 || item.note || item.sentByName || ownerLabel || item.repeatRule || item.taskId !== null;
+  const hasMeta = listName || due || item.steps.length > 0 || item.note || item.sentByName || ownerLabel || doneBy || item.commentCount > 0 || item.repeatRule || item.taskId !== null;
 
   return (
     <div
@@ -79,6 +83,8 @@ export default function TodoCard({ item, selected, listName, ownerLabel, onSelec
             {item.taskId !== null && <span className="inline-flex items-center gap-1"><CheckSquare size={12} weight="bold" aria-hidden="true" /> Görev</span>}
             {item.steps.length > 0 && <span className="inline-flex items-center gap-1 tabular"><ListChecks size={13} weight="bold" aria-hidden="true" /> {stepsDone}/{item.steps.length}</span>}
             {item.note && <NoteBlank size={13} weight="bold" aria-label="Notu var" />}
+            {item.commentCount > 0 && <span className="inline-flex items-center gap-1 tabular"><ChatCircleText size={13} weight="bold" aria-label="Yorum" /> {item.commentCount}</span>}
+            {doneBy && <span className="inline-flex items-center gap-1 text-theme-deep"><Check size={12} weight="bold" aria-hidden="true" /> {doneBy} tamamladı</span>}
           </span>
         )}
       </button>

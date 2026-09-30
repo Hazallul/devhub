@@ -13,7 +13,7 @@ import SendTodoModal from './SendTodoModal';
 import WeekPlan from './WeekPlan';
 import TasksPane from './TasksPane';
 import ListMembersModal from './ListMembersModal';
-import { buildViews, groupByDue, listIdOf, LIST_COLORS } from './views';
+import { buildViews, canDeleteCard, groupByDue, listIdOf, LIST_COLORS } from './views';
 import type { ViewDef, ViewId } from './views';
 import {
   useTodos, useTodoSaving, useCreateTodo, useUpdateTodo, useReorderTodos, useClearCompleted,
@@ -345,6 +345,8 @@ function ItemsPane({ view, items, lists, search, now, selectedId, onSelect, onSe
   const done = matching.filter(i => i.done).sort((a, b) => (b.doneAt ?? '').localeCompare(a.doneAt ?? ''));
   const ordered = order ? order.map(id => open.find(i => i.id === id)).filter((i): i is TodoItem => !!i) : open;
   const canReorder = view.reorderable && !searching && open.length > 1;
+  // Ortak listede üye yalnızca kendi eklediği tamamlanmış kartları temizleyebilir.
+  const clearable = done.filter(d => canDeleteCard(d, lists, me.id));
 
   const add = (e: React.FormEvent) => {
     e.preventDefault();
@@ -370,7 +372,7 @@ function ItemsPane({ view, items, lists, search, now, selectedId, onSelect, onSe
   return (
     <>
       <Header view={view} searching={searching} search={search} openCount={open.length} doneCount={done.length} now={now}
-        onClear={() => clear.mutate(done.map(d => d.id))} onDeleted={onViewGone} />
+        clearCount={clearable.length} onClear={() => clear.mutate(clearable.map(d => d.id))} onDeleted={onViewGone} />
 
       {!searching && (
         <form onSubmit={add} className="flex items-center gap-3 rounded-3xl bg-white border border-theme-light/60 shadow-soft pl-4 pr-2 py-2 mb-5 focus-within:border-theme-medium focus-within:ring-2 focus-within:ring-theme-light/60 transition-shadow">
@@ -462,8 +464,8 @@ function DraggableRow({ id, onDrop, children }: { id: number; onDrop: () => void
   );
 }
 
-function Header({ view, searching, search, openCount, doneCount, now, onClear, onDeleted }: {
-  view: ViewDef; searching: boolean; search: string; openCount: number; doneCount: number; now: Date; onClear: () => void; onDeleted: () => void;
+function Header({ view, searching, search, openCount, doneCount, clearCount, now, onClear, onDeleted }: {
+  view: ViewDef; searching: boolean; search: string; openCount: number; doneCount: number; clearCount: number; now: Date; onClear: () => void; onDeleted: () => void;
 }) {
   const updateList = useUpdateTodoList();
   const deleteList = useDeleteTodoList();
@@ -509,7 +511,7 @@ function Header({ view, searching, search, openCount, doneCount, now, onClear, o
             {shared ? <><Users size={17} weight="bold" aria-hidden="true" /> <span className="tabular">{list.members.length}</span></> : <><UserPlus size={17} weight="bold" aria-hidden="true" /> Paylaş</>}
           </button>
         )}
-        {!searching && (doneCount > 0 || listId !== null) && (
+        {!searching && (clearCount > 0 || listId !== null) && (
           <>
             <button ref={setAnchor} type="button" onClick={() => setMenuOpen(o => !o)} className="icon-btn shrink-0" aria-haspopup="menu" aria-expanded={menuOpen} aria-label="Liste işlemleri">
               <DotsThree size={22} weight="bold" />
@@ -529,7 +531,7 @@ function Header({ view, searching, search, openCount, doneCount, now, onClear, o
                 </div>
               </>}
               {listId !== null && <MenuDivider />}
-              {doneCount > 0 && <MenuItem icon={Broom} onSelect={() => { setMenuOpen(false); onClear(); }}>Tamamlananları temizle ({doneCount})</MenuItem>}
+              {clearCount > 0 && <MenuItem icon={Broom} onSelect={() => { setMenuOpen(false); onClear(); }}>Tamamlananları temizle ({clearCount})</MenuItem>}
               {listId !== null && listAdmin && (
                 confirmDelete
                   ? <MenuItem icon={Trash} tone="danger" onSelect={() => { setMenuOpen(false); deleteList.mutate(listId); onDeleted(); }}>Evet, {shared ? 'herkes için ' : ''}{total ? `${total} kartla birlikte ` : ''}sil</MenuItem>

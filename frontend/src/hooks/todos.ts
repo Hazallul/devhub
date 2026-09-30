@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient, useIsMutating } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
 import { useToast } from '../components/ui/Toast';
-import type { TodoData, TodoItem, TodoList, TodoListRole, TodoRepeat, TodoStep } from '../types';
+import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete';
+import type { TodoComment, TodoData, TodoItem, TodoList, TodoListRole, TodoRepeat, TodoStep } from '../types';
 
 /*
  * Kişisel alan verisi. "Kaydet" düğmesi yoktur: her değişiklik önce ekrana (iyimser), sonra sunucuya yazılır;
@@ -12,8 +13,16 @@ const KEY = ['todos'];
 const MUTATION = ['todos-write'];
 
 // Ortak listelerde başkalarının yaptığı değişiklikler de görünsün diye düzenli tazelenir.
-export const useTodos = () =>
-  useQuery({ queryKey: KEY, queryFn: async () => (await api.get<TodoData>('/todos')).data, refetchInterval: 20_000 });
+export const useTodos = () => {
+  // Silinmek üzere bekleyen ("Geri al" süresi dolmamış) kartlar görünmez.
+  const hidden = usePendingDeletes();
+  return useQuery({
+    queryKey: KEY,
+    queryFn: async () => (await api.get<TodoData>('/todos')).data,
+    refetchInterval: 20_000,
+    select: d => (hidden.size ? { ...d, items: d.items.filter(i => !hidden.has(`todo:${i.id}`)) } : d),
+  });
+};
 
 /** Kenar çubuğundaki rozet: açılmamış gelen kart sayısı */
 export const useTodoUnseen = () =>
@@ -53,7 +62,10 @@ function useTodoMutation<V, R = unknown>(fn: (vars: V) => Promise<R>, opts: Opti
     },
     // Art arda gelen yazmalarda yalnızca sonuncusundan sonra tazele (ara tazelemeler ekranı geri sardırmasın).
     onSettled: () => {
-      if (qc.isMutating({ mutationKey: MUTATION }) === 1) qc.invalidateQueries({ queryKey: KEY });
+      if (qc.isMutating({ mutationKey: MUTATION }) !== 1) return;
+      qc.invalidateQueries({ queryKey: KEY });
+      // Göreve bağlı kart tamamlanınca DevHub görevi de tamamlanır.
+      qc.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 }
@@ -84,12 +96,26 @@ export const useUpdateTodo = () =>
       optimistic: (d, { id, ...patch }) => mapItem(d, id, i => ({
         ...i, ...patch,
         doneAt: patch.done === undefined ? i.doneAt : patch.done ? new Date().toISOString() : null,
+        ...(patch.done === false ? { doneById: null, doneByName: null } : {}),
       })),
     },
   );
 
 export const useDeleteTodo = () =>
   useTodoMutation<number>(id => api.delete(`/todos/items/${id}`), { optimistic: (d, id) => ({ ...d, items: d.items.filter(i => i.id !== id) }) });
+
+/** Sağ tık menüsünden silme: onay sormaz ama birkaç saniye "Geri al" sunar. */
+export function useDeleteTodoWithUndo() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return (id: number) => {
+    const undo = scheduleDelete(`todo:${id}`, () => api.delete(`/todos/items/${id}`), error => {
+      if (error) toast.error(errorMessage(error));
+      return qc.invalidateQueries({ queryKey: KEY });
+    });
+    toast.success('Kart silindi', { label: 'Geri al', onClick: undo, duration: UNDO_MS });
+  };
+}
 
 export const useClearCompleted = () =>
   useTodoMutation<number[]>(
@@ -133,6 +159,29 @@ export const useDeleteStep = () =>
   useTodoMutation<{ itemId: number; id: number }>(
     ({ id }) => api.delete(`/todos/steps/${id}`),
     { optimistic: (d, { itemId, id }) => mapItem(d, itemId, i => ({ ...i, steps: i.steps.filter(s => s.id !== id) })) },
+  );
+
+// ---------------- yorumlar ----------------
+// Yorumlar ['todos', 'comments', id] anahtarında durur; her yazmadan sonra ['todos'] ön ekiyle birlikte tazelenir.
+
+export const useTodoComments = (itemId: number, enabled: boolean) =>
+  useQuery({
+    queryKey: ['todos', 'comments', itemId],
+    queryFn: async () => (await api.get<TodoComment[]>(`/todos/items/${itemId}/comments`)).data,
+    enabled,
+    refetchInterval: 20_000,
+  });
+
+export const useAddTodoComment = () =>
+  useTodoMutation<{ itemId: number; body: string }, TodoComment>(
+    ({ itemId, body }) => api.post<TodoComment>(`/todos/items/${itemId}/comments`, { body }).then(r => r.data),
+    { optimistic: (d, { itemId }) => mapItem(d, itemId, i => ({ ...i, commentCount: i.commentCount + 1 })) },
+  );
+
+export const useDeleteTodoComment = () =>
+  useTodoMutation<{ itemId: number; id: number }>(
+    ({ id }) => api.delete(`/todos/comments/${id}`),
+    { optimistic: (d, { itemId }) => mapItem(d, itemId, i => ({ ...i, commentCount: Math.max(0, i.commentCount - 1) })) },
   );
 
 // ---------------- listeler ----------------

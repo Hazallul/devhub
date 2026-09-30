@@ -30,6 +30,7 @@ public class AdminUserController {
     private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    private final com.enerjistaj.devhub.todo.TodoMembershipService todoMembershipService;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final PasswordEncoder passwordEncoder;
@@ -110,7 +111,9 @@ public class AdminUserController {
             if (user.getRole() == Role.ADMIN) ensureAnotherAdmin(user);
         }
         user.setActive(active);
-        return ResponseEntity.ok(UserDto.from(userRepository.save(user)));
+        User saved = userRepository.save(user);
+        if (!active) todoMembershipService.onUserDeactivated(saved);
+        return ResponseEntity.ok(UserDto.from(saved));
     }
 
     /** Geçici şifre üretir; kullanıcı bir sonraki girişte değiştirmek zorundadır. Şifre yalnızca bu yanıtta görünür. */

@@ -55,10 +55,19 @@ public class LeaveController {
         return ResponseEntity.ok(leaveBalanceService.balances(users, y));
     }
 
-    /** Ekip takvimi herkese açıktır; notlar dahil tüm talepler döner. */
+    /**
+     * Yönetici tüm talepleri görür. Çalışan kendi taleplerinin tamamını, başkalarının ise yalnızca onaylanmış
+     * izinlerini tür, not ve karar açıklaması olmadan görür; bekleyen, reddedilen ve iptal edilen talepler
+     * ve ret nedenleri başkasına gösterilmez.
+     */
     @GetMapping
     public ResponseEntity<List<LeaveDto>> getLeaves() {
-        return ResponseEntity.ok(leaveRepository.findAllByOrderByCreatedAtDesc().stream().map(LeaveDto::from).toList());
+        User me = currentUser.get();
+        boolean admin = CurrentUser.isAdmin(me);
+        return ResponseEntity.ok(leaveRepository.findAllByOrderByCreatedAtDesc().stream()
+            .filter(l -> admin || l.getUser().getId().equals(me.getId()) || l.getState() == LeaveState.ONAYLANDI)
+            .map(l -> admin || l.getUser().getId().equals(me.getId()) ? LeaveDto.from(l) : LeaveDto.from(l).forColleague())
+            .toList());
     }
 
     /**
@@ -89,6 +98,10 @@ public class LeaveController {
         if (type == null) throw ApiException.badRequest("İzin türü seçin.");
         if (start == null || end == null) throw ApiException.badRequest("Başlangıç ve bitiş tarihi zorunludur.");
         if (end.isBefore(start)) throw ApiException.badRequest("Bitiş tarihi başlangıçtan önce olamaz.");
+        // Çalışan geçmişe dönük yalnızca hastalık izni isteyebilir (rapor sonradan gelir); yönetici kayıt açarken serbesttir.
+        if (!onBehalf && type != LeaveType.HASTALIK && start.isBefore(LocalDate.now(ActionLogService.ZONE))) {
+            throw ApiException.badRequest("Geçmiş tarihli talep yalnızca hastalık izni için oluşturulabilir.");
+        }
         if (workdayService.count(start, end) == 0) {
             throw ApiException.badRequest("Seçilen tarihler hafta sonu veya resmi tatile denk geliyor; en az bir iş günü seçin.");
         }

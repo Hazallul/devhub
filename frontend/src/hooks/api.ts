@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
 import { getStoredUser } from '../lib/session';
 import { useToast } from '../components/ui/Toast';
+import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete';
 import type {
   User, Project, Task, TaskActivity, ActionLog, LeaveRequest, Announcement,
   UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState,
@@ -15,9 +16,19 @@ const get = <T,>(url: string) => async () => (await api.get<T>(url)).data;
 // Durumlar başka ekranlarda değişebilir: ekip listesi 30 sn'de bir tazelenir.
 export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: get<User[]>('/users'), refetchInterval: 30_000 });
 export const useProjects = () => useQuery({ queryKey: ['projects'], queryFn: get<Project[]>('/projects') });
-export const useAllTasks = () => useQuery({ queryKey: ['tasks'], queryFn: get<Task[]>('/tasks') });
-export const useUserTasks = (userId: number, enabled = true) =>
-  useQuery({ queryKey: ['tasks', 'user', userId], queryFn: get<Task[]>(`/tasks/user/${userId}`), enabled });
+/** Silinmek üzere bekleyen ("Geri al" süresi dolmamış) görevler listelerde görünmez. */
+function useVisibleTasks() {
+  const hidden = usePendingDeletes();
+  return (list: Task[]) => (hidden.size ? list.filter(t => !hidden.has(`task:${t.id}`)) : list);
+}
+export const useAllTasks = () => {
+  const select = useVisibleTasks();
+  return useQuery({ queryKey: ['tasks'], queryFn: get<Task[]>('/tasks'), select });
+};
+export const useUserTasks = (userId: number, enabled = true) => {
+  const select = useVisibleTasks();
+  return useQuery({ queryKey: ['tasks', 'user', userId], queryFn: get<Task[]>(`/tasks/user/${userId}`), enabled, select });
+};
 export const useTaskActivity = (taskId: number | null) =>
   useQuery({ queryKey: ['tasks', 'activity', taskId], queryFn: get<TaskActivity[]>(`/tasks/${taskId}/activity`), enabled: taskId !== null });
 export const useLogs = (enabled = true) => useQuery({ queryKey: ['logs'], queryFn: get<ActionLog[]>('/logs'), enabled });
@@ -230,12 +241,29 @@ export function useUpdateTask() {
       ctx?.snapshot.forEach(([key, list]) => qc.setQueryData(key, list));
       toast.error(errorMessage(err));
     },
-    onSettled: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+    // Görev tamamlanınca kişisel plandaki bağlı kart da tamamlanır: o da tazelensin.
+    onSettled: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); qc.invalidateQueries({ queryKey: ['todos'] }); },
   });
 }
 
-export const useDeleteTask = () =>
-  useAction((id: number) => api.delete(`/tasks/${id}`), { invalidate: [['tasks']], success: 'Görev silindi' });
+/**
+ * Görev silme geri alınabilir: görev ekrandan hemen kalkar, sunucudan birkaç saniye sonra silinir;
+ * bildirimdeki "Geri al" silmeyi iptal eder.
+ */
+export function useDeleteTask() {
+  const qc = useQueryClient();
+  const toast = useToast();
+  return {
+    mutate: (id: number, opts?: { onSuccess?: () => void }) => {
+      const undo = scheduleDelete(`task:${id}`, () => api.delete(`/tasks/${id}`), error => {
+        if (error) toast.error(errorMessage(error));
+        return qc.invalidateQueries({ queryKey: ['tasks'] });
+      });
+      toast.success('Görev silindi', { label: 'Geri al', onClick: undo, duration: UNDO_MS });
+      opts?.onSuccess?.();
+    },
+  };
+}
 
 export const useAddTaskComment = () =>
   useAction(

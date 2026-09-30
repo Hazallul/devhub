@@ -159,6 +159,7 @@ public class UserController {
             link.setType(type);
             link.setLabel(Payloads.optionalText(item, "label", 40, "Etiket"));
             link.setValue(normalizeLink(type, Payloads.requiredText(item, "value", "Bağlantı boş olamaz.", 300, "Bağlantı")));
+            if (next.stream().anyMatch(x -> x.getType() == link.getType() && x.getValue().equalsIgnoreCase(link.getValue()))) continue; // aynısı zaten var
             link.setPosition(next.size());
             next.add(link);
         }

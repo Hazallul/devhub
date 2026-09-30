@@ -19,6 +19,7 @@ import com.enerjistaj.devhub.repository.UserRepository;
 import com.enerjistaj.devhub.security.CurrentUser;
 import com.enerjistaj.devhub.service.ActionLogService;
 import com.enerjistaj.devhub.service.NotificationService;
+import com.enerjistaj.devhub.service.TaskStatusService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,8 +37,6 @@ public class TaskController {
 
     private static final String NOT_OWNER = "Yalnızca kendi görevlerinizi yönetebilirsiniz.";
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final Map<TaskStatus, String> STATUS_LABEL = Map.of(
-        TaskStatus.YAPILACAK, "Yapılacak", TaskStatus.DEVAM, "Devam Ediyor", TaskStatus.TAMAMLANDI, "Tamamlandı");
     private static final Map<TaskPriority, String> PRIORITY_LABEL = Map.of(
         TaskPriority.YUKSEK, "Yüksek", TaskPriority.ORTA, "Orta", TaskPriority.DUSUK, "Düşük");
 
@@ -48,6 +47,7 @@ public class TaskController {
     private final CurrentUser currentUser;
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
+    private final TaskStatusService taskStatusService;
 
     @GetMapping
     public ResponseEntity<List<TaskDto>> getAllTasks() {
@@ -151,14 +151,7 @@ public class TaskController {
         if (payload.containsKey("status")) {
             TaskStatus status = Payloads.enumValue(payload, "status", TaskStatus.class, "görev durumu");
             if (status == null) throw ApiException.badRequest("Görev durumu boş olamaz.");
-            if (status != t.getStatus()) {
-                event(t, me, "durumu değiştirdi: " + STATUS_LABEL.get(t.getStatus()) + " → " + STATUS_LABEL.get(status));
-                t.changeStatus(status);
-                if (status == TaskStatus.TAMAMLANDI && t.getCreatedBy() != null && !t.getCreatedBy().getId().equals(t.getUser().getId())) {
-                    notificationService.notify(t.getCreatedBy(), me, NotificationType.TASK_COMPLETED,
-                        t.getUser().getFullName() + " görevi tamamladı", t.getContent(), link(t));
-                }
-            }
+            taskStatusService.change(t, status, me);
         }
         if (payload.containsKey("priority")) {
             TaskPriority priority = Payloads.enumValue(payload, "priority", TaskPriority.class, "öncelik");

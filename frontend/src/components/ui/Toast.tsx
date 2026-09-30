@@ -5,8 +5,9 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle, Warning, X } from '@phosphor-icons/react';
 
 type Tone = 'success' | 'error';
-interface ToastItem { id: number; tone: Tone; message: string }
-interface ToastApi { success: (msg: string) => void; error: (msg: string) => void }
+export interface ToastAction { label: string; onClick: () => void; /** bildirimin ekranda kalma süresi (ms) */ duration?: number }
+interface ToastItem { id: number; tone: Tone; message: string; action?: ToastAction }
+interface ToastApi { success: (msg: string, action?: ToastAction) => void; error: (msg: string) => void }
 
 const ToastContext = createContext<ToastApi | null>(null);
 
@@ -16,15 +17,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const dismiss = useCallback((id: number) => setItems(list => list.filter(t => t.id !== id)), []);
 
-  const push = useCallback((tone: Tone, message: string) => {
+  const push = useCallback((tone: Tone, message: string, action?: ToastAction) => {
     const id = ++seq.current;
-    setItems(list => [...list.slice(-3), { id, tone, message }]);
-    // Skill: toast-dismiss 3–5 sn; hatalar biraz daha uzun kalır.
-    setTimeout(() => dismiss(id), tone === 'error' ? 5000 : 3200);
+    setItems(list => [...list.slice(-3), { id, tone, message, action }]);
+    // Skill: toast-dismiss 3–5 sn; hatalar ve eylemli bildirimler biraz daha uzun kalır.
+    setTimeout(() => dismiss(id), action?.duration ?? (tone === 'error' ? 5000 : 3200));
   }, [dismiss]);
 
   const api = useMemo<ToastApi>(() => ({
-    success: msg => push('success', msg),
+    success: (msg, action) => push('success', msg, action),
     error: msg => push('error', msg),
   }), [push]);
 
@@ -50,6 +51,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   ? <Warning size={20} weight="fill" className="shrink-0" />
                   : <CheckCircle size={20} weight="fill" className="shrink-0 text-theme-light" />}
                 <span className="text-sm font-medium">{t.message}</span>
+                {t.action && (
+                  <button onClick={() => { t.action!.onClick(); dismiss(t.id); }} className="px-2.5 py-1.5 rounded-lg text-sm font-bold text-theme-light hover:bg-white/10 underline underline-offset-4">
+                    {t.action.label}
+                  </button>
+                )}
                 <button onClick={() => dismiss(t.id)} aria-label="Bildirimi kapat" className="p-1.5 rounded-lg opacity-60 hover:opacity-100">
                   <X size={14} weight="bold" />
                 </button>

@@ -9,6 +9,9 @@ import com.enerjistaj.devhub.repository.UserRepository;
 import com.enerjistaj.devhub.security.CurrentUser;
 import com.enerjistaj.devhub.service.ActionLogService;
 import com.enerjistaj.devhub.service.NotificationService;
+import com.enerjistaj.devhub.service.TaskStatusService;
+import com.enerjistaj.devhub.entity.Task;
+import com.enerjistaj.devhub.entity.TaskStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +40,9 @@ public class TodoController {
     private final TodoListRepository lists;
     private final TodoItemRepository items;
     private final TodoStepRepository steps;
+    private final TodoCommentRepository comments;
+    private final TodoStarRepository stars;
+    private final TaskStatusService taskStatus;
     private final TodoListMemberRepository members;
     private final UserRepository users;
     private final TaskRepository tasks;
@@ -58,9 +64,15 @@ public class TodoController {
     /** myRole: oturumdaki kişinin listedeki yetkisi; members birden fazlaysa liste ortaktır. */
     public record ListDto(Long id, String name, String color, int position, TodoListRole myRole, List<MemberDto> members) {}
 
-    public record ItemDto(Long id, Long listId, String title, String note, boolean done, LocalDateTime doneAt, boolean important,
+    public record ItemDto(Long id, Long listId, String title, String note, boolean done, LocalDateTime doneAt, Long doneById, String doneByName, boolean important,
                           boolean myDay, LocalDate dueDate, String dueTime, TodoRepeat repeatRule, Long taskId, int position, Long sentById, String sentByName, String sentMessage,
-                          boolean seen, Long ownerId, String ownerName, LocalDateTime createdAt, LocalDateTime updatedAt, List<StepDto> steps) {}
+                          boolean seen, Long ownerId, String ownerName, long commentCount, LocalDateTime createdAt, LocalDateTime updatedAt, List<StepDto> steps) {}
+
+    public record CommentDto(Long id, Long userId, String userName, String body, LocalDateTime createdAt) {
+        static CommentDto from(TodoComment c) {
+            return new CommentDto(c.getId(), c.getUser().getId(), c.getUser().getFullName(), c.getBody(), c.getCreatedAt());
+        }
+    }
 
     public record Overview(List<ListDto> lists, List<ItemDto> items) {}
 
@@ -73,6 +85,9 @@ public class TodoController {
         Map<Long, List<StepDto>> stepsByItem = mine.isEmpty() ? Map.of()
             : steps.findByItemIdInOrderByPositionAscIdAsc(mine.stream().map(TodoItem::getId).toList()).stream()
                 .collect(Collectors.groupingBy(s -> s.getItem().getId(), Collectors.mapping(StepDto::from, Collectors.toList())));
+        Map<Long, Long> commentCounts = mine.isEmpty() ? Map.of()
+            : comments.countByItems(mine.stream().map(TodoItem::getId).toList()).stream().collect(Collectors.toMap(r -> (Long) r[0], r -> (Long) r[1]));
+        Set<Long> starred = stars.itemIdsByUser(me);
         List<TodoListMember> memberships = members.findByUserId(me);
         Map<Long, List<TodoListMember>> byList = memberships.isEmpty() ? Map.of()
             : members.findByListIdInOrderByJoinedAtAscIdAsc(memberships.stream().map(m -> m.getList().getId()).toList()).stream()
@@ -81,7 +96,7 @@ public class TodoController {
             memberships.stream()
                 .sorted(Comparator.comparing((TodoListMember m) -> m.getList().getPosition()).thenComparing(m -> m.getList().getId()))
                 .map(m -> listDto(m.getList(), m.getRole(), byList.getOrDefault(m.getList().getId(), List.of()))).toList(),
-            mine.stream().map(i -> dto(i, stepsByItem.getOrDefault(i.getId(), List.of()))).toList()));
+            mine.stream().map(i -> dto(i, stepsByItem.getOrDefault(i.getId(), List.of()), commentCounts.getOrDefault(i.getId(), 0L), starred.contains(i.getId()))).toList()));
     }
 
     /** Kenar çubuğundaki rozet: henüz açılmamış gelen kart sayısı. */
@@ -187,16 +202,17 @@ public class TodoController {
     // ---------------------------------------------------------------- kartlar
 
     @PostMapping("/items")
+    @Transactional
     public ResponseEntity<ItemDto> createItem(@RequestBody Map<String, Object> body) {
         User me = currentUser.get();
         TodoItem i = new TodoItem();
         i.setUser(me);
         i.setTitle(Payloads.requiredText(body, "title", "Başlık boş olamaz.", 300, "Başlık"));
         i.setNote(Payloads.optionalText(body, "note", 4000, "Not"));
-        i.setDueDate(Payloads.date(body, "dueDate", "Tarih"));
+        i.setDueDate(dueDate(body));
         i.setDueTime(time(body));
         i.setRepeatRule(Payloads.enumValue(body, "repeatRule", TodoRepeat.class, "tekrar"));
-        i.setImportant(Payloads.flag(body, "important"));
+        boolean important = Payloads.flag(body, "important");
         if (Payloads.flag(body, "myDay")) i.setMyDay(today());
         Long taskId = id(body.get("taskId"));
         if (taskId != null) {
@@ -208,7 +224,9 @@ public class TodoController {
         Long listId = id(body.get("listId"));
         if (listId != null) i.setList(ownList(listId));
         i.setPosition((listId != null ? items.minPositionInList(listId) : items.minPosition(me.getId())) - 1); // yeni kart en üstte
-        return ResponseEntity.ok(dto(items.save(i), List.of()));
+        TodoItem created = items.save(i);
+        if (important) stars.save(new TodoStar(created.getId(), me.getId()));
+        return ResponseEntity.ok(dto(created, List.of(), 0, important));
     }
 
     /** Kısmi güncelleme: yalnızca gövdede gelen alanlar değişir. */
@@ -219,14 +237,21 @@ public class TodoController {
         if (body.containsKey("title")) i.setTitle(Payloads.requiredText(body, "title", "Başlık boş olamaz.", 300, "Başlık"));
         if (body.containsKey("note")) i.setNote(Payloads.optionalText(body, "note", 4000, "Not"));
         boolean rescheduled = body.containsKey("dueDate") || body.containsKey("dueTime") || body.containsKey("repeatRule");
-        if (body.containsKey("dueDate")) i.setDueDate(Payloads.date(body, "dueDate", "Tarih"));
+        if (body.containsKey("dueDate")) i.setDueDate(dueDate(body));
         if (body.containsKey("dueTime")) i.setDueTime(time(body));
         if (body.containsKey("repeatRule")) {
             i.setRepeatRule(Payloads.enumValue(body, "repeatRule", TodoRepeat.class, "tekrar"));
             if (i.getRepeatRule() != null && i.getDueDate() == null) i.setDueDate(today()); // tekrar bir tarihten başlar
         }
         if (rescheduled) schedule(i);
-        if (body.containsKey("important")) i.setImportant(Payloads.flag(body, "important"));
+        Long me = currentUser.get().getId();
+        if (body.containsKey("important")) {
+            // Yıldız kişiye özeldir: ortak listede yalnızca işaretleyenin "Önemli" görünümüne girer.
+            boolean want = Payloads.flag(body, "important");
+            boolean has = stars.existsByItemIdAndUserId(id, me);
+            if (want && !has) stars.save(new TodoStar(id, me));
+            if (!want && has) stars.remove(id, me);
+        }
         if (body.containsKey("myDay")) i.setMyDay(Payloads.flag(body, "myDay") ? today() : null);
         if (body.containsKey("seen")) i.setSeen(Payloads.flag(body, "seen"));
         if (body.containsKey("done")) {
@@ -234,16 +259,20 @@ public class TodoController {
             if (done != i.isDone()) {
                 i.setDone(done);
                 i.setDoneAt(done ? LocalDateTime.now() : null);
+                i.setDoneBy(done ? currentUser.get() : null);
                 if (done && i.getRepeatRule() != null) repeat(i);
+                if (done && i.getTaskId() != null) completeLinkedTask(i);
             }
         }
         if (body.containsKey("listId")) {
             Long listId = id(body.get("listId"));
             i.setList(listId == null ? null : ownList(listId));
+            // "Genel" kişiye özeldir: ortak listeden oraya taşınan kart, taşıyan kişinin olur.
+            if (listId == null) i.setUser(currentUser.get());
         }
         i.setUpdatedAt(LocalDateTime.now());
         TodoItem saved = items.save(i);
-        return ResponseEntity.ok(dto(saved, stepsOf(saved.getId())));
+        return ResponseEntity.ok(dto(saved, stepsOf(saved.getId()), comments.countByItemId(saved.getId()), stars.existsByItemIdAndUserId(id, me)));
     }
 
     /** Sürükle-bırak sırası: ids dizisindeki sıraya göre konum verir. */
@@ -264,16 +293,18 @@ public class TodoController {
 
     @DeleteMapping("/items/{id}")
     public ResponseEntity<Void> deleteItem(@PathVariable Long id) {
-        items.delete(ownItem(id));
+        TodoItem i = ownItem(id);
+        if (!canDelete(i)) throw ApiException.forbidden("Bu kartı yalnızca ekleyen kişi veya liste yöneticisi silebilir.");
+        items.delete(i);
         return ResponseEntity.noContent().build();
     }
 
-    /** Tamamlananları temizle: yalnızca kişinin görebildiği, tamamlanmış ve listelenen kartlar silinir. */
+    /** Tamamlananları temizle: kişinin silebildiği (kendi eklediği ya da yöneticisi olduğu listedeki), tamamlanmış ve listelenen kartlar silinir. */
     @DeleteMapping("/items")
     @Transactional
     public ResponseEntity<Map<String, Integer>> deleteCompleted(@RequestParam List<Long> ids) {
         Long me = currentUser.get().getId();
-        List<TodoItem> found = items.findVisibleByIdIn(me, ids).stream().filter(TodoItem::isDone).toList();
+        List<TodoItem> found = items.findVisibleByIdIn(me, ids).stream().filter(TodoItem::isDone).filter(this::canDelete).toList();
         items.deleteAll(found);
         return ResponseEntity.ok(Map.of("deleted", found.size()));
     }
@@ -303,6 +334,43 @@ public class TodoController {
     @DeleteMapping("/steps/{id}")
     public ResponseEntity<Void> deleteStep(@PathVariable Long id) {
         steps.delete(ownStep(id));
+        return ResponseEntity.noContent().build();
+    }
+
+    // ---------------------------------------------------------------- yorumlar
+
+    @GetMapping("/items/{id}/comments")
+    public ResponseEntity<List<CommentDto>> comments(@PathVariable Long id) {
+        ownItem(id);
+        return ResponseEntity.ok(comments.findByItemIdOrderByCreatedAtAscIdAsc(id).stream().map(CommentDto::from).toList());
+    }
+
+    /** Yorum ekler; kart ortak bir listedeyse diğer üyelere bildirim gider. */
+    @PostMapping("/items/{id}/comments")
+    @Transactional
+    public ResponseEntity<CommentDto> addComment(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        User me = currentUser.get();
+        TodoItem i = ownItem(id);
+        TodoComment c = new TodoComment();
+        c.setItem(i);
+        c.setUser(me);
+        c.setBody(Payloads.requiredText(body, "body", "Yorum boş olamaz.", 1000, "Yorum"));
+        TodoComment saved = comments.save(c);
+        if (i.getList() != null) {
+            members.findByListIdOrderByJoinedAtAscIdAsc(i.getList().getId()).forEach(m -> notifications.notify(m.getUser(), me,
+                NotificationType.TODO_COMMENT, me.getFullName() + " bir karta yorum yazdı", i.getTitle() + " — " + saved.getBody(), "/todo?item=" + id));
+        }
+        return ResponseEntity.ok(CommentDto.from(saved));
+    }
+
+    /** Kişi yalnızca kendi yorumunu silebilir. */
+    @DeleteMapping("/comments/{id}")
+    @Transactional
+    public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
+        TodoComment c = comments.findById(id).orElseThrow(() -> ApiException.notFound("Yorum"));
+        ownItem(c.getItem().getId());
+        if (!c.getUser().getId().equals(currentUser.get().getId())) throw ApiException.forbidden("Yalnızca kendi yorumunuzu silebilirsiniz.");
+        comments.delete(c);
         return ResponseEntity.noContent().build();
     }
 
@@ -376,13 +444,13 @@ public class TodoController {
         next.setList(i.getList());
         next.setTitle(i.getTitle());
         next.setNote(i.getNote());
-        next.setImportant(i.isImportant());
         next.setDueDate(rule.next(i.getDueDate() != null ? i.getDueDate() : today(), today()));
         next.setDueTime(i.getDueTime());
         next.setRepeatRule(rule);
         next.setPosition(i.getPosition());
         schedule(next);
         TodoItem saved = items.save(next);
+        stars.findByItemId(i.getId()).forEach(s -> stars.save(new TodoStar(saved.getId(), s.getUserId())));
         for (TodoStep s : steps.findByItemIdOrderByPositionAscIdAsc(i.getId())) {
             TodoStep c = new TodoStep();
             c.setItem(saved);
@@ -393,7 +461,35 @@ public class TodoController {
         i.setRepeatRule(null);
     }
 
+    /**
+     * Kart bir DevHub görevine bağlıysa kart tamamlanınca görev de tamamlanır (görev sayfasındaki kuralla aynı: geçmiş kaydı
+     * ve atayana bildirim). Yalnızca görevin sahibi ya da uygulama yöneticisi tetikler; ortak listede başka bir üye kartı
+     * tamamlarsa görev olduğu gibi kalır.
+     */
+    private void completeLinkedTask(TodoItem i) {
+        User me = currentUser.get();
+        Task t = tasks.findById(i.getTaskId()).orElse(null);
+        if (t == null || t.getStatus() == TaskStatus.TAMAMLANDI) return;
+        if (!t.getUser().getId().equals(me.getId()) && !CurrentUser.isAdmin(me)) return;
+        taskStatus.change(t, TaskStatus.TAMAMLANDI, me);
+        tasks.save(t);
+    }
+
+    /** Listesiz kart ve kendi eklediği kart her zaman; ortak listede başkasının kartını yalnızca liste yöneticisi siler. */
+    private boolean canDelete(TodoItem i) {
+        Long me = currentUser.get().getId();
+        if (i.getList() == null || i.getUser().getId().equals(me)) return true;
+        return members.findByListIdAndUserId(i.getList().getId(), me).map(m -> m.getRole() == TodoListRole.ADMIN).orElse(false);
+    }
+
     private static final DateTimeFormatter HM = DateTimeFormatter.ofPattern("HH:mm");
+
+    /** Yanlış yazılmış yıllar (ör. 0202, 20026) plana ve tekrar hesabına girmesin. */
+    private static LocalDate dueDate(Map<String, Object> body) {
+        LocalDate d = Payloads.date(body, "dueDate", "Tarih");
+        if (d != null && (d.getYear() < 2000 || d.isAfter(today().plusYears(10)))) throw ApiException.badRequest("Tarih 2000 yılı ile 10 yıl sonrası arasında olmalı.");
+        return d;
+    }
 
     private static LocalTime time(Map<String, Object> body) {
         String s = Payloads.text(body, "dueTime");
@@ -446,12 +542,13 @@ public class TodoController {
         return steps.findByItemIdOrderByPositionAscIdAsc(itemId).stream().map(StepDto::from).toList();
     }
 
-    private static ItemDto dto(TodoItem i, List<StepDto> stepDtos) {
+    private static ItemDto dto(TodoItem i, List<StepDto> stepDtos, long commentCount, boolean important) {
         return new ItemDto(i.getId(), i.getList() != null ? i.getList().getId() : null, i.getTitle(), i.getNote(), i.isDone(), i.getDoneAt(),
-            i.isImportant(), today().equals(i.getMyDay()), i.getDueDate(), i.getDueTime() != null ? i.getDueTime().format(HM) : null,
+            i.getDoneBy() != null ? i.getDoneBy().getId() : null, i.getDoneBy() != null ? i.getDoneBy().getFullName() : null,
+            important, today().equals(i.getMyDay()), i.getDueDate(), i.getDueTime() != null ? i.getDueTime().format(HM) : null,
             i.getRepeatRule(), i.getTaskId(), i.getPosition(),
             i.getSentBy() != null ? i.getSentBy().getId() : null, i.getSentBy() != null ? i.getSentBy().getFullName() : null,
-            i.getSentMessage(), i.isSeen(), i.getUser().getId(), i.getUser().getFullName(), i.getCreatedAt(), i.getUpdatedAt(), stepDtos);
+            i.getSentMessage(), i.isSeen(), i.getUser().getId(), i.getUser().getFullName(), commentCount, i.getCreatedAt(), i.getUpdatedAt(), stepDtos);
     }
 
     /** "Bugün" kullanıcının saat dilimine göredir (sunucu UTC çalışır). */

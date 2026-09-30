@@ -69,6 +69,9 @@ export const LEAVE_TYPE: Record<LeaveType, Meta> = {
   MAZERET: { label: 'Mazeret', icon: Clock, className: 'bg-theme-dark' },
 };
 export const LEAVE_TYPES: LeaveType[] = ['YILLIK', 'HASTALIK', 'MAZERET'];
+/** Türü gizlenmiş (başkasına ait) izin: çalışanlar ekip arkadaşlarının yalnızca izinli olduğunu görür. */
+export const LEAVE_GENERIC: Meta = { label: 'İzinli', icon: Airplane, className: 'bg-theme-light' };
+export const leaveTypeMeta = (type: LeaveType | null | undefined): Meta => (type ? LEAVE_TYPE[type] : LEAVE_GENERIC);
 
 export const LEAVE_STATE: Record<LeaveState, { label: string; className: string }> = {
   BEKLIYOR: { label: 'Onay Bekliyor', className: 'bg-theme-lightest text-theme-deep border border-theme-light' },

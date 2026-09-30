@@ -19,6 +19,7 @@ const TYPE_ICON: Record<NotificationType, Icon> = {
   TODO_RECEIVED: ListChecks,
   TODO_REMINDER: Alarm,
   TODO_LIST_ADDED: UsersThree,
+  TODO_COMMENT: ChatCircleText,
   PROFILE_REQUESTED: IdentificationCard,
   PROFILE_DECIDED: IdentificationCard,
   LEAVE_REQUESTED: CalendarBlank,

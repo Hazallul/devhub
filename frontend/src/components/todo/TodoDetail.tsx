@@ -1,32 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Star, Check, FloppyDisk, CalendarBlank, ListBullets, Plus, Trash, PaperPlaneTilt, NoteBlank, Bell, Repeat, CheckSquare, ArrowSquareOut } from '@phosphor-icons/react';
+import { X, Star, Check, FloppyDisk, CalendarBlank, ListBullets, Plus, Trash, PaperPlaneTilt, NoteBlank, Bell, Repeat, CheckSquare, ArrowSquareOut, ChatCircleText } from '@phosphor-icons/react';
 import { DoneToggle } from './TodoCard';
-import { nextMonday, REPEAT, REPEATS } from './views';
+import { canDeleteCard, nextMonday, REPEAT, REPEATS } from './views';
 import { useQuickActions } from '../layout/QuickActions';
-import { useUpdateTodo, useDeleteTodo, useAddStep, useUpdateStep, useDeleteStep } from '../../hooks/todos';
-import { addDays, dueLabel, formatDate, parseServerDate, timeAgo, toIsoDay } from '../../lib/format';
+import { useUpdateTodo, useDeleteTodo, useAddStep, useUpdateStep, useDeleteStep, useTodoComments, useAddTodoComment, useDeleteTodoComment } from '../../hooks/todos';
+import { useMe } from '../../hooks/api';
+import { addDays, dueLabel, firstName, formatDate, parseServerDate, timeAgo, toIsoDay } from '../../lib/format';
 import type { TodoItem, TodoList, TodoRepeat, TodoStep } from '../../types';
 
 /**
  * Yazı alanları için otomatik kayıt: yazmayı bırakınca (600 ms) kaydeder; alan kapanırken veya
- * panel/sayfa değişirken bekleyen değişikliği hemen yazar. Böylece "kaydet" düğmesi gerekmez.
+ * panel/sayfa değişirken bekleyen değişikliği hemen yazar. Kullanıcı alana dokunmadıysa hiçbir şey yazmaz.
  */
-function useAutosave(value: string, saved: string, save: (v: string) => void) {
-  const latest = useRef({ value, saved, save });
-  useEffect(() => { latest.current = { value, saved, save }; });
+function useAutosavedText(saved: string, save: (v: string) => void) {
+  const [value, setValue] = useState(saved);
+  // dirty: kullanıcı bu alanı değiştirdi ve henüz yazılmadı. Yalnızca o zaman kaydedilir; aksi hâlde başka bir üyenin
+  // (ya da başka bir sekmenin) yaptığı değişiklik, eski metinle geri yazılıp ezilirdi.
+  const dirty = useRef(false);
+  const latest = useRef({ value, save });
+  useEffect(() => { latest.current = { value, save }; });
+  useEffect(() => { if (!dirty.current) setValue(saved); }, [saved]);
+  const flush = () => {
+    if (!dirty.current) return;
+    dirty.current = false;
+    latest.current.save(latest.current.value);
+  };
   useEffect(() => {
-    if (value === saved) return;
-    const t = setTimeout(() => save(value), 600);
+    if (!dirty.current) return;
+    const t = setTimeout(flush, 600);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
-  const flush = () => {
-    const l = latest.current;
-    if (l.value !== l.saved) l.save(l.value);
-  };
   useEffect(() => flush, []); // eslint-disable-line react-hooks/exhaustive-deps
-  return flush;
+  const change = (v: string) => { dirty.current = true; setValue(v); };
+  /** Yerel değişikliği atar ve kayıtlı değere döner (ör. boş bırakılan başlık). */
+  const reset = () => { dirty.current = false; setValue(saved); };
+  return { value, change, flush, reset };
 }
 
 interface Props { item: TodoItem; lists: TodoList[]; onClose: () => void; onSend: () => void }
@@ -36,21 +46,23 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
   const update = useUpdateTodo();
   const remove = useDeleteTodo();
   const { openTask } = useQuickActions();
-  const [title, setTitle] = useState(item.title);
-  const [note, setNote] = useState(item.note ?? '');
+  const me = useMe();
+  const shared = (lists.find(l => l.id === item.listId)?.members.length ?? 1) > 1;
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const now = new Date();
   const today = toIsoDay(now);
   const due = item.dueDate && !item.done ? dueLabel(item.dueDate) : null;
 
-  const flushTitle = useAutosave(title, item.title, v => { if (v.trim()) update.mutate({ id: item.id, title: v.trim() }); });
-  const flushNote = useAutosave(note, item.note ?? '', v => update.mutate({ id: item.id, note: v.trim() || null }));
+  const titleField = useAutosavedText(item.title, v => { if (v.trim() && v.trim() !== item.title) update.mutate({ id: item.id, title: v.trim() }); });
+  const noteField = useAutosavedText(item.note ?? '', v => { if ((v.trim() || null) !== item.note) update.mutate({ id: item.id, note: v.trim() || null }); });
+  const title = titleField.value;
+  const note = noteField.value;
 
   // Her şey zaten kendiliğinden kaydedilir; bu düğme bekleyen yazıyı hemen yazar ve kaydedildiğini açıkça gösterir.
   const saveNow = () => {
-    if (title.trim()) flushTitle(); else setTitle(item.title);
-    flushNote();
+    if (title.trim()) titleField.flush(); else titleField.reset();
+    noteField.flush();
     setJustSaved(true);
   };
   useEffect(() => {
@@ -87,8 +99,8 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
             rows={1}
             maxLength={300}
             aria-label="Başlık"
-            onChange={e => setTitle(e.target.value.replace(/\n/g, ' '))}
-            onBlur={() => { if (!title.trim()) setTitle(item.title); else flushTitle(); }}
+            onChange={e => titleField.change(e.target.value.replace(/\n/g, ' '))}
+            onBlur={() => { if (!title.trim()) titleField.reset(); else titleField.flush(); }}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur(); } }}
             className={`flex-1 min-w-0 resize-none bg-transparent text-lg font-bold leading-snug rounded-xl px-2 py-1 -mx-2 focus:outline-none focus:bg-theme-cream [field-sizing:content] ${item.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}
           />
@@ -212,28 +224,76 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
             value={note}
             maxLength={4000}
             placeholder="Ayrıntı, bağlantı veya hatırlatma yazın…"
-            onChange={e => setNote(e.target.value)}
-            onBlur={flushNote}
+            onChange={e => noteField.change(e.target.value)}
+            onBlur={noteField.flush}
             className="w-full min-h-[120px] resize-y rounded-2xl bg-white border border-theme-light/50 px-3.5 py-3 text-sm leading-relaxed text-theme-text placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-medium [field-sizing:content]"
           />
         </section>
+
+        {(shared || item.commentCount > 0) && <Comments item={item} />}
       </div>
 
       <div className="p-4 border-t border-theme-light/40 bg-white flex items-center gap-2">
         <p className="text-xs font-semibold text-theme-muted flex-1 min-w-0 truncate">
-          {item.done && item.doneAt ? `Tamamlandı · ${timeAgo(item.doneAt)}` : `Oluşturuldu · ${formatDate(toIsoDay(parseServerDate(item.createdAt)))}`}
+          {item.done && item.doneAt ? `${item.doneById !== null && item.doneById !== me.id && item.doneByName ? `${firstName(item.doneByName)} tamamladı` : 'Tamamlandı'} · ${timeAgo(item.doneAt)}` : `Oluşturuldu · ${formatDate(toIsoDay(parseServerDate(item.createdAt)))}`}
         </p>
         <button type="button" onClick={onSend} className="icon-btn border border-theme-light/70 text-theme-deep" aria-label="Kartı birine gönder" title="Kartı birine gönder"><PaperPlaneTilt size={17} weight="bold" /></button>
         <button type="button" onClick={saveNow} className="btn-primary min-h-[40px] px-4 text-sm" aria-live="polite">
           {justSaved ? <><Check size={16} weight="bold" /> Kaydedildi</> : <><FloppyDisk size={16} weight="bold" /> Kaydet</>}
         </button>
-        {confirmDelete ? (
+        {!canDeleteCard(item, lists, me.id) ? null : confirmDelete ? (
           <button type="button" onClick={() => remove.mutate(item.id, { onSuccess: onClose })} className="h-10 px-3 rounded-xl text-xs font-bold bg-[#FBEDE5] text-[#9A3B1B] hover:bg-[#F6DCCD] transition-colors">Silinsin mi?</button>
         ) : (
           <button type="button" onClick={() => setConfirmDelete(true)} className="icon-btn hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Kartı sil" title="Kartı sil"><Trash size={18} weight="bold" /></button>
         )}
       </div>
     </div>
+  );
+}
+
+/** Ortak listedeki kartın yorumları: üyeler yazışır, kişi kendi yorumunu silebilir. */
+function Comments({ item }: { item: TodoItem }) {
+  const me = useMe();
+  const { data: comments } = useTodoComments(item.id, true);
+  const add = useAddTodoComment();
+  const remove = useDeleteTodoComment();
+  const [draft, setDraft] = useState('');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const body = draft.trim();
+    if (!body) return;
+    add.mutate({ itemId: item.id, body });
+    setDraft('');
+  };
+
+  return (
+    <section aria-label="Yorumlar">
+      <p className="eyebrow flex items-center gap-1.5 mb-2"><ChatCircleText size={13} weight="bold" aria-hidden="true" /> Yorumlar {comments && comments.length > 0 && <span className="tabular">({comments.length})</span>}</p>
+      {comments && comments.length > 0 && (
+        <ul className="space-y-2 mb-2">
+          {comments.map(c => (
+            <li key={c.id} className="group rounded-2xl bg-white border border-theme-light/50 px-3.5 py-2.5">
+              <p className="flex items-center gap-2 text-xs font-bold text-theme-deep">
+                <span className="truncate">{c.userId === me.id ? 'Siz' : c.userName}</span>
+                <span className="font-medium text-theme-muted whitespace-nowrap">· {timeAgo(c.createdAt)}</span>
+                {c.userId === me.id && (
+                  <button type="button" onClick={() => remove.mutate({ itemId: item.id, id: c.id })} className="ml-auto text-theme-muted hover:text-[#9A3B1B] opacity-0 group-hover:opacity-100 focus:opacity-100 rounded" aria-label="Yorumu sil" title="Yorumu sil">
+                    <Trash size={13} weight="bold" />
+                  </button>
+                )}
+              </p>
+              <p className="text-sm text-theme-text mt-1 whitespace-pre-wrap break-words">{c.body}</p>
+            </li>
+          ))}
+        </ul>
+      )}
+      <form onSubmit={submit} className="flex items-center gap-2 rounded-2xl bg-white border border-theme-light/50 pl-3.5 pr-1.5 py-1.5 focus-within:ring-2 focus-within:ring-theme-medium">
+        <input value={draft} maxLength={1000} onChange={e => setDraft(e.target.value)} placeholder="Yorum yaz…" aria-label="Yorum yaz"
+          className="flex-1 min-w-0 bg-transparent py-1.5 text-sm text-theme-text placeholder:text-theme-muted/70 focus:outline-none" />
+        <button type="submit" disabled={!draft.trim() || add.isPending} className="icon-btn w-9 h-9 text-theme-deep disabled:opacity-30" aria-label="Yorumu gönder"><PaperPlaneTilt size={16} weight="bold" /></button>
+      </form>
+    </section>
   );
 }
 
@@ -288,8 +348,13 @@ function StepRow({ itemId, step }: { itemId: number; step: TodoStep }) {
   const update = useUpdateStep();
   const remove = useDeleteStep();
   const [title, setTitle] = useState(step.title);
+  const dirty = useRef(false);
+  // Kullanıcı yazmıyorken adım başka bir üye tarafından değiştirilirse yeni metni al.
+  useEffect(() => { if (!dirty.current) setTitle(step.title); }, [step.title]);
 
   const save = () => {
+    if (!dirty.current) return;
+    dirty.current = false;
     const v = title.trim();
     if (!v) setTitle(step.title);
     else if (v !== step.title) update.mutate({ itemId, id: step.id, title: v });
@@ -302,7 +367,7 @@ function StepRow({ itemId, step }: { itemId: number; step: TodoStep }) {
         value={title}
         maxLength={300}
         aria-label="Adım"
-        onChange={e => setTitle(e.target.value)}
+        onChange={e => { dirty.current = true; setTitle(e.target.value); }}
         onBlur={save}
         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
         className={`flex-1 min-w-0 bg-transparent text-sm font-medium focus:outline-none ${step.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}

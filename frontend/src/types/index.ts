@@ -93,7 +93,8 @@ export type LeaveState = 'BEKLIYOR' | 'ONAYLANDI' | 'REDDEDILDI' | 'IPTAL';
 export interface LeaveRequest {
     id: number;
     userId: number;
-    type: LeaveType;
+    /** Çalışan, başkasının izninde türü göremez (null): yalnızca "İzinli" bilgisi */
+    type: LeaveType | null;
     startDate: string; // yyyy-MM-dd
     endDate: string;   // yyyy-MM-dd
     note: string | null;
@@ -135,7 +136,7 @@ export interface LeaveBalance {
 }
 
 export type NotificationType =
-    | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
+    | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'TODO_COMMENT' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
     | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT';
 
 export interface AppNotification {
@@ -264,10 +265,16 @@ export interface TodoItem {
     /** Kartı ekleyen kişi (ortak listelerde başkası olabilir) */
     ownerId: number;
     ownerName: string;
+    /** Kartı tamamlayan kişi */
+    doneById: number | null;
+    doneByName: string | null;
+    commentCount: number;
     createdAt: string;
     updatedAt: string;
     steps: TodoStep[];
 }
+
+export interface TodoComment { id: number; userId: number; userName: string; body: string; createdAt: string }
 
 export interface TodoData { lists: TodoList[]; items: TodoItem[] }
 

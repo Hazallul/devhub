@@ -37,6 +37,11 @@ public class TodoItem {
     @Column(name = "done_at")
     private LocalDateTime doneAt;
 
+    /** Kartı tamamlayan kişi (ortak listede sahibinden farklı olabilir) */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "done_by_id")
+    private User doneBy;
+
     @Column(nullable = false)
     private boolean important;
 

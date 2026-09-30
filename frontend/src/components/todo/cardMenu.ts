@@ -1,6 +1,8 @@
 import { ArrowSquareOut, CheckCircle, ArrowCounterClockwise, Star, Sun, SunHorizon, CalendarX, PaperPlaneTilt, Trash } from '@phosphor-icons/react';
 import { useContextMenu } from '../layout/ContextMenu';
-import { useDeleteTodo, useUpdateTodo } from '../../hooks/todos';
+import { useDeleteTodoWithUndo, useTodos, useUpdateTodo } from '../../hooks/todos';
+import { useMe } from '../../hooks/api';
+import { canDeleteCard } from './views';
 import { addDays, toIsoDay } from '../../lib/format';
 import type { TodoItem } from '../../types';
 
@@ -8,7 +10,9 @@ import type { TodoItem } from '../../types';
 export function useTodoCardMenu() {
   const menu = useContextMenu();
   const update = useUpdateTodo();
-  const remove = useDeleteTodo();
+  const remove = useDeleteTodoWithUndo();
+  const me = useMe();
+  const lists = useTodos().data?.lists ?? [];
 
   return (e: React.MouseEvent, item: TodoItem, handlers: { onOpen: () => void; onSend: () => void }) => {
     const now = new Date();
@@ -28,7 +32,7 @@ export function useTodoCardMenu() {
         !!item.dueDate && { label: 'Tarihi kaldır', icon: CalendarX, onSelect: () => update.mutate({ id: item.id, dueDate: null, dueTime: null, repeatRule: null }) },
         'divider',
         { label: 'Birine gönder…', icon: PaperPlaneTilt, onSelect: handlers.onSend },
-        { label: 'Kartı sil', icon: Trash, tone: 'danger', onSelect: () => remove.mutate(item.id) },
+        canDeleteCard(item, lists, me.id) && { label: 'Kartı sil', icon: Trash, tone: 'danger', onSelect: () => remove(item.id) },
       ],
     });
   };

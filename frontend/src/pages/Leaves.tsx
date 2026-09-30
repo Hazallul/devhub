@@ -1,19 +1,25 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwise, CalendarBlank, LockSimple, SealCheck, ChatText, CaretLeft, CaretRight, ArrowRight } from '@phosphor-icons/react';
+import { createPortal, flushSync } from 'react-dom';
+import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from 'framer-motion';
+import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwise, CalendarBlank, LockSimple, SealCheck, ChatText, CaretLeft, CaretRight, ArrowRight , HandGrabbing } from '@phosphor-icons/react';
 import { PageHeader, StatCard, Skeleton, Avatar, Pill, EmptyState } from '../components/ui/primitives';
 import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useUndoLeaveDecision, useFinalizeLeaveDecision, useHolidayMap, useLeaveBalances } from '../hooks/api';
 import Modal from '../components/ui/Modal';
 import DecisionModal from '../components/ui/DecisionModal';
 import type { Decision } from '../components/ui/DecisionModal';
 import { useQuickActions } from '../components/layout/QuickActions';
-import { LEAVE_TYPE, LEAVE_STATE } from '../lib/meta';
+import { LEAVE_TYPE, LEAVE_GENERIC, leaveTypeMeta, LEAVE_STATE } from '../lib/meta';
 import { addDays, daysBetween, formatDate, toDate, toIsoDay, leaveDaysLabel } from '../lib/format';
-import { listContainer, listItem } from '../lib/motion';
 import type { LeaveRequest, User } from '../types';
 
 const WINDOW = 14;
+/** Pencerenin iki yanında (görünmeyen) çizilen gün sayısı: kaydırma sırasında içerik buradan gelir. */
+const BUFFER = WINDOW;
+const TOTAL = WINDOW + BUFFER * 2;
+/** Sürüklerken bu kadar gün kayınca pencere yeniden ortalanır (tampon tükenmeden). */
+const RECENTER = 5;
+const TRACK_WIDTH = `${(TOTAL / WINDOW) * 100}%`;
+const TRACK_LEFT = `-${(BUFFER / WINDOW) * 100}%`;
 const weekday = new Intl.DateTimeFormat('tr-TR', { weekday: 'short' });
 const monthName = new Intl.DateTimeFormat('tr-TR', { month: 'long' });
 const dayMonth = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' });
@@ -94,7 +100,7 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
                   {tip.leave.state === 'BEKLIYOR' ? 'Onay bekliyor' : LEAVE_STATE[tip.leave.state].label}
                 </span>
               </div>
-              <p className="text-xs text-white/80 font-medium mt-1">{LEAVE_TYPE[tip.leave.type].label} · {rangeLabel(tip.leave, holidays)}</p>
+              <p className="text-xs text-white/80 font-medium mt-1">{leaveTypeMeta(tip.leave.type).label} · {rangeLabel(tip.leave, holidays)}</p>
               {tip.leave.note && (
                 <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 flex gap-1.5 leading-relaxed">
                   <ChatText size={14} weight="bold" className="shrink-0 mt-px text-theme-light" aria-hidden="true" />
@@ -139,9 +145,17 @@ export default function Leaves() {
   const [confirming, setConfirming] = useState<LeaveRequest | null>(null);
   // Onay/ret kararı açıklamayla birlikte verilir (DecisionModal).
   const [deciding, setDeciding] = useState<{ leave: LeaveRequest; decision: Decision } | null>(null);
-  // Takvim penceresi: bugünden itibaren hafta hafta ileri/geri kaydırılır (0 = bugün).
-  const [weekOffset, setWeekOffset] = useState(0);
-  const [slideDir, setSlideDir] = useState(1);
+  // Takvim penceresi: bugünden itibaren kaç gün ileride başladığı (0 = bugün). Oklar haftalık, fareyle sürükleme günlük kaydırır.
+  const [dayOffset, setDayOffset] = useState(0);
+  // Tüm şeritlerin (gün başlıkları + satırlar) paylaştığı yatay kayma. Pencerenin iki yanında BUFFER gün daha çizilir,
+  // böylece sürüklerken ve oklarla geçerken içerik kesintisiz kayar.
+  const x = useMotionValue(0);
+  const reduceMotion = useReducedMotion();
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ origin: number; base: number; moved: boolean; lastX: number; lastT: number; velocity: number } | null>(null);
+  // dayOffset'in anlık değeri: tek bir sürükleme içinde pencere birden çok kez kaydırılabilir.
+  const offsetRef = useRef(0);
+  const [grabbing, setGrabbing] = useState(false);
 
   // Sayfa kayınca balon çubuktan kopmasın.
   useEffect(() => {
@@ -154,6 +168,7 @@ export default function Leaves() {
 
   /** Balon her zaman izin çubuğunun tam ortasına sabitlenir (fareyi takip etmez). */
   const showTip = (el: HTMLElement, leave: LeaveRequest, user: User) => {
+    if (drag.current?.moved) return; // sürüklerken balon açılmasın
     const r = el.getBoundingClientRect();
     const anchorX = r.left + r.width / 2;
     setTip({ leave, user, rect: { left: r.left, right: r.right, top: r.top, bottom: r.bottom }, anchorX });
@@ -161,19 +176,99 @@ export default function Leaves() {
 
   const userById = useMemo(() => new Map((users ?? []).map(u => [u.id, u])), [users]);
   const today = toIsoDay(new Date());
-  const windowStartDate = useMemo(() => toDate(toIsoDay(addDays(new Date(), weekOffset * 7))), [weekOffset]);
+  const windowStartDate = useMemo(() => toDate(toIsoDay(addDays(new Date(), dayOffset))), [dayOffset]);
   const days = useMemo(() => Array.from({ length: WINDOW }, (_, i) => addDays(windowStartDate, i)), [windowStartDate]);
+  const trackStartDate = useMemo(() => addDays(windowStartDate, -BUFFER), [windowStartDate]);
+  const trackDays = useMemo(() => Array.from({ length: TOTAL }, (_, i) => addDays(trackStartDate, i)), [trackStartDate]);
+  const trackStart = toIsoDay(trackDays[0]);
+  const trackEnd = toIsoDay(trackDays[TOTAL - 1]);
   const windowStart = toIsoDay(days[0]);
   const windowEnd = toIsoDay(days[WINDOW - 1]);
   const next14 = toIsoDay(addDays(new Date(), WINDOW - 1));
 
-  const goToWeek = (offset: number) => {
-    setSlideDir(offset >= weekOffset ? 1 : -1);
-    setWeekOffset(offset);
+  const dayWidth = () => (viewportRef.current?.getBoundingClientRect().width ?? 700) / WINDOW;
+
+  /** Pencereyi hedef güne alır (bugünden öncesine gitmez) ve kaç gün kaydığını döndürür. */
+  const shiftWindow = (target: number) => {
+    const next = Math.max(0, target);
+    const applied = next - offsetRef.current;
+    if (applied !== 0) {
+      offsetRef.current = next;
+      flushSync(() => setDayOffset(next));
+    }
+    return applied;
   };
+
+  /** x'i yumuşakça sıfıra getirir. Yay yerine yavaşlayan geçiş: bırakınca ileri geri sallanmaz, sıçramaz. */
+  const settle = () => {
+    if (reduceMotion) x.jump(0);
+    else animate(x, 0, { type: 'tween', duration: 0.45, ease: [0.22, 1, 0.36, 1] });
+  };
+
+  /**
+   * Pencereyi hedef güne taşır (oklar, "Bugün", "Sıradakine git"). İçerik yeni konumuna anında geçer, x ise aradaki fark
+   * kadar geri alınıp sıfıra kayar; böylece takvim atlamaz, kayarak gelir. x.jump: hız bilgisi bırakmadan konum verir
+   * (x.set kullanılırsa bu anlık fark "hız" sayılıp animasyonu fırlatır).
+   */
+  const goTo = (target: number) => {
+    const w = dayWidth();
+    const max = w * WINDOW;
+    const applied = shiftWindow(target);
+    x.jump(Math.max(-max, Math.min(max, x.get() + applied * w)));
+    settle();
+  };
+
+  const onDragStart = (e: React.PointerEvent) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    x.stop();
+    drag.current = { origin: e.clientX, base: x.get(), moved: false, lastX: e.clientX, lastT: e.timeStamp, velocity: 0 };
+  };
+  const onDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = drag.current;
+    if (!d) return;
+    if (!d.moved) {
+      if (Math.abs(e.clientX - d.origin) < 4) return;
+      d.moved = true;
+      setGrabbing(true);
+      setTip(null);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    // Bırakınca biraz daha kaysın diye son hareketin hızı (px/ms) tutulur.
+    const dt = e.timeStamp - d.lastT;
+    if (dt > 0) d.velocity = d.velocity * 0.6 + ((e.clientX - d.lastX) / dt) * 0.4;
+    d.lastX = e.clientX;
+    d.lastT = e.timeStamp;
+
+    const w = dayWidth();
+    let dx = d.base + (e.clientX - d.origin);
+    // Uzun sürüklemede pencere arada yeniden ortalanır: çizili tampon günler bitmez, istenildiği kadar gezilir.
+    const days = Math.trunc(-dx / w);
+    if (Math.abs(days) >= RECENTER) {
+      const applied = shiftWindow(offsetRef.current + days);
+      d.base += applied * w;
+      dx += applied * w;
+    }
+    // Bugünden öncesi yok: o yöne çekince takvim direnç gösterir ve bırakınca geri döner.
+    const back = offsetRef.current * w;
+    if (dx > back) dx = back + (dx - back) * 0.25;
+    x.jump(dx);
+  };
+  const onDragEnd = (e: React.PointerEvent) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d) return;
+    setGrabbing(false);
+    if (!d.moved) return;
+    const w = dayWidth();
+    // Fare bırakılmadan önce durduysa hız sayılmaz; hızlı bırakıldıysa en çok bir hafta daha kayar.
+    const velocity = e.timeStamp - d.lastT > 80 ? 0 : d.velocity;
+    const glide = Math.max(-7 * w, Math.min(7 * w, velocity * 180));
+    goTo(offsetRef.current + Math.round(-(x.get() + glide) / w));
+  };
+
   /** Takvimi bir iznin başladığı haftaya getirir ve takvime kaydırır. */
   const showInCalendar = (l: LeaveRequest) => {
-    goToWeek(Math.max(0, Math.floor(daysBetween(new Date(), toDate(l.startDate)) / 7)));
+    goTo(Math.max(0, Math.floor(daysBetween(new Date(), toDate(l.startDate)) / 7) * 7));
     document.getElementById('leave-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
@@ -188,16 +283,18 @@ export default function Leaves() {
   const later = activeLeaves.filter(l => l.startDate > windowEnd).sort((a, b) => a.startDate.localeCompare(b.startDate));
   const earlier = activeLeaves.filter(l => l.endDate < windowStart && l.endDate >= today);
 
-  // Takvimde görünecek satırlar: pencereyle kesişen onaylı/bekleyen izinler, kişiye göre gruplanır.
+  // Takvimde görünecek satırlar: görünen pencereyle kesişen izni olan kişiler. Her satırda kişinin, pencerenin
+  // iki yanındaki tampon günlere düşen izinleri de çizilir (kaydırırken içeri süzülsünler).
   const rows = useMemo(() => {
-    const inWindow = (leaves ?? []).filter(l => (l.state === 'ONAYLANDI' || l.state === 'BEKLIYOR') && l.startDate <= windowEnd && l.endDate >= windowStart);
+    const active = (leaves ?? []).filter(l => l.state === 'ONAYLANDI' || l.state === 'BEKLIYOR');
     const byUser = new Map<number, LeaveRequest[]>();
-    inWindow.forEach(l => byUser.set(l.userId, [...(byUser.get(l.userId) ?? []), l]));
+    active.filter(l => l.startDate <= trackEnd && l.endDate >= trackStart).forEach(l => byUser.set(l.userId, [...(byUser.get(l.userId) ?? []), l]));
     return [...byUser.entries()]
-      .map(([userId, list]) => ({ user: userById.get(userId), list }))
+      .filter(([, list]) => list.some(l => l.startDate <= windowEnd && l.endDate >= windowStart))
+      .map(([userId, list]) => ({ user: userById.get(userId), list: [...list].sort((a, b) => a.startDate.localeCompare(b.startDate)) }))
       .filter((r): r is { user: User; list: LeaveRequest[] } => !!r.user)
-      .sort((a, b) => a.list[0].startDate.localeCompare(b.list[0].startDate));
-  }, [leaves, userById, windowStart, windowEnd]);
+      .sort((a, b) => a.list.find(l => l.endDate >= windowStart)!.startDate.localeCompare(b.list.find(l => l.endDate >= windowStart)!.startDate));
+  }, [leaves, userById, windowStart, windowEnd, trackStart, trackEnd]);
 
   return (
     <>
@@ -210,7 +307,7 @@ export default function Leaves() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Bugün izinde" value={onLeaveToday.length} icon={Airplane} hint={onLeaveToday.length ? onLeaveToday.map(l => userById.get(l.userId)?.fullName.split(' ')[0]).join(', ') : 'Herkes görevde'} />
-        <StatCard label="Onay bekleyen" value={pending.length} icon={Hourglass} hint={isAdmin ? 'Aşağıdan karar verin' : 'Yönetici onayında'} />
+        <StatCard label={isAdmin ? 'Onay bekleyen' : 'Bekleyen talebim'} value={isAdmin ? pending.length : pending.filter(l => l.userId === me.id).length} icon={Hourglass} hint={isAdmin ? 'Aşağıdan karar verin' : 'Yönetici onayında'} />
         <StatCard label="Yaklaşan (14 gün)" value={upcoming.length} icon={CalendarCheck} hint="Onaylanmış izinler" />
         <StatCard
           label="Yıllık izin bakiyem"
@@ -242,121 +339,135 @@ export default function Leaves() {
             </AnimatePresence>
           </div>
           <div className="flex items-center gap-1.5">
-            <button type="button" onClick={() => goToWeek(weekOffset - 1)} disabled={weekOffset === 0} className="icon-btn border border-theme-light/70 disabled:opacity-40 disabled:pointer-events-none" aria-label="Önceki hafta">
+            <button type="button" onClick={() => goTo(dayOffset - 7)} disabled={dayOffset === 0} className="icon-btn border border-theme-light/70 disabled:opacity-40 disabled:pointer-events-none" aria-label="Önceki hafta">
               <CaretLeft size={18} weight="bold" />
             </button>
-            <button type="button" onClick={() => goToWeek(0)} disabled={weekOffset === 0} className="btn-secondary h-10 min-h-0 px-3.5 text-sm disabled:opacity-50">
+            <button type="button" onClick={() => goTo(0)} disabled={dayOffset === 0} className="btn-secondary h-10 min-h-0 px-3.5 text-sm disabled:opacity-50">
               Bugün
             </button>
-            <button type="button" onClick={() => goToWeek(weekOffset + 1)} className="icon-btn border border-theme-light/70" aria-label="Sonraki hafta">
+            <button type="button" onClick={() => goTo(dayOffset + 7)} className="icon-btn border border-theme-light/70" aria-label="Sonraki hafta">
               <CaretRight size={18} weight="bold" />
             </button>
           </div>
         </div>
-        <div className="flex items-center justify-end mb-4">
-          <div className="flex items-center gap-4 text-xs font-semibold text-theme-muted flex-wrap justify-end">
-            {(['YILLIK', 'HASTALIK', 'MAZERET'] as const).map(t => (
-              <span key={t} className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${LEAVE_TYPE[t].className}`} />{LEAVE_TYPE[t].label}</span>
-            ))}
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed border-theme-dark" />Onay bekliyor</span>
+        <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+          <p className="hidden md:flex items-center gap-1.5 text-xs font-medium text-theme-muted"><HandGrabbing size={14} weight="bold" aria-hidden="true" /> Takvimi tutup sağa sola sürükleyebilirsiniz</p>
+          <div className="flex items-center gap-4 text-xs font-semibold text-theme-muted flex-wrap justify-end ml-auto">
+            {/* Tür renkleri yalnızca yöneticide: çalışan herkesi tek renk "İzinli" görür, bekleyenlerden de yalnızca kendi talebini. */}
+            {isAdmin
+              ? (['YILLIK', 'HASTALIK', 'MAZERET'] as const).map(t => (
+                <span key={t} className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${LEAVE_TYPE[t].className}`} />{LEAVE_TYPE[t].label}</span>
+              ))
+              : <span className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${LEAVE_GENERIC.className}`} />İzinli</span>}
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed border-theme-dark" />{isAdmin ? 'Onay bekliyor' : 'Talebim onay bekliyor'}</span>
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[#F3E1D6]" />Resmi tatil</span>
           </div>
         </div>
         {isLoading ? <Skeleton className="h-48" /> : (
           <div className="overflow-x-auto scrollbar-thin -mx-2 px-2">
-            <div className="min-w-[760px]">
-              <div className="grid gap-px mb-2" style={{ gridTemplateColumns: `180px repeat(${WINDOW}, 1fr)` }}>
+            {/* Takvim fareyle tutulup sağa sola sürüklenebilir: tüm şeritler aynı x değerini paylaşır, bırakınca en yakın güne oturur. */}
+            <div
+              className={`min-w-[760px] select-none ${grabbing ? 'cursor-grabbing' : 'cursor-grab'}`}
+              onPointerDown={onDragStart}
+              onPointerMove={onDragMove}
+              onPointerUp={onDragEnd}
+              onPointerCancel={onDragEnd}
+            >
+              <div className="grid mb-2" style={{ gridTemplateColumns: '180px 1fr' }}>
                 <span />
-                {days.map((d, i) => {
-                  const weekend = d.getDay() === 0 || d.getDay() === 6;
-                  const isToday = toIsoDay(d) === today;
-                  const holidayName = holidays.names.get(toIsoDay(d));
-                  const showMonth = i === 0 || d.getDate() === 1;
-                  return (
-                    <div key={toIsoDay(d)} className="text-center">
-                      <p className={`text-[10px] font-bold uppercase tracking-wide h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
-                        {showMonth ? monthName.format(d) : '·'}
-                      </p>
-                      <div
-                        title={holidayName ? `Resmi tatil: ${holidayName}` : undefined}
-                        className={`py-1.5 rounded-lg ${isToday ? 'bg-theme-deep text-white' : holidayName ? 'bg-[#F3E1D6] text-[#8A4B2A]' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i > 0 ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
-                      >
-                        <p className="text-[10px] font-bold uppercase">{weekday.format(d)}</p>
-                        <p className="text-sm font-bold tabular">{d.getDate()}</p>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div ref={viewportRef} className="overflow-hidden">
+                  <motion.div className="flex" style={{ x, width: TRACK_WIDTH, marginLeft: TRACK_LEFT }}>
+                    {trackDays.map((d, i) => {
+                      const iso = toIsoDay(d);
+                      const weekend = d.getDay() === 0 || d.getDay() === 6;
+                      const isToday = iso === today;
+                      const past = iso < today;
+                      const holidayName = holidays.names.get(iso);
+                      const showMonth = i === BUFFER || d.getDate() === 1;
+                      return (
+                        <div key={iso} className={`text-center px-px ${past ? 'opacity-40' : ''}`} style={{ flex: `0 0 ${100 / TOTAL}%` }}>
+                          <p className={`text-[10px] font-bold uppercase tracking-wide h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
+                            {showMonth ? monthName.format(d) : '·'}
+                          </p>
+                          <div
+                            title={holidayName ? `Resmi tatil: ${holidayName}` : undefined}
+                            className={`py-1.5 rounded-lg ${isToday ? 'bg-theme-deep text-white' : holidayName ? 'bg-[#F3E1D6] text-[#8A4B2A]' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i !== BUFFER ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
+                          >
+                            <p className="text-[10px] font-bold uppercase">{weekday.format(d)}</p>
+                            <p className="text-sm font-bold tabular">{d.getDate()}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </motion.div>
+                </div>
               </div>
               {rows.length === 0 ? (
                 <p className="text-sm text-theme-muted text-center py-10">Bu aralıkta planlanmış izin yok.</p>
               ) : (
-                <motion.div
-                  key={windowStart}
-                  variants={listContainer}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-1.5"
-                  // Hafta değişince satırlar gidilen yönden kayarak gelir.
-                  style={{ originX: slideDir > 0 ? 1 : 0 }}
-                >
-                  {rows.map(({ user, list }) => (
-                    <motion.div
-                      key={user.id}
-                      variants={{ hidden: { opacity: 0, x: slideDir * 24 }, visible: { ...listItem.visible as object, x: 0 } }}
-                      className="grid gap-px items-center" style={{ gridTemplateColumns: `180px repeat(${WINDOW}, 1fr)` }}>
-                      <div className="flex items-center gap-2.5 pr-3 min-w-0">
-                        <Avatar user={user} size="xs" />
-                        <span className="text-sm font-semibold truncate">{user.fullName}</span>
-                      </div>
-                      <div className="relative h-9 rounded-xl bg-theme-cream" style={{ gridColumn: `2 / span ${WINDOW}` }}>
-                        {days.map((d, i) => {
-                          const holiday = holidays.set.has(toIsoDay(d));
-                          if (!holiday && d.getDay() !== 0 && d.getDay() !== 6) return null;
-                          return (
-                            <span
-                              key={i}
-                              className={`absolute inset-y-0 ${holiday ? 'bg-[#F3E1D6]/70' : 'bg-theme-lightest/80'}`}
-                              style={{ left: `${(i / WINDOW) * 100}%`, width: `${100 / WINDOW}%` }}
-                            />
-                          );
-                        })}
-                        {list.map(l => {
-                          const rawStart = daysBetween(windowStartDate, toDate(l.startDate));
-                          const rawEnd = daysBetween(windowStartDate, toDate(l.endDate));
-                          const startIdx = Math.max(0, rawStart);
-                          const endIdx = Math.min(WINDOW - 1, rawEnd);
-                          // Aralığın dışına taşan uçlar düz kesilir: iznin önceden başladığı / sonra da sürdüğü anlaşılır.
-                          const clipped = `${rawStart < 0 ? 'rounded-l-none' : ''} ${rawEnd > WINDOW - 1 ? 'rounded-r-none' : ''}`;
-                          const pendingBar = l.state === 'BEKLIYOR';
-                          return (
-                            <motion.div
-                              key={l.id}
-                              initial={{ scaleX: 0, opacity: 0 }}
-                              animate={{ scaleX: 1, opacity: 1 }}
-                              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                              tabIndex={0}
-                              aria-label={`${user.fullName}: ${LEAVE_TYPE[l.type].label}, ${rangeLabel(l, holidays.set)}${pendingBar ? ', onay bekliyor' : ''}${l.note ? `. Not: ${l.note}` : ''}`}
-                              aria-describedby={tip?.leave.id === l.id ? 'leave-tooltip' : undefined}
-                              onMouseEnter={e => showTip(e.currentTarget, l, user)}
-                              onMouseLeave={() => setTip(null)}
-                              onFocus={e => showTip(e.currentTarget, l, user)}
-                              onBlur={() => setTip(null)}
-                              whileHover={{ y: -1 }}
-                              className={`absolute top-1.5 bottom-1.5 rounded-lg ${clipped} origin-left flex items-center gap-1 px-2 overflow-hidden cursor-default outline-none focus-visible:ring-2 focus-visible:ring-theme-deep focus-visible:ring-offset-1 ${
-                                pendingBar ? 'border-2 border-dashed border-theme-dark bg-white/70' : LEAVE_TYPE[l.type].className
-                              }`}
-                              style={{ left: `calc(${(startIdx / WINDOW) * 100}% + 2px)`, width: `calc(${((endIdx - startIdx + 1) / WINDOW) * 100}% - 4px)` }}
-                            >
-                              <span className="text-[11px] font-bold text-theme-text truncate">{LEAVE_TYPE[l.type].label}</span>
-                              {l.note && <ChatText size={12} weight="bold" className="shrink-0 text-theme-text/70" aria-hidden="true" />}
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
+                <div className="space-y-1.5">
+                  <AnimatePresence initial={false}>
+                    {rows.map(({ user, list }) => (
+                      <motion.div
+                        key={user.id}
+                        layout
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0, transition: { duration: 0.12 } }}
+                        transition={{ layout: { type: 'spring', stiffness: 380, damping: 36 } }}
+                        className="grid items-center" style={{ gridTemplateColumns: '180px 1fr' }}>
+                        <div className="flex items-center gap-2.5 pr-3 min-w-0">
+                          <Avatar user={user} size="xs" />
+                          <span className="text-sm font-semibold truncate">{user.fullName}</span>
+                        </div>
+                        <div className="relative h-9 rounded-xl bg-theme-cream overflow-hidden">
+                          <motion.div className="absolute inset-y-0" style={{ x, width: TRACK_WIDTH, left: TRACK_LEFT }}>
+                            {trackDays.map((d, i) => {
+                              const holiday = holidays.set.has(toIsoDay(d));
+                              if (!holiday && d.getDay() !== 0 && d.getDay() !== 6) return null;
+                              return (
+                                <span
+                                  key={i}
+                                  className={`absolute inset-y-0 ${holiday ? 'bg-[#F3E1D6]/70' : 'bg-theme-lightest/80'}`}
+                                  style={{ left: `${(i / TOTAL) * 100}%`, width: `${100 / TOTAL}%` }}
+                                />
+                              );
+                            })}
+                            {list.map(l => {
+                              const rawStart = daysBetween(trackStartDate, toDate(l.startDate));
+                              const rawEnd = daysBetween(trackStartDate, toDate(l.endDate));
+                              const startIdx = Math.max(0, rawStart);
+                              const endIdx = Math.min(TOTAL - 1, rawEnd);
+                              const pendingBar = l.state === 'BEKLIYOR';
+                              return (
+                                <motion.div
+                                  key={l.id}
+                                  initial={{ scaleX: 0, opacity: 0 }}
+                                  animate={{ scaleX: 1, opacity: 1 }}
+                                  transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                  tabIndex={0}
+                                  aria-label={`${user.fullName}: ${leaveTypeMeta(l.type).label}, ${rangeLabel(l, holidays.set)}${pendingBar ? ', onay bekliyor' : ''}${l.note ? `. Not: ${l.note}` : ''}`}
+                                  aria-describedby={tip?.leave.id === l.id ? 'leave-tooltip' : undefined}
+                                  onMouseEnter={e => showTip(e.currentTarget, l, user)}
+                                  onMouseLeave={() => setTip(null)}
+                                  onFocus={e => showTip(e.currentTarget, l, user)}
+                                  onBlur={() => setTip(null)}
+                                  className={`absolute top-1.5 bottom-1.5 rounded-lg origin-left flex items-center gap-1 px-2 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-theme-deep focus-visible:ring-offset-1 ${
+                                    pendingBar ? 'border-2 border-dashed border-theme-dark bg-white/70' : (isAdmin ? leaveTypeMeta(l.type) : LEAVE_GENERIC).className
+                                  }`}
+                                  style={{ left: `calc(${(startIdx / TOTAL) * 100}% + 2px)`, width: `calc(${((endIdx - startIdx + 1) / TOTAL) * 100}% - 4px)` }}
+                                >
+                                  <span className="text-[11px] font-bold text-theme-text truncate">{leaveTypeMeta(l.type).label}</span>
+                                  {l.note && <ChatText size={12} weight="bold" className="shrink-0 text-theme-text/70" aria-hidden="true" />}
+                                </motion.div>
+                              );
+                            })}
+                          </motion.div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               )}
             </div>
           </div>
@@ -364,7 +475,7 @@ export default function Leaves() {
         {!isLoading && (later.length > 0 || earlier.length > 0) && (
           <div className="mt-4 pt-4 border-t border-theme-light/40 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
             {earlier.length > 0 && (
-              <button type="button" onClick={() => goToWeek(0)} className="inline-flex items-center gap-1.5 font-semibold text-theme-muted hover:text-theme-deep">
+              <button type="button" onClick={() => goTo(0)} className="inline-flex items-center gap-1.5 font-semibold text-theme-muted hover:text-theme-deep">
                 <CaretLeft size={14} weight="bold" /> Daha önce: {earlier.length} izin
               </button>
             )}
@@ -396,7 +507,7 @@ export default function Leaves() {
                 <AnimatePresence initial={false}>
                   {pending.map(l => {
                     const u = userById.get(l.userId);
-                    const Meta = LEAVE_TYPE[l.type];
+                    const Meta = leaveTypeMeta(l.type);
                     return (
                       <motion.li key={l.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40, transition: { duration: 0.18 } }} className="card p-4 flex items-center gap-4">
                         {u && <Avatar user={u} size="sm" />}
@@ -434,7 +545,7 @@ export default function Leaves() {
                 <AnimatePresence initial={false}>
                   {openDecisions.map(l => {
                     const u = userById.get(l.userId);
-                    const Meta = LEAVE_TYPE[l.type];
+                    const Meta = leaveTypeMeta(l.type);
                     const state = LEAVE_STATE[l.state];
                     return (
                       <motion.li key={l.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40, transition: { duration: 0.18 } }} className="card p-4">
@@ -475,7 +586,7 @@ export default function Leaves() {
             <ul className="space-y-3">
               <AnimatePresence initial={false}>
                 {mine.map(l => {
-                  const Meta = LEAVE_TYPE[l.type];
+                  const Meta = leaveTypeMeta(l.type);
                   const state = LEAVE_STATE[l.state];
                   return (
                     <motion.li key={l.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.15 } }} className="card p-4 flex items-center gap-4">
@@ -517,7 +628,7 @@ export default function Leaves() {
         {deciding && (
           <>
             <p className="text-sm font-bold text-theme-text">{userById.get(deciding.leave.userId)?.fullName}</p>
-            <p className="text-sm text-theme-muted font-medium mt-0.5">{LEAVE_TYPE[deciding.leave.type].label} · {rangeLabel(deciding.leave, holidays.set)}</p>
+            <p className="text-sm text-theme-muted font-medium mt-0.5">{leaveTypeMeta(deciding.leave.type).label} · {rangeLabel(deciding.leave, holidays.set)}</p>
             {deciding.leave.note && <p className="text-sm text-theme-text mt-2 italic">“{deciding.leave.note}”</p>}
           </>
         )}
@@ -544,7 +655,7 @@ export default function Leaves() {
         {confirming && (
           <div className="space-y-4">
             <p className="text-sm text-theme-text leading-relaxed">
-              <strong>{userById.get(confirming.userId)?.fullName}</strong> için <strong>{LEAVE_TYPE[confirming.type].label}</strong> talebi
+              <strong>{userById.get(confirming.userId)?.fullName}</strong> için <strong>{leaveTypeMeta(confirming.type).label}</strong> talebi
               ({rangeLabel(confirming, holidays.set)}) <strong>{confirming.state === 'ONAYLANDI' ? 'onaylandı' : 'reddedildi'}</strong> olarak kesinleşecek.
             </p>
             <p className="text-sm font-semibold text-[#7A3E1F] bg-[#FBEDE5] rounded-2xl p-3.5 flex gap-2">
