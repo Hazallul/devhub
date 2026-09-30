@@ -1,5 +1,9 @@
 package com.enerjistaj.devhub.controller;
 
+import com.enerjistaj.devhub.entity.UserLink;
+import com.enerjistaj.devhub.entity.UserLinkType;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.ArrayList;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.dto.UserDto;
 import com.enerjistaj.devhub.entity.NotificationType;
@@ -105,20 +109,87 @@ public class UserController {
         return ResponseEntity.ok(UserDto.from(userStatusService.change(user, newStatus, me)));
     }
 
+    /**
+     * Avatar rengini herkes kendisi değiştirir. Ad soyad ve unvanı yalnızca yönetici doğrudan değiştirebilir;
+     * çalışanlar bunun için ProfileRequestController üzerinden onay talebi açar.
+     */
     @PutMapping("/{id}/profile")
     public ResponseEntity<UserDto> updateProfile(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
-        currentUser.requireSelfOrAdmin(id, "Yalnızca kendi profilinizi düzenleyebilirsiniz.");
+        User me = currentUser.requireSelfOrAdmin(id, "Yalnızca kendi profilinizi düzenleyebilirsiniz.");
         User user = findUser(id);
 
-        String fullName = Payloads.requiredText(payload, "fullName", "Ad soyad zorunludur.", 255, "Ad soyad");
-        if (fullName.length() < 3) throw ApiException.badRequest("Ad soyad en az 3 karakter olmalı.");
         String avatarColor = Payloads.text(payload, "avatarColor");
         if (avatarColor != null && !avatarColor.matches("^#[0-9A-Fa-f]{6}$")) throw ApiException.badRequest("Avatar rengi #RRGGBB biçiminde olmalı.");
-
-        user.setFullName(fullName);
-        user.setJobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"));
         if (avatarColor != null) user.setAvatarColor(avatarColor);
+
+        if (payload.containsKey("fullName") || payload.containsKey("jobTitle")) {
+            String fullName = payload.containsKey("fullName")
+                ? Payloads.requiredText(payload, "fullName", "Ad soyad zorunludur.", 255, "Ad soyad") : user.getFullName();
+            if (fullName.length() < 3) throw ApiException.badRequest("Ad soyad en az 3 karakter olmalı.");
+            String jobTitle = payload.containsKey("jobTitle") ? Payloads.optionalText(payload, "jobTitle", 100, "Unvan") : user.getJobTitle();
+            boolean changed = !fullName.equals(user.getFullName()) || !java.util.Objects.equals(jobTitle, user.getJobTitle());
+            if (changed && !CurrentUser.isAdmin(me)) {
+                throw ApiException.forbidden("Ad soyad ve unvan değişikliği yönetici onayı gerektirir; lütfen değişiklik talebi gönderin.");
+            }
+            user.setFullName(fullName);
+            user.setJobTitle(jobTitle);
+        }
         return ResponseEntity.ok(UserDto.from(userRepository.save(user)));
+    }
+
+    /**
+     * Kişinin kendi iletişim bilgileri ve bağlantıları (onay gerekmez). Gövde: { links: [{ type, label?, value }] };
+     * liste olduğu gibi yenisiyle değiştirilir.
+     */
+    @PutMapping("/me/links")
+    @Transactional
+    public ResponseEntity<UserDto> updateLinks(@RequestBody Map<String, Object> payload) {
+        User user = currentUser.get();
+        if (!(payload.get("links") instanceof List<?> raw)) throw ApiException.badRequest("Bağlantı listesi gerekli.");
+        if (raw.size() > 12) throw ApiException.badRequest("En fazla 12 bağlantı eklenebilir.");
+
+        List<UserLink> next = new ArrayList<>();
+        for (Object o : raw) {
+            if (!(o instanceof Map<?, ?> m)) throw ApiException.badRequest("Geçersiz bağlantı.");
+            @SuppressWarnings("unchecked") Map<String, Object> item = (Map<String, Object>) m;
+            UserLinkType type = Payloads.enumValue(item, "type", UserLinkType.class, "bağlantı türü");
+            if (type == null) throw ApiException.badRequest("Bağlantı türü seçin.");
+            UserLink link = new UserLink();
+            link.setUser(user);
+            link.setType(type);
+            link.setLabel(Payloads.optionalText(item, "label", 40, "Etiket"));
+            link.setValue(normalizeLink(type, Payloads.requiredText(item, "value", "Bağlantı boş olamaz.", 300, "Bağlantı")));
+            link.setPosition(next.size());
+            next.add(link);
+        }
+        user.getLinks().clear();
+        userRepository.saveAndFlush(user); // eski satırlar önce silinsin
+        user.getLinks().addAll(next);
+        return ResponseEntity.ok(UserDto.from(userRepository.save(user)));
+    }
+
+    /** E-posta ve telefon biçim kontrolü; web adresleri yalnızca http(s) olabilir (şema yoksa https eklenir). */
+    private static String normalizeLink(UserLinkType type, String value) {
+        switch (type) {
+            case EMAIL -> {
+                if (!value.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) throw ApiException.badRequest("Geçerli bir e-posta adresi girin: " + value);
+                return value.toLowerCase(java.util.Locale.ROOT);
+            }
+            case PHONE -> {
+                if (!value.matches("^\\+?[0-9 ()-]{5,25}$")) throw ApiException.badRequest("Geçerli bir telefon numarası girin: " + value);
+                return value;
+            }
+            default -> {
+                String url = value.matches("(?i)^https?://.*") ? value : "https://" + value;
+                try {
+                    java.net.URI uri = new java.net.URI(url);
+                    if (uri.getHost() == null || !uri.getHost().contains(".")) throw new IllegalArgumentException();
+                } catch (Exception e) {
+                    throw ApiException.badRequest("Geçerli bir web adresi girin: " + value);
+                }
+                return url;
+            }
+        }
     }
 
     private User findUser(Long id) {

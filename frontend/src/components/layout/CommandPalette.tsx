@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
-import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText } from '@phosphor-icons/react';
+import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText, ListChecks } from '@phosphor-icons/react';
 import { DOCS, DOC_CATEGORIES } from '../../docs';
 import { useUsers, useProjects, useMe } from '../../hooks/api';
 import { trLower } from '../../lib/format';
@@ -46,6 +46,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     const go = (fn: () => void) => () => { onClose(); fn(); };
     const all: Item[] = [
       ...[...navFor(me), ...systemNavFor(me)].map(n => ({ id: `nav-${n.to}`, group: 'Sayfalar' as const, label: n.label, icon: n.icon, run: go(() => navigate(n.to)) })),
+      { id: 'nav-/todo', group: 'Sayfalar', label: 'Yapılacaklarım', hint: 'Kişisel alan', icon: ListChecks, run: go(() => navigate('/todo')) },
       { id: 'act-task', group: 'İşlemler', label: 'Yeni görev ekle', icon: Plus, run: go(() => actions.newTask()) },
       { id: 'act-leave', group: 'İşlemler', label: 'İzin talebi oluştur', icon: Airplane, run: go(() => actions.newLeave()) },
       { id: 'act-logs', group: 'İşlemler', label: 'Sistem loglarını aç', icon: ListDashes, run: go(() => actions.openLogs()) },

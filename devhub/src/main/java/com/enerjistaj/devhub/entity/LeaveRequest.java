@@ -41,6 +41,10 @@ public class LeaveRequest {
     @Column(name = "decided_at")
     private LocalDateTime decidedAt;
 
+    /** Yöneticinin karara eklediği açıklama (ör. ret nedeni); çalışana gösterilir. */
+    @Column(name = "decision_note", length = 500)
+    private String decisionNote;
+
     /** Kesinleşen karar (onay/ret) geri alınamaz. */
     @Column(nullable = false)
     private boolean finalized;

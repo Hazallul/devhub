@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
 import {
-  Bell, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText,
+  Bell, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree,
 } from '@phosphor-icons/react';
 import { Menu } from '../ui/Menu';
 import { Skeleton } from '../ui/primitives';
@@ -16,6 +16,11 @@ const TYPE_ICON: Record<NotificationType, Icon> = {
   TASK_DUE: Clock,
   TASK_COMPLETED: CheckCircle,
   TASK_COMMENT: ChatCircleText,
+  TODO_RECEIVED: ListChecks,
+  TODO_REMINDER: Alarm,
+  TODO_LIST_ADDED: UsersThree,
+  PROFILE_REQUESTED: IdentificationCard,
+  PROFILE_DECIDED: IdentificationCard,
   LEAVE_REQUESTED: CalendarBlank,
   LEAVE_DECIDED: CalendarCheck,
   LEAVE_REOPENED: ArrowCounterClockwise,

@@ -2,13 +2,19 @@
 -- DevHub sunum verisi
 -- Tüm tarihler çalıştırıldığı güne göre hesaplanır; sunumdan önce tekrar çalıştırılabilir:
 --   docker exec -i devhub-mysql mysql -uroot -proot --default-character-set=utf8mb4 devhub < devhub/scripts/demo-data.sql
--- Kullanıcı hesapları ve şifreleri korunur; proje, görev, izin, duyuru, bildirim ve log tabloları baştan yazılır.
+-- Kullanıcı hesapları ve şifreleri korunur; proje, görev, izin, duyuru, bildirim, log ve kişisel yapılacak tabloları baştan yazılır.
 -- =====================================================================
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 DELETE FROM notifications;
 DELETE FROM task_activity;
+DELETE FROM profile_change_requests;
+DELETE FROM user_links;
+DELETE FROM todo_list_members;
+DELETE FROM todo_steps;
+DELETE FROM todo_items;
+DELETE FROM todo_lists;
 DELETE FROM action_logs;
 DELETE FROM announcements;
 DELETE FROM leave_requests;
@@ -16,6 +22,10 @@ DELETE FROM tasks;
 DELETE FROM projects;
 ALTER TABLE notifications AUTO_INCREMENT = 1;
 ALTER TABLE task_activity AUTO_INCREMENT = 1;
+ALTER TABLE todo_list_members AUTO_INCREMENT = 1;
+ALTER TABLE todo_steps AUTO_INCREMENT = 1;
+ALTER TABLE todo_items AUTO_INCREMENT = 1;
+ALTER TABLE todo_lists AUTO_INCREMENT = 1;
 ALTER TABLE action_logs AUTO_INCREMENT = 1;
 ALTER TABLE announcements AUTO_INCREMENT = 1;
 ALTER TABLE leave_requests AUTO_INCREMENT = 1;
@@ -211,20 +221,27 @@ FROM u WHERE u.k = 'merve.can' AND @h IS NOT NULL;
 -- ---------------------------------------------------------------------
 -- Hafta sonu düzeltmesi (tarihler çalıştırılan güne göre kaydığı için sonradan normalize edilir)
 --  * Son tarih / teslim: Cumartesi → Cuma, Pazar → Pazartesi
---  * İzin başlangıcı hafta sonundaysa Pazartesi'ye, bitişi hafta sonundaysa Cuma'ya çekilir
+--  * İzin başlangıcı hafta sonundaysa Pazartesi'ye, bitişi hafta sonundaysa Cuma'ya çekilir (başlangıçtan önceye düşmez)
 -- ---------------------------------------------------------------------
 UPDATE tasks    SET due_date = due_date - INTERVAL 1 DAY WHERE DAYOFWEEK(due_date) = 7;
 UPDATE tasks    SET due_date = due_date + INTERVAL 1 DAY WHERE DAYOFWEEK(due_date) = 1;
 UPDATE projects SET deadline = deadline - INTERVAL 1 DAY WHERE DAYOFWEEK(deadline) = 7;
 UPDATE projects SET deadline = deadline + INTERVAL 1 DAY WHERE DAYOFWEEK(deadline) = 1;
-UPDATE leave_requests SET start_date = start_date + INTERVAL 2 DAY WHERE DAYOFWEEK(start_date) = 7;
-UPDATE leave_requests SET start_date = start_date + INTERVAL 1 DAY WHERE DAYOFWEEK(start_date) = 1;
-UPDATE leave_requests SET end_date = end_date - INTERVAL 1 DAY WHERE DAYOFWEEK(end_date) = 7;
-UPDATE leave_requests SET end_date = end_date - INTERVAL 2 DAY WHERE DAYOFWEEK(end_date) = 1;
+-- Başlangıç ve bitiş tek UPDATE'te düzeltilir: MySQL atamaları soldan sağa uygular, bu yüzden GREATEST içindeki
+-- start_date yeni değerdir. Yalnızca hafta sonuna denk gelen bir izin böylece tek güne (Pazartesi) iner;
+-- bitiş hiçbir zaman başlangıcın önüne düşmez (eskiden "5 Eki – 2 Eki" gibi ters aralıklar oluşabiliyordu).
+UPDATE leave_requests SET
+  start_date = start_date + INTERVAL (CASE DAYOFWEEK(start_date) WHEN 7 THEN 2 WHEN 1 THEN 1 ELSE 0 END) DAY,
+  end_date = GREATEST(start_date, end_date - INTERVAL (CASE DAYOFWEEK(end_date) WHEN 7 THEN 1 WHEN 1 THEN 2 ELSE 0 END) DAY);
 -- Proje teslim tarihi hafta sonundan kaydıysa, o projenin açık görevleri teslimi aşmasın.
 UPDATE tasks t JOIN users us ON us.id = t.user_id JOIN projects p ON p.name = us.current_project
 SET t.due_date = p.deadline
 WHERE t.status <> 'TAMAMLANDI' AND t.due_date > p.deadline;
+-- Açık görevin son tarihi sahibinin izin günlerine denk gelmesin: iznin bitişinden sonraki ilk iş gününe alınır.
+UPDATE tasks t
+JOIN leave_requests lr ON lr.user_id = t.user_id AND lr.state IN ('ONAYLANDI', 'BEKLIYOR') AND t.due_date BETWEEN lr.start_date AND lr.end_date
+SET t.due_date = lr.end_date + INTERVAL (CASE DAYOFWEEK(lr.end_date) WHEN 6 THEN 3 WHEN 7 THEN 2 ELSE 1 END) DAY
+WHERE t.status <> 'TAMAMLANDI';
 
 -- ---------------------------------------------------------------------
 -- Görev ayrıntıları: atayan kişi, açıklamalar, geçmiş ve yorumlar
@@ -449,7 +466,146 @@ JOIN users au ON au.id = a.actor_id
 JOIN (SELECT id AS task_id, user_id FROM tasks UNION SELECT id, created_by_id FROM tasks WHERE created_by_id IS NOT NULL) r ON r.task_id = tk.id
 WHERE a.kind = 'COMMENT' AND r.user_id <> a.actor_id;
 
-DROP TEMPORARY TABLE IF EXISTS u, t, l, g, h, c;
+-- ---------------------------------------------------------------------
+-- Kişisel alan: yapılacaklar (her kayıt yalnızca sahibine görünür)
+-- k: sahibi, list: liste adı (NULL = Genel), due: bugünden gün farkı, pos: sıra (küçük üstte),
+-- sender: kart başka birinden geldiyse gönderen; seen = 0 ise alıcı henüz açmamıştır.
+-- ---------------------------------------------------------------------
+INSERT INTO todo_lists (user_id, name, color, position)
+SELECT us.id, x.name, x.color, x.pos
+FROM (
+  SELECT 'admin' AS k, 'Yönetim' AS name, '#9CAB84' AS color, 0 AS pos
+  UNION ALL SELECT 'admin', 'Kişisel', '#D9A88A', 1
+  UNION ALL SELECT 'ali.yilmaz', 'Sprint 15', '#C5D89D', 0
+) x JOIN users us ON us.email = CONCAT(x.k, '@devhub.local');
+
+-- Her listenin oluşturanı o listenin yöneticisidir. "Sprint 15" ortak bir listedir: Ali yönetir,
+-- Ayşe de yönetici yapılmıştır, Burak ve Seda üyedir (üyeler listedeki tüm kartları görür).
+INSERT INTO todo_list_members (list_id, user_id, role, joined_at)
+SELECT id, user_id, 'ADMIN', NOW() - INTERVAL 6 DAY FROM todo_lists;
+INSERT INTO todo_list_members (list_id, user_id, role, joined_at)
+SELECT tl.id, us.id, x.role, NOW() - INTERVAL x.ago DAY
+FROM (
+  SELECT 'ayse.kaya' AS k, 'ADMIN' AS role, 5 AS ago
+  UNION ALL SELECT 'burak.polat', 'MEMBER', 4
+  UNION ALL SELECT 'seda.yildiz', 'MEMBER', 2
+) x JOIN users us ON us.email = CONCAT(x.k, '@devhub.local')
+JOIN todo_lists tl ON tl.name = 'Sprint 15';
+
+DROP TEMPORARY TABLE IF EXISTS td;
+CREATE TEMPORARY TABLE td (k VARCHAR(20), list VARCHAR(80) NULL, title VARCHAR(300), note VARCHAR(4000) NULL, done BOOLEAN, important BOOLEAN,
+                           myday BOOLEAN, due INT NULL, pos INT, sender VARCHAR(20) NULL, msg VARCHAR(500) NULL, seen BOOLEAN);
+INSERT INTO td VALUES
+('admin', NULL,      'Haftalık durum raporunu gönder',          NULL, FALSE, FALSE, TRUE,  0,    0, NULL, NULL, TRUE),
+('admin', NULL,      'Yeni stajyer için hesap aç',              'Kullanıcılar sayfasından eklenecek; geçici şifre ilk gün elden verilecek.', FALSE, FALSE, FALSE, 2, 1, NULL, NULL, TRUE),
+('admin', NULL,      'Müşteri ziyareti gündemini onayla',       'Gündem taslağı ortak klasörde. Katılımcı listesi de eklenecek.', FALSE, FALSE, FALSE, 3, 2, 'burak.polat', 'Perşembeye kadar dönüş yapabilir misin?', FALSE),
+('admin', NULL,      'Ofis malzemesi siparişini onayla',        NULL, TRUE,  FALSE, FALSE, NULL, 3, NULL, NULL, TRUE),
+('admin', 'Yönetim', 'Sprint demosu için sunumu hazırla',       'Cuma 14:00 demo. Proje ilerlemesi ve Sistem İzleme gösterilecek.', FALSE, TRUE, TRUE, 1, 0, NULL, NULL, TRUE),
+('admin', 'Yönetim', 'Q4 bütçe taslağını hazırla',              NULL, FALSE, TRUE,  FALSE, 5,    1, NULL, NULL, TRUE),
+('admin', 'Yönetim', 'Performans görüşmelerini planla',         'Her görüşme 45 dakika; takvim daveti gönderilecek.', FALSE, FALSE, FALSE, 8, 2, NULL, NULL, TRUE),
+('admin', 'Yönetim', 'İzin takvimini ekip liderleriyle paylaş', NULL, TRUE,  FALSE, FALSE, NULL, 3, NULL, NULL, TRUE),
+('admin', 'Kişisel', 'Diş randevusunu ayarla',                  NULL, FALSE, FALSE, FALSE, NULL, 0, NULL, NULL, TRUE),
+('admin', 'Kişisel', 'Clean Architecture: 5. bölümü oku',       NULL, FALSE, FALSE, FALSE, NULL, 1, NULL, NULL, TRUE),
+('ali.yilmaz', 'Sprint 15', 'Backlog maddelerini puanla',       NULL, FALSE, TRUE,  TRUE,  1,    0, NULL, NULL, TRUE),
+('ali.yilmaz', 'Sprint 15', 'Bekleyen PR incelemelerine bak',   NULL, FALSE, FALSE, TRUE,  0,    1, NULL, NULL, TRUE),
+('ayse.kaya',  'Sprint 15', 'Auth servisinin yük testini çalıştır', 'Sonuçları sprint demosundan önce kanala yazalım.', FALSE, FALSE, FALSE, 2, 2, NULL, NULL, TRUE),
+('burak.polat', 'Sprint 15', 'Release notlarını derle',        NULL, FALSE, FALSE, FALSE, 3, 3, NULL, NULL, TRUE),
+('seda.yildiz', 'Sprint 15', 'Giriş ekranı erişilebilirlik kontrolü', NULL, TRUE, FALSE, FALSE, NULL, 4, NULL, NULL, TRUE),
+('ali.yilmaz', NULL,        'Demo ortamını kontrol et',         'Demo öncesi staging verisi yenilenmeli.', FALSE, FALSE, FALSE, 1, 0, 'admin', 'Demo öncesi bir göz atar mısın?', FALSE),
+('ali.yilmaz', NULL,        'Oryantasyon dokümanına Git akışını ekle', NULL, FALSE, FALSE, FALSE, 6, 1, NULL, NULL, TRUE),
+('ayse.kaya',  NULL,        'Refresh token testlerini yaz',     NULL, FALSE, TRUE,  TRUE,  0,    0, NULL, NULL, TRUE),
+('ayse.kaya',  NULL,        'Rate limit dokümanını güncelle',   NULL, FALSE, FALSE, FALSE, 4,    1, NULL, NULL, TRUE);
+
+INSERT INTO todo_items (user_id, list_id, title, note, done, done_at, important, my_day, due_date, position, sent_by_id, sent_message, seen, created_at, updated_at)
+SELECT us.id, tl.id, td.title, td.note, td.done, IF(td.done, NOW() - INTERVAL 20 HOUR, NULL), td.important,
+       NULL, IF(td.due IS NULL, IF(td.myday AND NOT td.done, CURDATE(), NULL), CURDATE() + INTERVAL td.due DAY), td.pos,
+       sn.id, td.msg, td.seen, NOW() - INTERVAL (3 + td.pos * 5) HOUR, NOW() - INTERVAL 2 HOUR
+FROM td
+JOIN users us ON us.email = CONCAT(td.k, '@devhub.local')
+LEFT JOIN todo_lists tl ON tl.name = td.list AND tl.id IN (SELECT list_id FROM todo_list_members WHERE user_id = us.id)
+LEFT JOIN users sn ON sn.email = CONCAT(td.sender, '@devhub.local');
+
+-- Tarihler hafta sonuna denk gelmesin (görevlerdeki kuralın aynısı)
+UPDATE todo_items SET due_date = due_date + INTERVAL 2 DAY WHERE DAYOFWEEK(due_date) = 7;
+UPDATE todo_items SET due_date = due_date + INTERVAL 1 DAY WHERE DAYOFWEEK(due_date) = 1;
+
+INSERT INTO todo_steps (item_id, title, done, position)
+SELECT ti.id, x.step, x.done, x.pos
+FROM (
+  SELECT 'Sprint demosu için sunumu hazırla' AS title, 'Slaytları güncelle' AS step, TRUE AS done, 0 AS pos
+  UNION ALL SELECT 'Sprint demosu için sunumu hazırla', 'Demo verisini yenile', FALSE, 1
+  UNION ALL SELECT 'Sprint demosu için sunumu hazırla', 'Prova yap', FALSE, 2
+  UNION ALL SELECT 'Q4 bütçe taslağını hazırla', 'Geçen çeyreğin harcamalarını çıkar', TRUE, 0
+  UNION ALL SELECT 'Q4 bütçe taslağını hazırla', 'Ekiplerin taleplerini topla', TRUE, 1
+  UNION ALL SELECT 'Q4 bütçe taslağını hazırla', 'Taslağı finansla paylaş', FALSE, 2
+  UNION ALL SELECT 'Demo ortamını kontrol et', 'Staging verisini yenile', FALSE, 0
+  UNION ALL SELECT 'Demo ortamını kontrol et', 'Giriş ve izin akışını dene', FALSE, 1
+) x JOIN todo_items ti ON ti.title = x.title;
+
+-- Saatli ve tekrarlayan kartlar (haftalık plan, hatırlatma)
+UPDATE todo_items SET due_time = '16:30', repeat_rule = 'WEEKLY' WHERE title = 'Haftalık durum raporunu gönder';
+UPDATE todo_items SET due_time = '14:00' WHERE title = 'Sprint demosu için sunumu hazırla';
+UPDATE todo_items SET due_time = '10:00', repeat_rule = 'WEEKDAYS' WHERE title = 'Bekleyen PR incelemelerine bak';
+UPDATE todo_items SET due_time = '11:00' WHERE title = 'Refresh token testlerini yaz';
+
+-- Bir DevHub görevinden plana alınmış kart: Ali'nin son tarihi en yakın açık görevi
+INSERT INTO todo_items (user_id, list_id, title, important, my_day, due_date, position, task_id, created_at, updated_at)
+SELECT tk.user_id, NULL, tk.content, FALSE, NULL, tk.due_date, 2, tk.id, NOW() - INTERVAL 1 HOUR, NOW() - INTERVAL 1 HOUR
+FROM tasks tk JOIN users us ON us.id = tk.user_id
+WHERE us.email = 'ali.yilmaz@devhub.local' AND tk.status <> 'TAMAMLANDI' AND tk.due_date >= CURDATE()
+ORDER BY tk.due_date, tk.id LIMIT 1;
+
+-- Saati geçmiş kartlar için hatırlatma yeniden gönderilmesin (saatler İstanbul saatiyle; sunucu UTC)
+UPDATE todo_items SET reminded = (due_time IS NOT NULL AND TIMESTAMP(due_date, due_time) <= NOW() + INTERVAL 3 HOUR);
+
+-- Henüz açılmamış gelen kartların bildirimi
+INSERT INTO notifications (user_id, actor_id, type, title, body, link, created_at)
+SELECT ti.user_id, ti.sent_by_id, 'TODO_RECEIVED', CONCAT(sn.full_name, ' size bir yapılacak gönderdi'),
+       CONCAT(ti.title, IF(ti.sent_message IS NULL, '', CONCAT(' — ', ti.sent_message))), CONCAT('/todo?item=', ti.id), ti.created_at
+FROM todo_items ti JOIN users sn ON sn.id = ti.sent_by_id WHERE ti.seen = b'0';
+
+-- ---------------------------------------------------------------------
+-- İzin kararlarına açıklama (reddedilenlerin hepsinde, onaylananların birkaçında)
+-- ---------------------------------------------------------------------
+UPDATE leave_requests SET decision_note = 'Bu tarihlerde sprint demosu var; ekipte en az iki backend geliştirici bulunmalı. Bir hafta sonrası için yeniden talep açabilirsiniz.'
+WHERE state = 'REDDEDILDI';
+UPDATE leave_requests SET decision_note = 'İyi tatiller! Devir notlarını ekip kanalına bırakmayı unutmayın.'
+WHERE state = 'ONAYLANDI' AND type = 'YILLIK' AND start_date > CURDATE();
+
+-- ---------------------------------------------------------------------
+-- Profil bağlantıları (kişi kendisi ekler; onay gerekmez)
+-- ---------------------------------------------------------------------
+INSERT INTO user_links (user_id, type, label, value, position)
+SELECT us.id, x.type, x.label, x.value, x.pos
+FROM (
+  SELECT 'admin' AS k, 'EMAIL' AS type, 'Destek' AS label, 'destek@devhub.local' AS value, 0 AS pos
+  UNION ALL SELECT 'admin', 'PHONE', 'Dahili', '+90 212 555 01 00', 1
+  UNION ALL SELECT 'ali.yilmaz', 'LINKEDIN', NULL, 'https://www.linkedin.com/in/ali-yilmaz-ornek', 0
+  UNION ALL SELECT 'ali.yilmaz', 'GITHUB', NULL, 'https://github.com/aliyilmaz-ornek', 1
+  UNION ALL SELECT 'ali.yilmaz', 'EMAIL', 'Kişisel', 'ali.yilmaz@example.com', 2
+  UNION ALL SELECT 'ayse.kaya', 'GITHUB', NULL, 'https://github.com/aysekaya-ornek', 0
+  UNION ALL SELECT 'ayse.kaya', 'WEBSITE', 'Blog', 'https://aysekaya.example.com', 1
+  UNION ALL SELECT 'elif.arslan', 'WEBSITE', 'Portfolyo', 'https://elifarslan.example.com', 0
+  UNION ALL SELECT 'elif.arslan', 'LINKEDIN', NULL, 'https://www.linkedin.com/in/elif-arslan-ornek', 1
+) x JOIN users us ON us.email = CONCAT(x.k, '@devhub.local');
+
+-- ---------------------------------------------------------------------
+-- Ad / unvan değişikliği talepleri: biri bekliyor, biri açıklamayla reddedilmiş
+-- ---------------------------------------------------------------------
+INSERT INTO profile_change_requests (user_id, full_name, job_title, previous_full_name, previous_job_title, state, decision_note, decided_by, decided_at, created_at)
+SELECT us.id, us.full_name, 'Senior Backend Developer', us.full_name, us.job_title, 'BEKLIYOR', NULL, NULL, NULL, NOW() - INTERVAL 5 HOUR
+FROM users us WHERE us.email = 'ayse.kaya@devhub.local';
+INSERT INTO profile_change_requests (user_id, full_name, job_title, previous_full_name, previous_job_title, state, decision_note, decided_by, decided_at, created_at)
+SELECT us.id, us.full_name, 'Head of Product', us.full_name, us.job_title, 'REDDEDILDI',
+       'Unvan değişiklikleri yıl sonu değerlendirmesinden sonra yapılıyor; o zaman tekrar konuşalım.', @admin, NOW() - INTERVAL 2 DAY, NOW() - INTERVAL 3 DAY
+FROM users us WHERE us.email = 'burak.polat@devhub.local';
+
+INSERT INTO notifications (user_id, actor_id, type, title, body, link, created_at)
+SELECT @admin, r.user_id, 'PROFILE_REQUESTED', CONCAT(us.full_name, ' profil değişikliği istedi'),
+       CONCAT('Unvan: ', COALESCE(r.previous_job_title, '—'), ' → ', COALESCE(r.job_title, '—')), '/users', r.created_at
+FROM profile_change_requests r JOIN users us ON us.id = r.user_id WHERE r.state = 'BEKLIYOR';
+
+DROP TEMPORARY TABLE IF EXISTS u, t, l, g, h, c, td;
 
 -- ---------------------------------------------------------------------
 -- Tutarlılık kontrolü: her satır bir kural ihlalidir; boş sonuç beklenir.
@@ -507,6 +663,25 @@ FROM tasks tk JOIN users us ON us.id = tk.created_by_id WHERE tk.created_by_id <
 UNION ALL
 SELECT 'Geçmiş kaydı görevden önce / gelecekte', CAST(a.task_id AS CHAR), a.message
 FROM task_activity a JOIN tasks tk ON tk.id = a.task_id WHERE a.created_at < tk.created_at OR a.created_at > NOW()
+UNION ALL
+SELECT 'Kart, sahibinin üyesi olmadığı bir listede', us.full_name, ti.title
+FROM todo_items ti JOIN users us ON us.id = ti.user_id
+WHERE ti.list_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM todo_list_members m WHERE m.list_id = ti.list_id AND m.user_id = ti.user_id)
+UNION ALL
+SELECT 'Yöneticisi olmayan liste', tl.name, ''
+FROM todo_lists tl WHERE NOT EXISTS (SELECT 1 FROM todo_list_members m WHERE m.list_id = tl.id AND m.role = 'ADMIN')
+UNION ALL
+SELECT 'Kişisel kart başkasının görevine bağlı', us.full_name, ti.title
+FROM todo_items ti JOIN tasks tk ON tk.id = ti.task_id JOIN users us ON us.id = ti.user_id WHERE tk.user_id <> ti.user_id
+UNION ALL
+SELECT 'Tarihsiz kartta saat veya tekrar', us.full_name, ti.title
+FROM todo_items ti JOIN users us ON us.id = ti.user_id WHERE ti.due_date IS NULL AND (ti.due_time IS NOT NULL OR ti.repeat_rule IS NOT NULL)
+UNION ALL
+SELECT 'Kişisel kartta hafta sonu tarihi', us.full_name, ti.title
+FROM todo_items ti JOIN users us ON us.id = ti.user_id WHERE DAYOFWEEK(ti.due_date) IN (1, 7)
+UNION ALL
+SELECT 'İzin bitişi başlangıçtan önce', us.full_name, CONCAT(lr.start_date, ' – ', lr.end_date)
+FROM leave_requests lr JOIN users us ON us.id = lr.user_id WHERE lr.end_date < lr.start_date
 UNION ALL
 SELECT 'Kişinin projesi yok listesinde', us.full_name, us.current_project
 FROM users us WHERE us.current_project IS NOT NULL AND NOT EXISTS (SELECT 1 FROM projects p WHERE p.name = us.current_project);

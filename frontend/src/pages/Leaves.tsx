@@ -5,6 +5,8 @@ import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwi
 import { PageHeader, StatCard, Skeleton, Avatar, Pill, EmptyState } from '../components/ui/primitives';
 import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useUndoLeaveDecision, useFinalizeLeaveDecision, useHolidayMap, useLeaveBalances } from '../hooks/api';
 import Modal from '../components/ui/Modal';
+import DecisionModal from '../components/ui/DecisionModal';
+import type { Decision } from '../components/ui/DecisionModal';
 import { useQuickActions } from '../components/layout/QuickActions';
 import { LEAVE_TYPE, LEAVE_STATE } from '../lib/meta';
 import { addDays, daysBetween, formatDate, toDate, toIsoDay, leaveDaysLabel } from '../lib/format';
@@ -99,6 +101,12 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
                   <span>“{tip.leave.note}”</span>
                 </p>
               )}
+              {tip.leave.decisionNote && (
+                <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 leading-relaxed">
+                  <span className="block text-[10px] font-bold uppercase tracking-wide text-white/60 mb-0.5">{tip.leave.decidedByName ?? 'Yönetici'} açıklaması</span>
+                  {tip.leave.decisionNote}
+                </p>
+              )}
             </div>
             {/* Ok: çubuktaki noktayı gösterir */}
             <span
@@ -129,6 +137,8 @@ export default function Leaves() {
   const finalize = useFinalizeLeaveDecision();
   const [tip, setTip] = useState<TooltipState | null>(null);
   const [confirming, setConfirming] = useState<LeaveRequest | null>(null);
+  // Onay/ret kararı açıklamayla birlikte verilir (DecisionModal).
+  const [deciding, setDeciding] = useState<{ leave: LeaveRequest; decision: Decision } | null>(null);
   // Takvim penceresi: bugünden itibaren hafta hafta ileri/geri kaydırılır (0 = bugün).
   const [weekOffset, setWeekOffset] = useState(0);
   const [slideDir, setSlideDir] = useState(1);
@@ -399,10 +409,10 @@ export default function Leaves() {
                           </button>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <button onClick={() => decide.mutate({ id: l.id, decision: 'REDDEDILDI' })} disabled={decide.isPending} className="icon-btn border border-theme-light/70 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
+                          <button onClick={() => setDeciding({ leave: l, decision: 'REDDEDILDI' })} disabled={decide.isPending} className="icon-btn border border-theme-light/70 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
                             <X size={18} weight="bold" />
                           </button>
-                          <button onClick={() => decide.mutate({ id: l.id, decision: 'ONAYLANDI' })} disabled={decide.isPending} className="btn-primary h-10 min-h-0 px-4 text-sm" aria-label={`${u?.fullName} talebini onayla`}>
+                          <button onClick={() => setDeciding({ leave: l, decision: 'ONAYLANDI' })} disabled={decide.isPending} className="btn-primary h-10 min-h-0 px-4 text-sm" aria-label={`${u?.fullName} talebini onayla`}>
                             <Check size={16} weight="bold" /> Onayla
                           </button>
                         </div>
@@ -434,6 +444,7 @@ export default function Leaves() {
                             <p className="text-sm font-bold truncate">{u?.fullName}</p>
                             <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 mt-0.5"><Meta.icon size={13} weight="bold" /> {Meta.label} · {rangeLabel(l, holidays.set)}</p>
                             {l.note && <p className="text-xs text-theme-text mt-1.5 italic">“{l.note}”</p>}
+                            <DecisionNote leave={l} />
                           </div>
                           <Pill className={state.className}>{state.label}</Pill>
                         </div>
@@ -473,6 +484,7 @@ export default function Leaves() {
                         <p className="text-sm font-bold">{Meta.label}</p>
                         <p className="text-xs text-theme-muted font-medium mt-0.5">{rangeLabel(l, holidays.set)}</p>
                         {l.note && <p className="text-xs text-theme-text mt-1 italic truncate">“{l.note}”</p>}
+                        <DecisionNote leave={l} />
                       </div>
                       <Pill className={state.className}>
                         {l.finalized && l.state !== 'IPTAL' && <LockSimple size={11} weight="bold" aria-label="Kesinleşti" />}
@@ -493,6 +505,23 @@ export default function Leaves() {
       </div>
 
       <BarTooltip tip={tip} holidays={holidays.set} />
+
+      <DecisionModal
+        decision={deciding?.decision ?? null}
+        onClose={() => setDeciding(null)}
+        subject="izin talebini"
+        pending={decide.isPending}
+        hint="Kararı kesinleştirene kadar geri alabilirsiniz."
+        onConfirm={note => deciding && decide.mutate({ id: deciding.leave.id, decision: deciding.decision, note }, { onSuccess: () => setDeciding(null) })}
+      >
+        {deciding && (
+          <>
+            <p className="text-sm font-bold text-theme-text">{userById.get(deciding.leave.userId)?.fullName}</p>
+            <p className="text-sm text-theme-muted font-medium mt-0.5">{LEAVE_TYPE[deciding.leave.type].label} · {rangeLabel(deciding.leave, holidays.set)}</p>
+            {deciding.leave.note && <p className="text-sm text-theme-text mt-2 italic">“{deciding.leave.note}”</p>}
+          </>
+        )}
+      </DecisionModal>
 
       <Modal
         open={!!confirming}
@@ -526,5 +555,16 @@ export default function Leaves() {
         )}
       </Modal>
     </>
+  );
+}
+
+/** Yöneticinin karara eklediği açıklama (ör. ret nedeni). */
+function DecisionNote({ leave }: { leave: LeaveRequest }) {
+  if (!leave.decisionNote) return null;
+  const rejected = leave.state === 'REDDEDILDI';
+  return (
+    <p className={`text-xs mt-2 rounded-xl px-3 py-2 leading-relaxed whitespace-pre-wrap break-words ${rejected ? 'bg-[#FBEDE5] text-[#7A3E1F]' : 'bg-theme-lightest/70 text-theme-text'}`}>
+      <span className="font-bold">{leave.decidedByName ?? 'Yönetici'}:</span> {leave.decisionNote}
+    </p>
   );
 }

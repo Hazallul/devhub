@@ -136,6 +136,7 @@ public class LeaveController {
         leave.setState(decision);
         leave.setDecidedBy(me);
         leave.setDecidedAt(LocalDateTime.now());
+        leave.setDecisionNote(Payloads.optionalText(payload, "note", 500, "Açıklama"));
         leaveRepository.save(leave);
 
         // Bugünü kapsayan bir izin onaylanırsa kişi hemen İzinli olur; ileri tarihliler LeaveStatusScheduler'a kalır.
@@ -143,7 +144,8 @@ public class LeaveController {
             userStatusService.change(leave.getUser(), UserStatusService.IZINLI, me);
         }
         notificationService.notify(leave.getUser(), me, NotificationType.LEAVE_DECIDED,
-                decision == LeaveState.ONAYLANDI ? "İzin talebiniz onaylandı" : "İzin talebiniz reddedildi", summary(leave), "/leaves");
+                decision == LeaveState.ONAYLANDI ? "İzin talebiniz onaylandı" : "İzin talebiniz reddedildi",
+                summary(leave) + (leave.getDecisionNote() != null ? " — " + leave.getDecisionNote() : ""), "/leaves");
         return ResponseEntity.ok(LeaveDto.from(leave));
     }
 
@@ -158,6 +160,7 @@ public class LeaveController {
         leave.setState(LeaveState.BEKLIYOR);
         leave.setDecidedBy(null);
         leave.setDecidedAt(null);
+        leave.setDecisionNote(null);
         leaveRepository.saveAndFlush(leave);
 
         // Onay geri alındıysa ve kişi yalnızca bu izin yüzünden İzinli ise çalışma şekline döner.

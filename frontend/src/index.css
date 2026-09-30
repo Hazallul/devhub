@@ -70,6 +70,16 @@
     scrollbar-width: thin;
     scrollbar-color: #C5D89D transparent;
   }
+  /* Kenar çubukları: kaydırma çubuğu yalnızca üzerine gelince görünür (boşken yeşil şerit dikkat dağıtmasın) */
+  .scrollbar-hover {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    transition: scrollbar-color 0.2s;
+  }
+  .scrollbar-hover:hover,
+  .scrollbar-hover:focus-within {
+    scrollbar-color: #C5D89D transparent;
+  }
   .tabular {
     font-variant-numeric: tabular-nums;
   }

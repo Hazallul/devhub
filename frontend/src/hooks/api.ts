@@ -6,7 +6,7 @@ import { useToast } from '../components/ui/Toast';
 import type {
   User, Project, Task, TaskActivity, ActionLog, LeaveRequest, Announcement,
   UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState,
-  Holiday, LeaveBalance, AppNotification, Role, MonitorOverview,
+  Holiday, LeaveBalance, AppNotification, Role, MonitorOverview, ProfileRequest, UserLink,
 } from '../types';
 
 const get = <T,>(url: string) => async () => (await api.get<T>(url)).data;
@@ -92,12 +92,46 @@ export const useAssignProject = () =>
     },
   );
 
+/** Avatar rengi herkes için; ad soyad ve unvanı yalnızca yönetici doğrudan değiştirebilir (çalışan talep açar). */
 export const useUpdateProfile = () =>
   useAction(
-    ({ userId, ...body }: { userId: number; fullName: string; jobTitle: string; avatarColor: string }) =>
+    ({ userId, ...body }: { userId: number; fullName?: string; jobTitle?: string; avatarColor?: string }) =>
       api.put<User>(`/users/${userId}/profile`, body).then(r => r.data),
-    { invalidate: [['users']], success: 'Profil güncellendi' },
+    { invalidate: [['users'], ['admin-users']], success: 'Profil güncellendi' },
   );
+
+/** Kişinin kendi iletişim bilgileri ve bağlantıları (onay gerekmez). */
+export const useUpdateLinks = () =>
+  useAction(
+    (links: UserLink[]) => api.put<User>('/users/me/links', { links }).then(r => r.data),
+    { invalidate: [['users'], ['admin-users']], success: 'İletişim bilgileri kaydedildi' },
+  );
+
+// ---------- Profil değişikliği talepleri ----------
+/** Yönetici tüm talepleri, çalışan kendi taleplerini alır. */
+export const useProfileRequests = () =>
+  useQuery({ queryKey: ['profile-requests', 'list'], queryFn: get<ProfileRequest[]>('/profile-requests') });
+
+export const usePendingProfileCount = (enabled: boolean) =>
+  useQuery({ queryKey: ['profile-requests', 'count'], queryFn: get<{ count: number }>('/profile-requests/pending-count'), enabled, refetchInterval: 30_000 });
+
+export const useCreateProfileRequest = () =>
+  useAction(
+    (body: { fullName: string; jobTitle: string }) => api.post<ProfileRequest>('/profile-requests', body).then(r => r.data),
+    { invalidate: [['profile-requests']], success: 'Değişiklik talebiniz yöneticiye iletildi' },
+  );
+
+export const useDecideProfileRequest = () =>
+  useAction(
+    ({ id, ...body }: { id: number; decision: 'ONAYLANDI' | 'REDDEDILDI'; note?: string }) => api.put(`/profile-requests/${id}/decision`, body),
+    {
+      invalidate: [['profile-requests'], ['users'], ['admin-users']],
+      success: ({ decision }) => (decision === 'ONAYLANDI' ? 'Değişiklik onaylandı ve profile uygulandı' : 'Değişiklik talebi reddedildi'),
+    },
+  );
+
+export const useWithdrawProfileRequest = () =>
+  useAction((id: number) => api.delete(`/profile-requests/${id}`), { invalidate: [['profile-requests']], success: 'Talep geri çekildi' });
 
 export const useChangePassword = () =>
   useAction(
@@ -227,8 +261,9 @@ export const useCreateLeave = () =>
 
 export const useDecideLeave = () =>
   useAction(
-    ({ id, decision }: { id: number; decision: Exclude<LeaveState, 'BEKLIYOR'> }) =>
-      api.put(`/leaves/${id}/decision`, { decision }),
+    // note: çalışana gösterilecek açıklama (ör. ret nedeni); isteğe bağlı
+    ({ id, ...body }: { id: number; decision: Exclude<LeaveState, 'BEKLIYOR'>; note?: string }) =>
+      api.put(`/leaves/${id}/decision`, body),
     {
       invalidate: [['leaves'], ['users'], ['logs']],
       success: ({ decision }) => `${decision === 'ONAYLANDI' ? 'İzin onaylandı' : 'İzin reddedildi'}; kesinleştirene kadar geri alabilirsiniz`,

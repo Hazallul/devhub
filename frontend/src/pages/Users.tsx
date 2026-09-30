@@ -2,19 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, ShieldCheck, Warning, Sparkle,
+  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, X, ShieldCheck, Warning, Sparkle,
 } from '@phosphor-icons/react';
 import { PageHeader, Segmented, Skeleton, EmptyState, Avatar, Pill } from '../components/ui/primitives';
 import { Menu, MenuItem, MenuDivider } from '../components/ui/Menu';
 import type { MenuPoint } from '../components/ui/Menu';
 import Modal from '../components/ui/Modal';
+import DecisionModal from '../components/ui/DecisionModal';
+import { usePageMenu } from '../components/layout/ContextMenu';
+import type { Decision } from '../components/ui/DecisionModal';
+import { ProfileDiff } from '../components/settings/ProfileCard';
 import {
   useMe, useAdminUsers, useProjects, useLeaveBalances, useCreateUser, useUpdateUser, useSetUserActive, useResetPassword,
+  useProfileRequests, useDecideProfileRequest,
 } from '../hooks/api';
 import type { UserInput } from '../hooks/api';
-import { formatDate, seniorityLabel, suggestedLeaveDays, trLower } from '../lib/format';
+import { formatDate, seniorityLabel, suggestedLeaveDays, timeAgo, trLower } from '../lib/format';
 import { listContainer, listItem } from '../lib/motion';
-import type { Role, User } from '../types';
+import type { ProfileRequest, Role, User } from '../types';
 
 type Filter = 'ACTIVE' | 'INACTIVE' | 'ALL';
 
@@ -36,8 +41,15 @@ function UsersPage() {
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<User | 'new' | null>(null);
   const [menu, setMenu] = useState<{ user: User; point: MenuPoint } | null>(null);
+  usePageMenu([{ label: 'Yeni kullanıcı', icon: UserPlus, onSelect: () => setEditing('new') }]);
   const [confirm, setConfirm] = useState<{ kind: 'deactivate' | 'reset'; user: User } | null>(null);
   const [tempPassword, setTempPassword] = useState<{ user: Pick<User, 'fullName' | 'email'>; password: string } | null>(null);
+
+  // Çalışanların ad soyad / unvan değişikliği talepleri
+  const { data: profileRequests } = useProfileRequests();
+  const decideProfile = useDecideProfileRequest();
+  const [deciding, setDeciding] = useState<{ request: ProfileRequest; decision: Decision } | null>(null);
+  const pendingRequests = (profileRequests ?? []).filter(r => r.state === 'BEKLIYOR');
 
   const balanceOf = useMemo(() => new Map((balances ?? []).map(b => [b.userId, b])), [balances]);
 
@@ -76,6 +88,58 @@ function UsersPage() {
         description="Çalışan ekleyin, rol ve izin hakkını düzenleyin, ayrılan çalışanların hesabını pasifleştirin."
         actions={<button onClick={() => setEditing('new')} className="btn-primary"><UserPlus size={18} weight="bold" /> Yeni Kullanıcı</button>}
       />
+
+      <AnimatePresence initial={false}>
+        {pendingRequests.length > 0 && (
+          <motion.section initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden" aria-labelledby="profile-requests-title">
+            <div className="mb-8">
+              <h2 id="profile-requests-title" className="text-lg font-bold tracking-tight mb-1 flex items-center gap-2">
+                Profil Değişikliği Talepleri <Pill className="bg-theme-deep text-white">{pendingRequests.length}</Pill>
+              </h2>
+              <p className="text-sm text-theme-muted mb-4">Çalışanlar ad soyad ve unvanlarını doğrudan değiştiremez; onayladığınızda değişiklik profile uygulanır.</p>
+              <ul className="space-y-3">
+                <AnimatePresence initial={false}>
+                  {pendingRequests.map(r => {
+                    const u = users?.find(x => x.id === r.userId);
+                    return (
+                      <motion.li key={r.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40, transition: { duration: 0.18 } }} className="card p-4 flex flex-wrap items-center gap-4">
+                        {u && <Avatar user={u} size="sm" />}
+                        <div className="flex-1 min-w-[220px]">
+                          <p className="text-sm font-bold truncate">{u?.fullName ?? r.previousFullName} <span className="font-medium text-theme-muted">· {timeAgo(r.createdAt)}</span></p>
+                          <div className="mt-1"><ProfileDiff request={r} /></div>
+                        </div>
+                        <div className="flex gap-2 shrink-0 ml-auto">
+                          <button onClick={() => setDeciding({ request: r, decision: 'REDDEDILDI' })} className="icon-btn border border-theme-light/70 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
+                            <X size={18} weight="bold" />
+                          </button>
+                          <button onClick={() => setDeciding({ request: r, decision: 'ONAYLANDI' })} className="btn-primary h-10 min-h-0 px-4 text-sm" aria-label={`${u?.fullName} talebini onayla`}>
+                            <Check size={16} weight="bold" /> Onayla
+                          </button>
+                        </div>
+                      </motion.li>
+                    );
+                  })}
+                </AnimatePresence>
+              </ul>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      <DecisionModal
+        decision={deciding?.decision ?? null}
+        onClose={() => setDeciding(null)}
+        subject="profil değişikliğini"
+        pending={decideProfile.isPending}
+        onConfirm={note => deciding && decideProfile.mutate({ id: deciding.request.id, decision: deciding.decision, note }, { onSuccess: () => setDeciding(null) })}
+      >
+        {deciding && (
+          <>
+            <p className="text-sm font-bold text-theme-text mb-1.5">{users?.find(x => x.id === deciding.request.userId)?.fullName ?? deciding.request.previousFullName}</p>
+            <ProfileDiff request={deciding.request} />
+          </>
+        )}
+      </DecisionModal>
 
       <div className="flex flex-col lg:flex-row gap-3 mb-6 lg:items-center">
         <Segmented<Filter>

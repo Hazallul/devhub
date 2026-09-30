@@ -20,6 +20,9 @@ public class LeaveDto {
     private LeaveState state;
     private LocalDateTime createdAt;
     private boolean finalized;
+    /** Yöneticinin karara eklediği açıklama */
+    private String decisionNote;
+    private String decidedByName;
 
     public static LeaveDto from(LeaveRequest l) {
         return LeaveDto.builder()
@@ -32,6 +35,8 @@ public class LeaveDto {
             .state(l.getState())
             .createdAt(l.getCreatedAt())
             .finalized(l.isFinalized())
+            .decisionNote(l.getDecisionNote())
+            .decidedByName(l.getDecidedBy() != null ? l.getDecidedBy().getFullName() : null)
             .build();
     }
 }

@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
+  ArrowSquareOut,
   Plus, MagnifyingGlass, CaretLeft, CaretRight, CaretDown, CalendarBlank, Kanban, Trash, ChatCircleText, TextAlignLeft, Rows, SquaresFour,
 } from '@phosphor-icons/react';
 import { PageHeader, Segmented, Skeleton, Avatar, PriorityBadge, EmptyState, ProgressBar } from '../components/ui/primitives';
 import { useAllTasks, useUsers, useMe, useUpdateTask, useDeleteTask, useProjects } from '../hooks/api';
 import { useQuickActions } from '../components/layout/QuickActions';
+import { useContextMenu } from '../components/layout/ContextMenu';
 import { TASK_STATUS, TASK_STATUSES, TASK_PRIORITY, TASK_PRIORITIES, projectColor } from '../lib/meta';
 import { dueLabel, firstName, trLower } from '../lib/format';
 import type { Project, Task, TaskPriority, TaskStatus, User } from '../types';
@@ -249,9 +251,20 @@ interface TaskCardProps {
 
 function TaskCard({ task, owner, project, editable, dragging, onDragStart, onDragEnd, onMove, onOpen }: TaskCardProps) {
   const remove = useDeleteTask();
+  const menu = useContextMenu();
   const status = task.status ?? 'YAPILACAK';
   const idx = TASK_STATUSES.indexOf(status);
   const done = status === 'TAMAMLANDI';
+  const openMenu = (e: React.MouseEvent) => menu(e, {
+    label: 'Görev',
+    items: [
+      { label: 'Ayrıntıyı aç', icon: ArrowSquareOut, onSelect: onOpen },
+      editable && 'divider',
+      ...(editable ? TASK_STATUSES.filter(s => s !== status).map(s => ({ label: `“${TASK_STATUS[s].label}” yap`, icon: TASK_STATUS[s].icon, onSelect: () => onMove(s) })) : []),
+      editable && 'divider',
+      editable && { label: 'Görevi sil', icon: Trash, tone: 'danger' as const, onSelect: () => remove.mutate(task.id) },
+    ],
+  });
 
   return (
     <motion.div
@@ -266,6 +279,7 @@ function TaskCard({ task, owner, project, editable, dragging, onDragStart, onDra
         draggable={editable}
         onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; onDragStart(); }}
         onDragEnd={onDragEnd}
+        onContextMenu={openMenu}
         onClick={e => { if (!(e.target as HTMLElement).closest('button')) onOpen(); }}
         className={`group bg-white rounded-3xl p-4 border border-theme-light/50 shadow-soft hover:shadow-diffusion hover:border-theme-light transition-[box-shadow,border-color] ${editable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
       >
@@ -443,9 +457,10 @@ function ListRow({ task, groupBy, userById, projectById, onOpen }: {
   const done = status === 'TAMAMLANDI';
   const owner = userById.get(task.userId);
   const project = task.projectId ? projectById.get(task.projectId) : undefined;
+  const menu = useContextMenu();
 
   return (
-    <li>
+    <li onContextMenu={e => menu(e, { label: 'Görev', items: [{ label: 'Ayrıntıyı aç', icon: ArrowSquareOut, onSelect: () => onOpen(task.id) }] })}>
       <button type="button" onClick={() => onOpen(task.id)} className="w-full flex items-center gap-3 px-4 sm:px-5 py-3 text-left hover:bg-theme-cream/70 transition-colors">
         <meta.icon size={18} weight={done ? 'fill' : 'bold'} className={`shrink-0 ${meta.className}`} aria-label={meta.label} />
         <span className="min-w-0 flex-1">

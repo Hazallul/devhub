@@ -6,9 +6,10 @@ import {
   PencilSimple, Target, Pause, Flag,
   Briefcase, ListDashes, Gear,
   WarningCircle, XCircle, Question,
+  EnvelopeSimple, Phone, LinkedinLogo, GithubLogo, Globe, LinkSimple,
 } from '@phosphor-icons/react';
 import type {
-  User, UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState, ActionLogType, HealthStatus,
+  User, UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState, ActionLogType, HealthStatus, UserLink, UserLinkType,
 } from '../types';
 
 interface Meta { label: string; icon: Icon; className: string }
@@ -100,3 +101,29 @@ export const HEALTH_STATUS: Record<HealthStatus, Meta> = {
   DOWN: { label: 'Çalışmıyor', icon: XCircle, className: 'bg-[#FBEDE5] text-[#9A3B1B] border-[#EFC9B5]' },
   UNKNOWN: { label: 'Bilinmiyor', icon: Question, className: 'bg-gray-100 text-theme-muted border-gray-200' },
 };
+
+/** Profildeki iletişim/bağlantı türleri */
+export const LINK_TYPE: Record<UserLinkType, { label: string; icon: Icon; placeholder: string }> = {
+  EMAIL: { label: 'E-posta', icon: EnvelopeSimple, placeholder: 'ad@ornek.com' },
+  PHONE: { label: 'Telefon', icon: Phone, placeholder: '+90 5xx xxx xx xx' },
+  LINKEDIN: { label: 'LinkedIn', icon: LinkedinLogo, placeholder: 'linkedin.com/in/kullanici-adi' },
+  GITHUB: { label: 'GitHub', icon: GithubLogo, placeholder: 'github.com/kullanici-adi' },
+  WEBSITE: { label: 'Web sitesi', icon: Globe, placeholder: 'ornek.com' },
+  OTHER: { label: 'Diğer bağlantı', icon: LinkSimple, placeholder: 'https://…' },
+};
+export const LINK_TYPES: UserLinkType[] = ['EMAIL', 'PHONE', 'LINKEDIN', 'GITHUB', 'WEBSITE', 'OTHER'];
+
+/** Bağlantının tıklanınca açacağı adres. Web adresleri yalnızca http(s) ise bağlantı olur (sunucu da bunu doğrular). */
+export function linkHref(link: UserLink): string | undefined {
+  if (link.type === 'EMAIL') return `mailto:${link.value}`;
+  if (link.type === 'PHONE') return `tel:${link.value.replace(/[^+\d]/g, '')}`;
+  return /^https?:\/\//i.test(link.value) ? link.value : undefined;
+}
+
+/** Çipte görünen kısa metin: etiket varsa o; e-posta/telefonda değerin kendisi; web adresinde tür adı veya alan adı. */
+export function linkText(link: UserLink): string {
+  if (link.label) return link.label;
+  if (link.type === 'EMAIL' || link.type === 'PHONE') return link.value;
+  if (link.type === 'LINKEDIN' || link.type === 'GITHUB') return LINK_TYPE[link.type].label;
+  try { return new URL(link.value).hostname.replace(/^www\./, ''); } catch { return link.value; }
+}

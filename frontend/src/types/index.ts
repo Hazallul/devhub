@@ -1,6 +1,10 @@
 export type Role = 'ADMIN' | 'EMPLOYEE';
 export type UserStatus = 'AKTIF' | 'TOPLANTIDA' | 'UZAKTAN' | 'IZINLI';
 
+export type UserLinkType = 'EMAIL' | 'PHONE' | 'LINKEDIN' | 'GITHUB' | 'WEBSITE' | 'OTHER';
+
+export interface UserLink { type: UserLinkType; label: string | null; value: string }
+
 export interface User {
     id: number;
     email: string;
@@ -18,6 +22,8 @@ export interface User {
     annualLeaveDays: number;
     /** Yönetici şifreyi sıfırladıysa kullanıcı şifresini değiştirmelidir */
     mustChangePassword: boolean;
+    /** Profildeki iletişim bilgileri ve bağlantılar (kişi kendisi düzenler) */
+    links?: UserLink[];
 }
 
 export interface LoginResponse {
@@ -95,6 +101,9 @@ export interface LeaveRequest {
     createdAt: string;
     /** Kesinleşen onay/ret kararı geri alınamaz. */
     finalized: boolean;
+    /** Yöneticinin karara eklediği açıklama (ör. ret nedeni) */
+    decisionNote: string | null;
+    decidedByName: string | null;
 }
 
 export interface Announcement {
@@ -126,7 +135,7 @@ export interface LeaveBalance {
 }
 
 export type NotificationType =
-    | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
+    | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
     | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT';
 
 export interface AppNotification {
@@ -206,4 +215,76 @@ export interface MonitorOverview {
     warnPercent: number;
     host: MonitorHost;
     services: MonitorService[];
+}
+
+// ---------------- Kişisel alan: yapılacaklar ----------------
+export interface TodoStep { id: number; title: string; done: boolean; position: number }
+
+export type TodoListRole = 'ADMIN' | 'MEMBER';
+
+export interface TodoListMember { userId: number; fullName: string; role: TodoListRole }
+
+export interface TodoList {
+    id: number;
+    name: string;
+    color: string | null;
+    position: number;
+    /** Oturumdaki kişinin bu listedeki yetkisi (uygulamadaki rolünden bağımsız) */
+    myRole: TodoListRole;
+    /** Birden fazla üye varsa liste ortaktır: üyeler içindeki tüm kartları görür */
+    members: TodoListMember[];
+}
+
+export type TodoRepeat = 'DAILY' | 'WEEKDAYS' | 'WEEKLY' | 'MONTHLY';
+
+export interface TodoItem {
+    id: number;
+    /** null = varsayılan "Genel" listesi */
+    listId: number | null;
+    title: string;
+    note: string | null;
+    done: boolean;
+    doneAt: string | null;
+    important: boolean;
+    /** "Bugün" görünümüne eklendi mi (ertesi gün kendiliğinden düşer) */
+    myDay: boolean;
+    dueDate: string | null;
+    /** "SS:dd"; tarihle birlikte hatırlatma zamanı */
+    dueTime: string | null;
+    /** Tamamlanınca sonraki tarihe yenisi açılır */
+    repeatRule: TodoRepeat | null;
+    /** Kart bir DevHub görevinden plana eklendiyse o görev */
+    taskId: number | null;
+    position: number;
+    /** Kart başka birinden geldiyse gönderen */
+    sentById: number | null;
+    sentByName: string | null;
+    sentMessage: string | null;
+    seen: boolean;
+    /** Kartı ekleyen kişi (ortak listelerde başkası olabilir) */
+    ownerId: number;
+    ownerName: string;
+    createdAt: string;
+    updatedAt: string;
+    steps: TodoStep[];
+}
+
+export interface TodoData { lists: TodoList[]; items: TodoItem[] }
+
+// ---------------- Profil değişikliği talepleri ----------------
+export type ProfileRequestState = 'BEKLIYOR' | 'ONAYLANDI' | 'REDDEDILDI' | 'IPTAL';
+
+/** Ad soyad / unvan değişikliği: çalışan ister, yönetici onaylar. */
+export interface ProfileRequest {
+    id: number;
+    userId: number;
+    fullName: string;
+    jobTitle: string | null;
+    previousFullName: string;
+    previousJobTitle: string | null;
+    state: ProfileRequestState;
+    decisionNote: string | null;
+    decidedByName: string | null;
+    decidedAt: string | null;
+    createdAt: string;
 }

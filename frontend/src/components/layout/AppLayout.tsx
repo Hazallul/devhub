@@ -2,17 +2,20 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
-  Gear, SignOut, ListDashes, Key, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
+  Gear, SignOut, ListDashes, Key, ListChecks, ArrowUpRight, House, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
 } from '@phosphor-icons/react';
 import { getStoredUser, clearSession } from '../../lib/session';
-import { useAllTasks, useLeaves, useMe } from '../../hooks/api';
+import { useAllTasks, useLeaves, useMe, usePendingProfileCount } from '../../hooks/api';
 import { page, pageWipe, wipeEdge } from '../../lib/motion';
 import { Avatar } from '../ui/primitives';
 import { Menu, MenuItem, MenuDivider } from '../ui/Menu';
 import { navFor, systemNavFor } from './nav';
+import TodoSpace from '../todo/TodoSpace';
+import { useTodoUnseen } from '../../hooks/todos';
 import NotificationBell from './NotificationBell';
 import { QuickActionsProvider, useQuickActions } from './QuickActions';
 import CommandPalette from './CommandPalette';
+import { ContextMenuProvider } from './ContextMenu';
 
 /** Oturum yoksa login'e yönlendirir; varsa kalıcı iskeleti (sidebar + üst bar) çizer. */
 export default function AppLayout() {
@@ -26,6 +29,7 @@ export default function AppLayout() {
 
 function Shell() {
   const location = useLocation();
+  const navigate = useNavigate();
   const outlet = useOutlet();
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -33,6 +37,18 @@ function Shell() {
   const reduceMotion = useReducedMotion();
   // Geçiş animasyonu bölüm değişince oynar; /docs/a → /docs/b gibi alt sayfalarda sayfa kendi içinde değişir.
   const section = location.pathname.split('/')[1] || 'home';
+
+  // Kişisel alan (/todo) uygulamanın üstünde tam ekran bir katmandır: altta kullanıcının kaldığı sayfa olduğu gibi durur
+  // (kaydırma konumu dahil) ve ev düğmesi oraya geri döner.
+  const isTodo = section === 'todo';
+  const behind = useRef({ outlet, section, path: '/' });
+  const wasTodo = useRef(isTodo);
+  useEffect(() => {
+    if (!isTodo) behind.current = { outlet, section, path: location.pathname + location.search };
+  });
+  const shownOutlet = isTodo ? behind.current.outlet : outlet;
+  const shownSection = isTodo ? behind.current.section : section;
+  const todoOrigin = (location.state as { origin?: { x: number; y: number } } | null)?.origin;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -48,13 +64,18 @@ function Shell() {
   // Sayfa değişince: başa kaydır, mobil menüyü kapat, odağı içeriğe taşı.
   useEffect(() => {
     setDrawerOpen(false);
+    const returning = wasTodo.current;
+    wasTodo.current = isTodo;
+    if (isTodo || returning) return; // kişisel alana girip çıkarken alttaki sayfa yerinde kalsın
     mainRef.current?.scrollTo({ top: 0 });
     mainRef.current?.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   return (
+    <ContextMenuProvider onSearch={() => setPaletteOpen(true)}>
     <div className="relative flex h-[100dvh] overflow-hidden bg-theme-cream">
-      <aside className="hidden lg:flex w-72 shrink-0 bg-white border-r border-theme-light/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] relative z-20">
+      <aside inert={isTodo} className="hidden lg:flex w-72 shrink-0 bg-white border-r border-theme-light/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] relative z-20">
         <SidebarContent />
       </aside>
 
@@ -75,12 +96,12 @@ function Shell() {
         )}
       </AnimatePresence>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div inert={isTodo} className="flex-1 flex flex-col min-w-0">
         <Topbar onOpenPalette={() => setPaletteOpen(true)} onOpenDrawer={() => setDrawerOpen(true)} />
         <main ref={mainRef} tabIndex={-1} id="main-scroll-container" className="relative flex-1 overflow-y-auto overscroll-contain scrollbar-thin outline-none">
           <AnimatePresence mode="wait" initial={false}>
             {/* Tam genişlikte sarmalayıcı: açılma menünün kenarından başlar, ortalanmış içerikten değil. */}
-            <motion.div key={section} variants={reduceMotion ? page : pageWipe} initial="hidden" animate="visible" exit="exit" className="relative min-h-full">
+            <motion.div key={shownSection} variants={reduceMotion ? page : pageWipe} initial="hidden" animate="visible" exit="exit" className="relative min-h-full">
               {!reduceMotion && (
                 <motion.span
                   variants={wipeEdge}
@@ -90,15 +111,20 @@ function Shell() {
               )}
               <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10">
                 <PasswordNotice />
-                {outlet}
+                {shownOutlet}
               </div>
             </motion.div>
           </AnimatePresence>
         </main>
       </div>
 
+      <AnimatePresence>
+        {isTodo && <TodoSpace key="todo" origin={todoOrigin} onHome={() => navigate(behind.current.path)} />}
+      </AnimatePresence>
+
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
+    </ContextMenuProvider>
   );
 }
 
@@ -108,10 +134,12 @@ function SidebarContent() {
   const actions = useQuickActions();
   const { data: leaves } = useLeaves();
   const { data: tasks } = useAllTasks();
+  const todoUnseen = useTodoUnseen().data?.count ?? 0;
+  const pendingProfiles = usePendingProfileCount(me.role === 'ADMIN').data?.count ?? 0;
 
   const pendingLeaves = me.role === 'ADMIN' ? leaves?.filter(l => l.state === 'BEKLIYOR').length ?? 0 : 0;
   const myOpenTasks = tasks?.filter(t => t.userId === me.id && t.status !== 'TAMAMLANDI').length ?? 0;
-  const badges: Record<string, number> = { '/tasks': myOpenTasks, '/leaves': pendingLeaves };
+  const badges: Record<string, number> = { '/tasks': myOpenTasks, '/leaves': pendingLeaves, '/users': pendingProfiles };
 
   const logout = () => {
     clearSession();
@@ -119,10 +147,32 @@ function SidebarContent() {
   };
 
   return (
-    <div className="flex flex-col w-full h-full min-h-0 p-5 overflow-y-auto overscroll-contain scrollbar-thin">
-      <button onClick={() => navigate('/')} className="flex items-center gap-3 px-3 mb-10 mt-2 rounded-2xl" aria-label="DevHub ana sayfa">
-        <div className="w-10 h-10 bg-theme-deep rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-sm">D</div>
-        <span className="text-2xl font-bold tracking-tight text-theme-text">DevHub</span>
+    <div className="flex flex-col w-full h-full min-h-0 p-5 overflow-y-auto overscroll-contain scrollbar-hover">
+      {/* Ev karosu: kişisel alandaki (TodoSpace) ev düğmesiyle aynı konum ve boyutta durur; iki ekran arasında geçerken kaymaz. */}
+      <button onClick={() => navigate('/')} className="group flex items-center gap-3 px-3 mb-8 mt-2 h-10 rounded-2xl text-left" aria-label="DevHub: Genel Bakış'a git" title="Genel Bakış">
+        <span className="w-10 h-10 shrink-0 bg-theme-deep rounded-2xl flex items-center justify-center text-white shadow-soft group-hover:bg-theme-text transition-colors">
+          <House size={20} weight="fill" aria-hidden="true" />
+        </span>
+        <span className="text-2xl font-bold tracking-tight text-theme-text leading-none">DevHub</span>
+      </button>
+
+      <p className="eyebrow px-4 mb-2">Kişisel</p>
+      <button
+        type="button"
+        onClick={e => {
+          const r = e.currentTarget.getBoundingClientRect();
+          navigate('/todo', { state: { origin: { x: Math.round(r.left + 34), y: Math.round(r.top + r.height / 2) } } });
+        }}
+        className="group flex items-center gap-3 p-2.5 mb-8 rounded-2xl bg-theme-cream border border-theme-light/50 hover:border-theme-medium hover:bg-theme-lightest/60 transition-colors text-left"
+      >
+        <span className="w-10 h-10 rounded-xl bg-theme-deep text-white flex items-center justify-center shrink-0"><ListChecks size={20} weight="bold" aria-hidden="true" /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-bold text-theme-text">Yapılacaklarım</span>
+          <span className="block text-xs text-theme-muted font-medium truncate">{todoUnseen ? `${todoUnseen} yeni kart geldi` : 'Kişisel alan'}</span>
+        </span>
+        {todoUnseen > 0
+          ? <span className="text-[11px] font-bold tabular min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#9A3B1B] text-white flex items-center justify-center" aria-hidden="true">{todoUnseen}</span>
+          : <ArrowUpRight size={16} weight="bold" className="text-theme-muted group-hover:text-theme-deep group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" aria-hidden="true" />}
       </button>
 
       <p className="eyebrow px-4 mb-2">Menü</p>
@@ -159,7 +209,12 @@ function SidebarContent() {
               <span className={`relative flex items-center gap-3 px-4 py-3 rounded-2xl transition-colors ${isActive ? 'text-theme-deep font-bold' : 'text-theme-muted font-medium hover:text-theme-deep hover:bg-theme-lightest/50'}`}>
                 {isActive && <motion.span layoutId="nav-active" className="absolute inset-0 bg-theme-lightest rounded-2xl" transition={{ type: 'spring', stiffness: 420, damping: 36 }} />}
                 <item.icon size={22} weight={isActive ? 'fill' : 'duotone'} className="relative" aria-hidden="true" />
-                <span className="relative">{item.label}</span>
+                <span className="relative flex-1">{item.label}</span>
+                {badges[item.to] > 0 && (
+                  <span className="relative text-[11px] font-bold tabular min-w-[22px] h-[22px] px-1.5 rounded-full bg-theme-deep text-white flex items-center justify-center" aria-label={`${badges[item.to]} bekleyen`}>
+                    {badges[item.to]}
+                  </span>
+                )}
               </span>
             )}
           </NavLink>
@@ -196,7 +251,6 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
   const actions = useQuickActions();
   const [menuOpen, setMenuOpen] = useState(false);
   const [newBtn, setNewBtn] = useState<HTMLButtonElement | null>(null);
-  const isMac = typeof navigator !== 'undefined' && /mac/i.test(navigator.platform);
 
   const run = (fn: () => void) => () => { setMenuOpen(false); fn(); };
 
@@ -210,7 +264,6 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
       >
         <MagnifyingGlass size={18} aria-hidden="true" />
         <span className="flex-1 text-left truncate">Kişi, proje veya işlem ara…</span>
-        <kbd className="hidden sm:inline text-[11px] font-bold bg-theme-lightest text-theme-deep px-2 py-0.5 rounded-md">{isMac ? '⌘' : 'Ctrl'} K</kbd>
       </button>
 
       <div className="ml-auto flex items-center gap-2">

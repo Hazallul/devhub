@@ -11,7 +11,7 @@ import type { MenuPoint } from '../ui/Menu';
 import TaskRow from '../tasks/TaskRow';
 import { useMe, useProjects, useUpdateStatus, useAssignProject, useCreateTask, useUserTasks } from '../../hooks/api';
 import { useQuickActions } from '../layout/QuickActions';
-import { USER_STATUS, TASK_PRIORITY, TASK_PRIORITIES, statusOptions, statusHint } from '../../lib/meta';
+import { USER_STATUS, TASK_PRIORITY, TASK_PRIORITIES, statusOptions, statusHint, LINK_TYPE, linkHref, linkText } from '../../lib/meta';
 
 interface EmployeeCardProps {
   user: User;
@@ -270,6 +270,23 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
           >
             <div className="px-4 sm:px-5 pb-5">
               <div className="border-t border-theme-light/40 pt-4 flex flex-col gap-3">
+                {user.links && user.links.length > 0 && (
+                  <ul className="flex flex-wrap gap-2" aria-label={`${user.fullName} iletişim bilgileri`} onClick={e => e.stopPropagation()}>
+                    {user.links.map((l, i) => {
+                      const meta = LINK_TYPE[l.type];
+                      const href = linkHref(l);
+                      const chip = <><meta.icon size={14} weight="bold" aria-hidden="true" /> {linkText(l)}</>;
+                      const cls = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-theme-cream border border-theme-light/50 text-xs font-semibold text-theme-deep max-w-[260px] truncate';
+                      return (
+                        <li key={i}>
+                          {href
+                            ? <a href={href} target={l.type === 'EMAIL' || l.type === 'PHONE' ? undefined : '_blank'} rel="noopener noreferrer" title={`${meta.label}: ${l.value}`} className={`${cls} hover:bg-theme-lightest hover:border-theme-light transition-colors`}>{chip}</a>
+                            : <span title={`${meta.label}: ${l.value}`} className={cls}>{chip}</span>}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-theme-deep flex items-center gap-2">
                     <ListDashes size={16} weight="bold" aria-hidden="true" />

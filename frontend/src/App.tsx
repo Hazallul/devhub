@@ -32,6 +32,8 @@ function App() {
               <Route path="/reports" element={<Reports />} />
               <Route path="/users" element={<Users />} />
               <Route path="/monitoring" element={<Monitoring />} />
+              {/* Kişisel alan: AppLayout bu adreste tam ekran TodoSpace katmanını açar */}
+              <Route path="/todo" element={null} />
               <Route path="/docs" element={<Docs />} />
               <Route path="/docs/:slug" element={<Docs />} />
             </Route>

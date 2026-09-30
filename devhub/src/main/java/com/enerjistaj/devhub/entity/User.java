@@ -6,6 +6,8 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users")
@@ -58,6 +60,13 @@ public class User {
     @Builder.Default
     @Column(nullable = false)
     private boolean mustChangePassword = false;
+
+    /** Profildeki iletişim bilgileri ve bağlantılar; kişi kendisi düzenler. */
+    @Builder.Default
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("position asc, id asc")
+    @org.hibernate.annotations.BatchSize(size = 64)
+    private List<UserLink> links = new ArrayList<>();
 
     @CreationTimestamp
     @Column(updatable = false)

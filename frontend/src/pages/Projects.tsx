@@ -8,6 +8,7 @@ import type { MenuPoint } from '../components/ui/Menu';
 import ProjectDrawer from '../components/projects/ProjectDrawer';
 import { useUsers, useProjects, useAllTasks, useMe, useAssignProject } from '../hooks/api';
 import { useQuickActions } from '../components/layout/QuickActions';
+import { useContextMenu } from '../components/layout/ContextMenu';
 import { PROJECT_STATUS, PROJECT_STATUSES, projectColor } from '../lib/meta';
 import { dueLabel } from '../lib/format';
 import { listContainer, listItem } from '../lib/motion';
@@ -21,6 +22,7 @@ export default function Projects() {
   const location = useLocation();
   const navigate = useNavigate();
   const actions = useQuickActions();
+  const contextMenu = useContextMenu();
   const { data: users, isLoading: usersLoading } = useUsers();
   const { data: projects, isLoading: projectsLoading } = useProjects();
   const { data: tasks } = useAllTasks();
@@ -223,6 +225,13 @@ export default function Projects() {
                     variants={listItem}
                     layout
                     {...dropProps(`p-${p.id}`, p.name)}
+                    onContextMenu={e => contextMenu(e, {
+                      label: p.name,
+                      items: [
+                        { label: 'Detayları gör', icon: Eye, onSelect: () => setOpenId(p.id) },
+                        isAdmin && { label: 'Bu projeye görev ata', icon: Plus, onSelect: () => actions.newTask(undefined, p.id) },
+                      ],
+                    })}
                     whileHover={{ y: -3 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 26 }}
                     className={`relative bg-white rounded-4xl p-6 border shadow-soft hover:shadow-diffusion transition-[border-color,box-shadow] flex flex-col gap-5 ${
