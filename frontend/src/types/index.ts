@@ -19,7 +19,11 @@ export interface User {
     active: boolean;
     hireDate: string | null;
     /** Yıllık izin hakkı (iş günü) */
+    /** Bugünkü kıdeme göre yıllık izin hakkı (sunucu işe giriş tarihinden hesaplar) */
     annualLeaveDays: number;
+    /** Hakkın bir sonraki artışı (ör. 1. yıl dolunca 14 gün) */
+    annualLeaveNextDate?: string | null;
+    annualLeaveNextDays?: number | null;
     /** Yönetici şifreyi sıfırladıysa kullanıcı şifresini değiştirmelidir */
     mustChangePassword: boolean;
     /** Profildeki iletişim bilgileri ve bağlantılar (kişi kendisi düzenler) */
@@ -42,15 +46,49 @@ export interface Project {
     deadline?: string | null;
 }
 
-export type ActionLogType = 'PROJE' | 'IZIN' | 'GOREV' | 'SISTEM';
+export type LogCategory = 'OTURUM' | 'KULLANICI' | 'PROFIL' | 'PROJE' | 'GOREV' | 'IZIN' | 'DUYURU' | 'DOKUMAN' | 'SISTEM';
+export type LogLevel = 'BILGI' | 'UYARI' | 'KRITIK';
+export type LogAction =
+    | 'GIRIS' | 'GIRIS_BASARISIZ' | 'CIKIS' | 'SIFRE_DEGISTIRME' | 'SIFRE_SIFIRLAMA'
+    | 'OLUSTURMA' | 'GUNCELLEME' | 'SILME' | 'TAMAMLAMA' | 'YORUM'
+    | 'DURUM_DEGISIKLIGI' | 'PROJE_ATAMA' | 'PROJEDEN_CIKARMA' | 'GOREV_AKTARMA'
+    | 'AKTIFLESTIRME' | 'PASIFLESTIRME' | 'YETKI_DEGISIKLIGI'
+    | 'TALEP' | 'ONAY' | 'RET' | 'GERI_ALMA' | 'KESINLESTIRME' | 'GERI_CEKME' | 'KAYIT'
+    | 'YAYIN' | 'BILGI';
+/** Eski ad: log türü = kategori */
+export type ActionLogType = LogCategory;
 
+/** Sistem logu (denetim kaydı) */
 export interface ActionLog {
     id: number;
+    category: LogCategory;
+    action: LogAction;
+    level: LogLevel;
     message: string;
     createdAt: string;
-    /** İşlemi yapan kişi; null ise sistem */
+    /** İşlemi yapan kişi; null ise sistem veya tanınmayan biri (başarısız giriş) */
     actorId: number | null;
     actorName: string | null;
+    /** Etkilenen kayıt (KULLANICI, PROJE, GOREV, IZIN, DUYURU, TATIL, PROFIL_TALEBI) */
+    targetType: string | null;
+    targetId: number | null;
+    targetName: string | null;
+    /** Satır satır değişiklikler ("Alan: eski → yeni") */
+    details: string | null;
+    /** Yalnızca yöneticiye gelir */
+    ipAddress: string | null;
+}
+
+export interface LogPage { items: ActionLog[]; total: number; page: number; size: number }
+
+export interface LogStats {
+    total: number;
+    today: number;
+    failedLogins24h: number;
+    critical7d: number;
+    perDay: { date: string; count: number; warnings: number }[];
+    byCategory: Record<LogCategory, number>;
+    topActors: { actorId: number; name: string; count: number }[];
 }
 
 export type TaskStatus = 'YAPILACAK' | 'DEVAM' | 'TAMAMLANDI';
@@ -137,7 +175,7 @@ export interface LeaveBalance {
 
 export type NotificationType =
     | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'TODO_COMMENT' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
-    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT';
+    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED';
 
 export interface AppNotification {
     id: number;
@@ -294,4 +332,64 @@ export interface ProfileRequest {
     decidedByName: string | null;
     decidedAt: string | null;
     createdAt: string;
+}
+
+// ---------- Dokümantasyon ----------
+/** Editörün (TipTap / ProseMirror) belge düğümü; dokümanlar bu biçimde saklanır. */
+export interface DocMark { type: string; attrs?: Record<string, unknown> }
+export interface DocNode { type: string; attrs?: Record<string, unknown>; content?: DocNode[]; text?: string; marks?: DocMark[] }
+
+export interface DocSummary {
+  id: number;
+  slug: string;
+  title: string;
+  summary: string | null;
+  category: string;
+  tags: string[];
+  sortOrder: number;
+  version: number;
+  plainText: string;
+  createdById: number | null;
+  createdByName: string | null;
+  updatedById: number | null;
+  updatedByName: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DocDetail extends DocSummary {
+  content: DocNode;
+  /** yönetici için: bu dokümanda onay bekleyen öneri sayısı */
+  pendingCount: number;
+  /** oturumdaki kişinin bu doküman için bekleyen önerisi */
+  myPendingRevisionId: number | null;
+}
+
+export type DocRevisionStatus = 'BEKLIYOR' | 'ONAYLANDI' | 'REDDEDILDI' | 'GERI_CEKILDI';
+
+export interface DocRevision {
+  id: number;
+  docId: number | null;
+  docSlug: string | null;
+  docTitle: string | null;
+  docVersion: number | null;
+  isNew: boolean;
+  title: string;
+  summary: string | null;
+  category: string;
+  tags: string[];
+  baseVersion: number | null;
+  /** öneri hazırlandıktan sonra doküman başka bir değişiklikle güncellendi */
+  outdated: boolean;
+  note: string | null;
+  status: DocRevisionStatus;
+  authorId: number | null;
+  authorName: string | null;
+  decidedById: number | null;
+  decidedByName: string | null;
+  decisionNote: string | null;
+  createdAt: string;
+  decidedAt: string | null;
+  /** listelerde null */
+  content: DocNode | null;
 }

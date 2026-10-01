@@ -1,5 +1,8 @@
 package com.enerjistaj.devhub.service;
 
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.entity.LeaveRequest;
 import com.enerjistaj.devhub.entity.LeaveState;
 import com.enerjistaj.devhub.entity.NotificationType;
@@ -55,10 +58,14 @@ public class UserStatusService {
         User saved = userRepository.save(user);
         syncLeaveRecords(saved, oldStatus, newStatus);
 
-        if (IZINLI.equals(oldStatus) || IZINLI.equals(newStatus)) {
-            actionLogService.log(actor, user.getFullName() + " durumu '" + (oldStatus != null ? oldStatus : "Belirsiz")
-                    + "' -> '" + newStatus + "' olarak güncellendi.");
-        }
+        String from = oldStatus != null ? LABELS.getOrDefault(oldStatus, oldStatus) : "Belirsiz";
+        String to = LABELS.getOrDefault(newStatus, newStatus);
+        actionLogService.record(LogCategory.KULLANICI, LogAction.DURUM_DEGISIKLIGI, user.getFullName() + " durumu: " + from + " → " + to)
+                .by(actor).target("KULLANICI", user.getId(), user.getFullName()).change("Durum", from, to)
+                .detail(actor == null ? "İzin takvimine göre sistem tarafından otomatik güncellendi"
+                        : actor.getId().equals(user.getId()) ? "Kişi kendi durumunu değiştirdi" : "Yönetici tarafından değiştirildi")
+                .detail(WORK_MODES.contains(newStatus) && actor != null && !actor.getId().equals(user.getId()) ? "Çalışma şekli: " + to : null)
+                .save();
         // Başkası (yönetici) değiştirdiyse kişiye haber verilir; kendi değişikliği ve sistem geçişleri için bildirim yok.
         if (actor != null) {
             notificationService.notify(user, actor, NotificationType.STATUS_CHANGED,

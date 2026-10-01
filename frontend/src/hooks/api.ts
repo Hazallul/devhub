@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
 import { getStoredUser } from '../lib/session';
 import { useToast } from '../components/ui/Toast';
@@ -7,7 +7,7 @@ import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete
 import type {
   User, Project, Task, TaskActivity, ActionLog, LeaveRequest, Announcement,
   UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState,
-  Holiday, LeaveBalance, AppNotification, Role, MonitorOverview, ProfileRequest, UserLink,
+  Holiday, LeaveBalance, AppNotification, Role, MonitorOverview, ProfileRequest, UserLink, LogPage, LogStats, LogCategory, LogLevel, LogAction,
 } from '../types';
 
 const get = <T,>(url: string) => async () => (await api.get<T>(url)).data;
@@ -32,6 +32,53 @@ export const useUserTasks = (userId: number, enabled = true) => {
 export const useTaskActivity = (taskId: number | null) =>
   useQuery({ queryKey: ['tasks', 'activity', taskId], queryFn: get<TaskActivity[]>(`/tasks/${taskId}/activity`), enabled: taskId !== null });
 export const useLogs = (enabled = true) => useQuery({ queryKey: ['logs'], queryFn: get<ActionLog[]>('/logs'), enabled });
+
+// ---------- Sistem logları (yönetici) ----------
+export interface LogFilters {
+  category?: LogCategory; level?: LogLevel; action?: LogAction; actorId?: number; from?: string; to?: string; q?: string;
+  /** son N saat (özet kartlarıyla aynı aralık) */
+  sinceHours?: number;
+}
+
+const logParams = (f: LogFilters) => {
+  const p = new URLSearchParams();
+  Object.entries(f).forEach(([k, v]) => { if (v !== undefined && v !== '') p.set(k, String(v)); });
+  return p;
+};
+
+/** Süzülmüş loglar, 50'şer kayıtlık sayfalar hâlinde ("Daha fazla yükle"). */
+export const useLogSearch = (f: LogFilters) =>
+  useInfiniteQuery({
+    queryKey: ['logs', 'search', f],
+    queryFn: async ({ pageParam }) => {
+      const p = logParams(f);
+      p.set('page', String(pageParam));
+      p.set('size', '50');
+      return (await api.get<LogPage>(`/logs/search?${p}`)).data;
+    },
+    initialPageParam: 0,
+    getNextPageParam: last => ((last.page + 1) * last.size < last.total ? last.page + 1 : undefined),
+    // Filtre değişince eski sonuçlar yenisi gelene kadar kalır: liste bir anlığına boşalıp sayfa zıplamaz.
+    placeholderData: keepPreviousData,
+    refetchInterval: 30_000,
+  });
+
+export const useLogStats = () => useQuery({ queryKey: ['logs', 'stats'], queryFn: get<LogStats>('/logs/stats?days=14'), refetchInterval: 30_000 });
+
+/** Süzülmüş logları sunucunun hazırladığı CSV olarak indirir. */
+export async function downloadLogs(f: LogFilters) {
+  const res = await api.get<Blob>(`/logs/export?${logParams(f)}`, { responseType: 'blob' });
+  // Not: köşeli parantezli bir düzenli ifade Tailwind'in sınıf taramasına takılıp derlemeyi bozuyordu.
+  const stamp = new Date().toISOString().slice(0, 16).split('-').join('').split(':').join('').replace('T', '-');
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `devhub-loglar-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 export const useLeaves = () => useQuery({ queryKey: ['leaves'], queryFn: get<LeaveRequest[]>('/leaves') });
 export const useAnnouncements = () => useQuery({ queryKey: ['announcements'], queryFn: get<Announcement[]>('/announcements') });
 export const useHolidays = () => useQuery({ queryKey: ['holidays'], queryFn: get<Holiday[]>('/holidays'), staleTime: 10 * 60_000 });
@@ -151,7 +198,9 @@ export const useChangePassword = () =>
   );
 
 export interface UserInput {
-  fullName: string; email: string; role: Role; jobTitle?: string; hireDate?: string; annualLeaveDays?: number; currentProject?: string;
+  fullName: string; email: string; role: Role; jobTitle?: string; hireDate?: string; currentProject?: string;
+  /** Yalnızca oluştururken: başlangıç şifresi (boşsa sunucu üretir) */
+  password?: string;
 }
 
 export const useCreateUser = () =>
@@ -170,6 +219,20 @@ export const useSetUserActive = () =>
   useAction(
     ({ id, active }: { id: number; active: boolean }) => api.put<User>(`/admin/users/${id}/active`, { active }).then(r => r.data),
     { invalidate: [['admin-users'], ['users']], success: ({ active }) => (active ? 'Hesap yeniden aktifleştirildi' : 'Hesap pasifleştirildi') },
+  );
+
+/** Kalıcı silmeden önce etkisi: silinecek görev/izin/kart ve devredilecek ortak liste/duyuru sayıları */
+export const useDeleteImpact = (id: number | null) =>
+  useQuery({
+    queryKey: ['admin-users', 'delete-impact', id],
+    queryFn: get<{ tasks: number; leaves: number; comments: number; todos: number; sharedListsTransferred: number; announcements: number }>(`/admin/users/${id}/delete-impact`),
+    enabled: id !== null,
+  });
+
+export const useDeleteUser = () =>
+  useAction(
+    (id: number) => api.delete(`/admin/users/${id}`),
+    { invalidate: [['admin-users'], ['users'], ['tasks'], ['leaves'], ['logs'], ['projects']], success: 'Hesap kalıcı olarak silindi' },
   );
 
 export const useResetPassword = () =>

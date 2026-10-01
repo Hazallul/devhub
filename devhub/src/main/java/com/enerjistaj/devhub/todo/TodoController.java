@@ -1,5 +1,8 @@
 package com.enerjistaj.devhub.todo;
 
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.User;
@@ -37,6 +40,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TodoController {
 
+    private final ActionLogService actionLogService;
     private final TodoListRepository lists;
     private final TodoItemRepository items;
     private final TodoStepRepository steps;
@@ -471,8 +475,13 @@ public class TodoController {
         Task t = tasks.findById(i.getTaskId()).orElse(null);
         if (t == null || t.getStatus() == TaskStatus.TAMAMLANDI) return;
         if (!t.getUser().getId().equals(me.getId()) && !CurrentUser.isAdmin(me)) return;
+        String before = TaskStatusService.STATUS_LABEL.get(t.getStatus());
         taskStatus.change(t, TaskStatus.TAMAMLANDI, me);
         tasks.save(t);
+        // Kartın kendisi kişiye özeldir ve loglanmaz; yalnızca etkilediği DevHub görevi kayda geçer.
+        actionLogService.record(LogCategory.GOREV, LogAction.TAMAMLAMA, "Görev tamamlandı: " + t.getContent()).by(me)
+                .target("GOREV", t.getId(), t.getContent()).change("Durum", before, "Tamamlandı")
+                .detail("Kişisel plandaki bağlı kart tamamlanınca").save();
     }
 
     /** Listesiz kart ve kendi eklediği kart her zaman; ortak listede başkasının kartını yalnızca liste yöneticisi siler. */

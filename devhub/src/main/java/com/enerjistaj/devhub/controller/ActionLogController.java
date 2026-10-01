@@ -1,24 +1,207 @@
 package com.enerjistaj.devhub.controller;
 
 import com.enerjistaj.devhub.dto.LogDto;
+import com.enerjistaj.devhub.entity.*;
+import com.enerjistaj.devhub.exception.ApiException;
 import com.enerjistaj.devhub.repository.ActionLogRepository;
+import com.enerjistaj.devhub.security.CurrentUser;
+import com.enerjistaj.devhub.service.ActionLogService;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * Sistem logları. Yönetici her şeyi arar, süzer, istatistiğini görür ve CSV olarak indirir.
+ * Çalışanlar yalnızca ekip akışını görür (projeler, görevler, duyurular ve durum değişiklikleri; IP adresi olmadan).
+ */
 @RestController
 @RequestMapping("/api/logs")
 @RequiredArgsConstructor
 public class ActionLogController {
 
-    private final ActionLogRepository actionLogRepository;
+    private static final String ONLY_ADMIN = "Ayrıntılı sistem loglarını yalnızca yöneticiler görebilir.";
+    private static final Set<LogCategory> TEAM_FEED = EnumSet.of(LogCategory.PROJE, LogCategory.GOREV, LogCategory.DUYURU);
+    private static final Sort NEWEST = Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"));
+    private static final DateTimeFormatter CSV_TIME = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm:ss");
 
+    private final ActionLogRepository logs;
+    private final CurrentUser currentUser;
+
+    public record LogPage(List<LogDto> items, long total, int page, int size) {}
+
+    public record DayCount(LocalDate date, long count, long warnings) {}
+
+    public record ActorCount(Long actorId, String name, long count) {}
+
+    public record Stats(long total, long today, long failedLogins24h, long critical7d, List<DayCount> perDay,
+                        Map<LogCategory, Long> byCategory, List<ActorCount> topActors) {}
+
+    /** Son 200 kayıt. Çalışan için yalnızca ekip akışı. */
     @GetMapping
-    public ResponseEntity<List<LogDto>> getLogs() {
-        return ResponseEntity.ok(actionLogRepository.findAllByOrderByCreatedAtDesc().stream().map(LogDto::from).toList());
+    public ResponseEntity<List<LogDto>> feed() {
+        boolean admin = CurrentUser.isAdmin(currentUser.get());
+        return ResponseEntity.ok(logs.findTop200ByOrderByCreatedAtDescIdDesc().stream()
+            .filter(l -> admin || teamVisible(l))
+            .map(l -> admin ? LogDto.from(l) : LogDto.from(l).withoutIp())
+            .toList());
+    }
+
+    /** Süzme ve sayfalama: kategori, seviye, işlem, kişi, tarih aralığı (İstanbul günü) ve serbest metin. */
+    @GetMapping("/search")
+    public ResponseEntity<LogPage> search(@RequestParam(required = false) LogCategory category,
+                                          @RequestParam(required = false) LogLevel level,
+                                          @RequestParam(required = false) LogAction action,
+                                          @RequestParam(required = false) Long actorId,
+                                          @RequestParam(required = false) String from,
+                                          @RequestParam(required = false) String to,
+                                          @RequestParam(required = false) String q,
+                                          @RequestParam(required = false) Integer sinceHours,
+                                          @RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "50") int size) {
+        currentUser.requireAdmin(ONLY_ADMIN);
+        int safeSize = Math.max(1, Math.min(size, 100));
+        Page<ActionLog> result = logs.findAll(spec(category, level, action, actorId, from, to, q, sinceHours), PageRequest.of(Math.max(page, 0), safeSize, NEWEST));
+        return ResponseEntity.ok(new LogPage(result.getContent().stream().map(LogDto::from).toList(), result.getTotalElements(), result.getNumber(), safeSize));
+    }
+
+    /** Özet: günlük kayıt sayıları, kategorilere dağılım, başarısız girişler, kritik işlemler ve en aktif kişiler. */
+    @GetMapping("/stats")
+    public ResponseEntity<Stats> stats(@RequestParam(defaultValue = "14") int days) {
+        currentUser.requireAdmin(ONLY_ADMIN);
+        int span = Math.max(1, Math.min(days, 60));
+        LocalDate today = LocalDate.now(ActionLogService.ZONE);
+        LocalDate first = today.minusDays(span - 1L);
+        List<ActionLog> recent = logs.findByCreatedAtGreaterThanEqual(utc(first.atStartOfDay()));
+
+        Map<LocalDate, List<ActionLog>> byDay = recent.stream().collect(Collectors.groupingBy(l -> localDay(l.getCreatedAt())));
+        List<DayCount> perDay = new ArrayList<>();
+        for (LocalDate d = first; !d.isAfter(today); d = d.plusDays(1)) {
+            List<ActionLog> list = byDay.getOrDefault(d, List.of());
+            perDay.add(new DayCount(d, list.size(), list.stream().filter(l -> l.getLevel() != LogLevel.BILGI).count()));
+        }
+        Map<LogCategory, Long> byCategory = new EnumMap<>(LogCategory.class);
+        for (LogCategory c : LogCategory.values()) byCategory.put(c, 0L);
+        recent.forEach(l -> byCategory.merge(l.getCategory(), 1L, Long::sum));
+
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+        long failed = recent.stream().filter(l -> l.getAction() == LogAction.GIRIS_BASARISIZ && l.getCreatedAt().isAfter(nowUtc.minusHours(24))).count();
+        long critical = recent.stream().filter(l -> l.getLevel() == LogLevel.KRITIK && l.getCreatedAt().isAfter(nowUtc.minusDays(7))).count();
+        List<ActorCount> top = recent.stream().filter(l -> l.getActor() != null)
+            .collect(Collectors.groupingBy(l -> l.getActor().getId(), Collectors.toList())).values().stream()
+            .map(list -> new ActorCount(list.get(0).getActor().getId(), list.get(0).getActor().getFullName(), list.size()))
+            .sorted(Comparator.comparingLong(ActorCount::count).reversed()).limit(5).toList();
+
+        return ResponseEntity.ok(new Stats(recent.size(), byDay.getOrDefault(today, List.of()).size(), failed, critical, perDay, byCategory, top));
+    }
+
+    /** Süzülmüş kayıtları (en fazla 5000) Excel'in doğrudan açabileceği CSV olarak indirir. */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) LogCategory category,
+                                         @RequestParam(required = false) LogLevel level,
+                                         @RequestParam(required = false) LogAction action,
+                                         @RequestParam(required = false) Long actorId,
+                                         @RequestParam(required = false) String from,
+                                         @RequestParam(required = false) String to,
+                                         @RequestParam(required = false) String q,
+                                         @RequestParam(required = false) Integer sinceHours) {
+        currentUser.requireAdmin(ONLY_ADMIN);
+        List<ActionLog> rows = logs.findAll(spec(category, level, action, actorId, from, to, q, sinceHours), PageRequest.of(0, 5000, NEWEST)).getContent();
+        StringBuilder csv = new StringBuilder("﻿"); // Excel Türkçe karakterleri doğru okusun
+        csv.append("Kayıt No;Tarih;Seviye;Kategori;İşlem;Yapan;Açıklama;Hedef;Ayrıntılar;IP\r\n");
+        for (ActionLog l : rows) {
+            csv.append(l.getId()).append(';')
+                .append(localTime(l.getCreatedAt()).format(CSV_TIME)).append(';')
+                .append(l.getLevel()).append(';')
+                .append(l.getCategory()).append(';')
+                .append(l.getAction()).append(';')
+                .append(cell(l.getActor() != null ? l.getActor().getFullName() : "Sistem")).append(';')
+                .append(cell(l.getMessage())).append(';')
+                .append(cell(l.getTargetName())).append(';')
+                .append(cell(l.getDetails() != null ? l.getDetails().replace("\n", " | ") : null)).append(';')
+                .append(cell(l.getIpAddress())).append("\r\n");
+        }
+        String name = "devhub-loglar-" + LocalDateTime.now(ActionLogService.ZONE).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".csv";
+        return ResponseEntity.ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
+            .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+            .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    // ---------------------------------------------------------------- yardımcılar
+
+    private static boolean teamVisible(ActionLog l) {
+        return TEAM_FEED.contains(l.getCategory()) || (l.getCategory() == LogCategory.KULLANICI && l.getAction() == LogAction.DURUM_DEGISIKLIGI);
+    }
+
+    /** sinceHours: son N saat (özet kartlarındaki "son 24 saat", "son 7 gün" sayılarıyla birebir aynı aralık). */
+    private static Specification<ActionLog> spec(LogCategory category, LogLevel level, LogAction action, Long actorId, String from, String to, String q,
+                                                 Integer sinceHours) {
+        LocalDate fromDay = day(from, "Başlangıç");
+        LocalDate toDay = day(to, "Bitiş");
+        String text = q == null || q.isBlank() ? null : "%" + q.trim().toLowerCase(Locale.forLanguageTag("tr")) + "%";
+        return (root, query, cb) -> {
+            List<Predicate> p = new ArrayList<>();
+            if (category != null) p.add(cb.equal(root.get("category"), category));
+            if (level != null) p.add(cb.equal(root.get("level"), level));
+            if (action != null) p.add(cb.equal(root.get("action"), action));
+            if (actorId != null) p.add(actorId == 0 ? cb.isNull(root.get("actor")) : cb.equal(root.get("actor").get("id"), actorId));
+            if (fromDay != null) p.add(cb.greaterThanOrEqualTo(root.get("createdAt"), utc(fromDay.atStartOfDay())));
+            if (toDay != null) p.add(cb.lessThan(root.get("createdAt"), utc(toDay.plusDays(1).atStartOfDay())));
+            if (sinceHours != null && sinceHours > 0) {
+                p.add(cb.greaterThanOrEqualTo(root.get("createdAt"), LocalDateTime.now(ZoneOffset.UTC).minusHours(Math.min(sinceHours, 24 * 366))));
+            }
+            if (text != null) {
+                p.add(cb.or(
+                    cb.like(cb.lower(root.get("message")), text),
+                    cb.like(cb.lower(cb.coalesce(root.get("targetName"), "")), text),
+                    cb.like(cb.lower(cb.coalesce(root.get("details"), "")), text),
+                    cb.like(cb.lower(cb.coalesce(root.get("ipAddress"), "")), text)));
+            }
+            return cb.and(p.toArray(Predicate[]::new));
+        };
+    }
+
+    private static LocalDate day(String raw, String label) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return LocalDate.parse(raw);
+        } catch (DateTimeParseException e) {
+            throw ApiException.badRequest(label + " tarihi geçerli olmalı (yyyy-AA-gg).");
+        }
+    }
+
+    /** Kayıtlar UTC saklanır; İstanbul saatindeki bir anı UTC'ye çevirir. */
+    private static LocalDateTime utc(LocalDateTime istanbul) {
+        return istanbul.atZone(ActionLogService.ZONE).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
+    }
+
+    private static LocalDateTime localTime(LocalDateTime utc) {
+        return utc.atZone(ZoneOffset.UTC).withZoneSameInstant(ActionLogService.ZONE).toLocalDateTime();
+    }
+
+    private static LocalDate localDay(LocalDateTime utc) {
+        return localTime(utc).toLocalDate();
+    }
+
+    /** CSV hücresi: ayırıcı, tırnak veya satır sonu içeriyorsa tırnak içine alınır. */
+    private static String cell(String v) {
+        if (v == null) return "";
+        String s = v.replace("\r", " ").replace("\n", " ");
+        if (!s.isEmpty() && "=+-@".indexOf(s.charAt(0)) >= 0) s = "'" + s; // Excel formül enjeksiyonuna karşı
+        return s.contains(";") || s.contains("\"") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
     }
 }

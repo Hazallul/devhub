@@ -100,7 +100,7 @@ export function PageHeader({ title, description, actions, eyebrow }: { title: st
   );
 }
 
-export function StatCard({ label, value, icon: IconCmp, hint, onClick }: { label: string; value: ReactNode; icon: Icon; hint?: ReactNode; onClick?: () => void }) {
+export function StatCard({ label, value, icon: IconCmp, hint, onClick, active }: { label: string; value: ReactNode; icon: Icon; hint?: ReactNode; onClick?: () => void; active?: boolean }) {
   const content = (
     <>
       <div className="flex items-center justify-between">
@@ -119,9 +119,10 @@ export function StatCard({ label, value, icon: IconCmp, hint, onClick }: { label
     <motion.button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       whileHover={{ y: -2 }}
       whileTap={{ scale: 0.98 }}
-      className={`${cls} cursor-pointer hover:shadow-diffusion transition-shadow`}
+      className={`${cls} cursor-pointer hover:shadow-diffusion transition-shadow ${active ? 'ring-2 ring-theme-deep ring-offset-2 ring-offset-theme-cream' : ''}`}
     >
       {content}
     </motion.button>

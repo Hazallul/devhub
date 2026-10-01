@@ -11,13 +11,13 @@ interface ModalProps {
   title: string;
   description?: string;
   children: ReactNode;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   /** Modal içeriği bir <form> ise burada verilir; başlık ve gövde form içinde kalır. */
   onSubmit?: (e: React.FormEvent) => void;
   footer?: ReactNode;
 }
 
-const WIDTH = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-2xl' };
+const WIDTH = { sm: 'max-w-md', md: 'max-w-xl', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 export default function Modal({ open, onClose, title, description, children, size = 'md', onSubmit, footer }: ModalProps) {

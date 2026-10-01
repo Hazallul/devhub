@@ -13,6 +13,7 @@ import SendTodoModal from './SendTodoModal';
 import WeekPlan from './WeekPlan';
 import TasksPane from './TasksPane';
 import ListMembersModal from './ListMembersModal';
+import UserCard from '../layout/UserCard';
 import { buildViews, canDeleteCard, groupByDue, listIdOf, LIST_COLORS } from './views';
 import type { ViewDef, ViewId } from './views';
 import {
@@ -158,6 +159,8 @@ function Space({ onHome }: { onHome: () => void }) {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="flex-1 min-h-0 flex flex-col">
           <Rail smart={smart} own={own} view={current.id} counts={counts} unseen={unseen} onPick={setView} />
         </motion.div>
+        {/* Uygulama menüsündekiyle aynı kullanıcı kartı: kişisel alandan da çıkış yapılabilir. */}
+        <div className="pt-4 shrink-0"><UserCard /></div>
       </aside>
 
       {/* Orta: kartlar */}

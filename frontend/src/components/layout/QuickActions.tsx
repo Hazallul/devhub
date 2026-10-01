@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useMe } from '../../hooks/api';
 import { ProjectFormModal, LeaveFormModal, AnnouncementFormModal } from '../forms/FormModals';
 import TaskFormModal from '../tasks/TaskFormModal';
 import TaskDrawer from '../tasks/TaskDrawer';
@@ -34,6 +35,8 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<Open>(null);
   const [taskId, setTaskId] = useState<number | null>(null);
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isAdmin = useMe().role === 'ADMIN';
   const close = useCallback(() => setOpen(null), []);
   const closeTask = useCallback(() => setTaskId(null), []);
 
@@ -51,9 +54,10 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
     newProject: assignUser => setOpen({ kind: 'project', assignUser }),
     newLeave: forUser => setOpen({ kind: 'leave', forUser }),
     newAnnouncement: () => setOpen({ kind: 'announcement' }),
-    openLogs: () => setOpen({ kind: 'logs' }),
+    // Yönetici ayrıntılı log sayfasına gider; çalışan ekip akışını pencerede görür.
+    openLogs: () => (isAdmin ? navigate('/logs') : setOpen({ kind: 'logs' })),
     openTask: id => setTaskId(id),
-  }), []);
+  }), [isAdmin, navigate]);
 
   return (
     <Ctx.Provider value={api}>

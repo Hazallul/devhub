@@ -90,3 +90,36 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* ---------- Doküman editörü (TipTap). Okuma görünümü DocContent.tsx'te Tailwind sınıflarıyla, burası aynı görünümün editördeki karşılığı. ---------- */
+.doc-prose {
+  @apply min-h-[420px] text-[15px] leading-7 text-theme-text outline-none;
+}
+.doc-prose > * + * { @apply mt-4; }
+.doc-prose h2 { @apply text-2xl font-bold tracking-tight pt-5; }
+.doc-prose h3 { @apply text-lg font-bold pt-2; }
+.doc-prose ul { @apply list-disc pl-6 space-y-1 marker:text-theme-medium; }
+.doc-prose ol { @apply list-decimal pl-6 space-y-1 marker:font-bold marker:text-theme-deep; }
+.doc-prose li > p { @apply m-0; }
+.doc-prose a { @apply font-semibold text-theme-deep underline decoration-theme-medium underline-offset-4; }
+.doc-prose code { @apply px-1.5 py-0.5 rounded-md bg-theme-lightest text-theme-deep text-[0.88em] font-mono font-semibold; }
+.doc-prose pre code { @apply p-0 bg-transparent text-[#F6F0D7] font-normal text-[13px]; }
+.doc-prose mark { @apply bg-theme-light/80 text-theme-text rounded px-0.5; }
+.doc-prose hr { @apply border-theme-light/60 my-6; }
+.doc-prose hr.ProseMirror-selectednode { @apply border-theme-deep; }
+.doc-prose .doc-callout-body > * + * { @apply mt-1.5; }
+.doc-prose table { @apply w-full text-sm border-collapse rounded-2xl overflow-hidden my-4 table-fixed; }
+.doc-prose th, .doc-prose td { @apply border border-theme-light/60 px-3 py-2 align-top text-left relative; }
+.doc-prose th { @apply bg-theme-cream font-bold; }
+.doc-prose td p, .doc-prose th p { @apply m-0; }
+.doc-prose .selectedCell::after { content: ''; @apply absolute inset-0 bg-theme-light/40 pointer-events-none; }
+.doc-prose img.doc-image, .doc-prose [data-resize-wrapper] img { @apply max-w-full h-auto rounded-2xl border border-theme-light/50; }
+.doc-prose .ProseMirror-selectednode img, .doc-prose img.ProseMirror-selectednode { @apply ring-2 ring-theme-medium ring-offset-2; }
+.doc-prose [data-resize-handle] { @apply w-3 h-3 rounded-full bg-white border-2 border-theme-deep; }
+.doc-prose p.is-empty::before,
+.doc-prose h2.is-empty::before,
+.doc-prose h3.is-empty::before {
+  content: attr(data-placeholder);
+  @apply float-left h-0 pointer-events-none text-theme-muted/70 font-medium;
+}
+.doc-prose .ProseMirror-gapcursor::after { @apply border-theme-deep; }

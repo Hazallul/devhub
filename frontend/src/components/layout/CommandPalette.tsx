@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
 import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText, ListChecks } from '@phosphor-icons/react';
-import { DOCS, DOC_CATEGORIES } from '../../docs';
+import { DOC_CATEGORIES } from '../../docs';
+import { useDocs } from '../../hooks/docs';
 import { useUsers, useProjects, useMe } from '../../hooks/api';
 import { trLower } from '../../lib/format';
 import { Avatar, StatusBadge } from '../ui/primitives';
@@ -29,6 +30,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
   const actions = useQuickActions();
   const { data: users } = useUsers();
   const { data: projects } = useProjects();
+  const { data: docs } = useDocs();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +51,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       { id: 'nav-/todo', group: 'Sayfalar', label: 'Yapılacaklarım', hint: 'Kişisel alan', icon: ListChecks, run: go(() => navigate('/todo')) },
       { id: 'act-task', group: 'İşlemler', label: 'Yeni görev ekle', icon: Plus, run: go(() => actions.newTask()) },
       { id: 'act-leave', group: 'İşlemler', label: 'İzin talebi oluştur', icon: Airplane, run: go(() => actions.newLeave()) },
-      { id: 'act-logs', group: 'İşlemler', label: 'Sistem loglarını aç', icon: ListDashes, run: go(() => actions.openLogs()) },
+      { id: 'act-logs', group: 'İşlemler', label: me.role === 'ADMIN' ? 'Sistem loglarını aç' : 'Ekip akışını aç', icon: ListDashes, run: go(() => actions.openLogs()) },
       ...(me.role === 'ADMIN' ? [
         { id: 'act-project', group: 'İşlemler' as const, label: 'Yeni proje oluştur', icon: Briefcase, run: go(() => actions.newProject()) },
         { id: 'act-ann', group: 'İşlemler' as const, label: 'Duyuru yayınla', icon: Megaphone, run: go(() => actions.newAnnouncement()) },
@@ -62,7 +64,8 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
         id: `project-${p.id}`, group: 'Projeler' as const, label: p.name, icon: Briefcase,
         run: go(() => navigate('/projects', { state: { openProjectId: p.id } })),
       })),
-      ...DOCS.map(d => ({
+      { id: 'act-doc', group: 'İşlemler' as const, label: 'Doküman yaz', icon: BookOpenText, run: go(() => navigate('/docs/yeni')) },
+      ...(docs ?? []).map(d => ({
         id: `doc-${d.slug}`, group: 'Dokümanlar' as const, label: d.title, icon: BookOpenText,
         hint: [DOC_CATEGORIES.find(c => c.id === d.category)?.name, ...d.tags].filter(Boolean).join(' · '),
         run: go(() => navigate(`/docs/${d.slug}`)),
@@ -71,7 +74,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     const q = trLower(query.trim());
     if (!q) return all.filter(i => i.group !== 'Kişiler' && i.group !== 'Projeler' && i.group !== 'Dokümanlar');
     return all.filter(i => trLower(`${i.label} ${i.hint ?? ''}`).includes(q)).slice(0, 12);
-  }, [query, users, projects, me, navigate, onClose, actions]);
+  }, [query, users, projects, docs, me, navigate, onClose, actions]);
 
   useEffect(() => { setActive(0); }, [query]);
 

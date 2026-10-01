@@ -1,4 +1,4 @@
-import type { ActionLog, ActionLogType } from '../types';
+import type { ActionLog, LogCategory } from '../types';
 
 export function initials(fullName: string) {
   return fullName
@@ -12,6 +12,17 @@ export function initials(fullName: string) {
 
 export function firstName(fullName: string) {
   return fullName.split(' ')[0];
+}
+
+const TR_MAP: Record<string, string> = { ç: 'c', ğ: 'g', ı: 'i', İ: 'i', ö: 'o', ş: 's', ü: 'u', Ç: 'c', Ğ: 'g', Ö: 'o', Ş: 's', Ü: 'u' };
+
+/** "Git Akışı ve Branch" -> "git-akisi-ve-branch" (adresler ve başlık bağlantıları için; sunucudaki DocContent.slugify ile aynı kural) */
+export function slugify(text: string) {
+  return text
+    .replace(/[çğıİöşüÇĞÖŞÜ]/g, ch => TR_MAP[ch] ?? ch)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
 
 export function trLower(s: string) {
@@ -33,6 +44,13 @@ export function toDate(value: string) {
 
 export function formatDate(value: string) {
   return dateFmt.format(toDate(value));
+}
+
+const fullDateFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+
+/** "1 Ekim 2027": yılı belirsiz kalmaması gereken tarihler için (ör. ileri tarihli izin hakkı) */
+export function formatFullDate(value: string) {
+  return fullDateFmt.format(toDate(value));
 }
 
 export function formatLongDate(d: Date) {
@@ -83,14 +101,22 @@ export function leaveDaysLabel(start: string, end: string, holidays: ReadonlySet
   return `${r.workdays} iş günü (toplam ${r.total} gün${r.holidays ? ` · ${r.holidays} resmi tatil` : ''})`;
 }
 
-/** İş Kanunu md. 53: 1–5 yıl 14, 5–15 yıl 20, 15 yıl ve üzeri 26 gün (1 yıldan az kıdemde yasal hak yoktur). */
-export function suggestedLeaveDays(hireDate: string | null) {
+/**
+ * Yıllık izin hakkı (İş Kanunu md. 53), sunucudaki LeavePolicy ile aynı kural: 1 yıldan az kıdem 0, 1–5 yıl 14,
+ * 5–15 yıl 20, 15 yıl ve üzeri 26 gün. Hak kıdem yıldönümünde kendiliğinden artar; next = bir sonraki artış.
+ */
+export function leaveEntitlement(hireDate: string | null) {
   if (!hireDate) return null;
-  const years = (Date.now() - toDate(hireDate).getTime()) / (365.25 * 86_400_000);
-  if (years < 1) return { years, days: 14, note: '1 yıldan az kıdem: yasal hak yok, şirket politikasıyla 14 gün' };
-  if (years < 5) return { years, days: 14, note: '1–5 yıl kıdem: 14 gün' };
-  if (years < 15) return { years, days: 20, note: '5–15 yıl kıdem: 20 gün' };
-  return { years, days: 26, note: '15 yıl ve üzeri kıdem: 26 gün' };
+  const hire = toDate(hireDate);
+  const today = toDate(toIsoDay(new Date()));
+  const steps: [number, number][] = [[1, 14], [5, 20], [15, 26]];
+  const anniversary = (y: number) => new Date(hire.getFullYear() + y, hire.getMonth(), hire.getDate());
+  let days = 0;
+  steps.forEach(([y, d]) => { if (anniversary(y) <= today) days = d; });
+  const nextStep = steps.find(([y]) => anniversary(y) > today);
+  const next = nextStep ? { date: toIsoDay(anniversary(nextStep[0])), days: nextStep[1] } : null;
+  const note = days === 0 ? '1 yıldan az kıdem: henüz yıllık izin hakkı yok' : days === 14 ? '1–5 yıl kıdem' : days === 20 ? '5–15 yıl kıdem' : '15 yıl ve üzeri kıdem';
+  return { days, next, note };
 }
 
 export function seniorityLabel(hireDate: string | null) {
@@ -135,14 +161,10 @@ export function greeting() {
 }
 
 /** Backend log mesajı "[28.09.2026 16:42] ..." biçiminde; zamanı ve metni ayırır, türünü tahmin eder. */
-export function parseLog(log: ActionLog): { time: string; text: string; type: ActionLogType } {
-  const match = log.message.match(/^\[(.*?)\]\s*(.*)$/);
-  const text = match ? match[2] : log.message;
-  const time = match ? match[1] : '';
-  const lower = trLower(text);
-  let type: ActionLogType = 'SISTEM';
-  if (lower.includes('izin')) type = 'IZIN';
-  else if (lower.includes('görev')) type = 'GOREV';
-  else if (lower.includes('proje')) type = 'PROJE';
-  return { time, text, type };
+/** Log satırı: saat ("30.09.2026 14:05"), metin ve kategori. Eski kayıtların başındaki "[...] " damgası atılır. */
+export function parseLog(log: ActionLog): { time: string; text: string; type: LogCategory } {
+  const text = log.message.replace(/^\[[^\]]*\]\s*/, '');
+  const d = parseServerDate(log.createdAt);
+  const time = `${d.toLocaleDateString('tr-TR')} ${d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
+  return { time, text, type: log.category };
 }

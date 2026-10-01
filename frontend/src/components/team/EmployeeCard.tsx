@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, CaretDown, CaretRight, CaretLeft, DotsThree, Briefcase, UserMinus, ListDashes, CheckSquare, Envelope,
+  Plus, CaretDown, CaretRight, CaretLeft, DotsThree, Briefcase, UserMinus, ListDashes, CheckSquare, Envelope, PencilSimple, Copy,
 } from '@phosphor-icons/react';
 import type { Task, User, UserStatus, TaskPriority } from '../../types';
 import { Avatar, StatusBadge, Skeleton, PriorityBadge } from '../ui/primitives';
+import { useToast } from '../ui/Toast';
 import { Menu, MenuItem, MenuLabel, MenuDivider } from '../ui/Menu';
 import type { MenuPoint } from '../ui/Menu';
 import TaskRow from '../tasks/TaskRow';
@@ -41,6 +42,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
 
   const isAdmin = me.role === 'ADMIN';
   const isSelf = me.id === user.id;
+  const toast = useToast();
   const canEditStatus = isAdmin || isSelf;
   const canEditTasks = isAdmin || isSelf;
   const statuses: UserStatus[] = statusOptions(me, user);
@@ -71,8 +73,8 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
     setMenuPoint(point);
   };
 
+  // Herkes her kartta menüyü açabilir; menüde yalnızca kişinin yapabileceği işlemler görünür.
   const handleContextMenu = (e: React.MouseEvent) => {
-    if (!canEditTasks && !isAdmin) return;
     e.preventDefault();
     openMenuAt({ x: e.clientX, y: e.clientY });
   };
@@ -174,7 +176,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
             <StatusBadge status={user.status} interactive={canEditStatus} />
           </button>
 
-          {(canEditTasks || isAdmin) && (
+          {(
             <button
               ref={setMoreBtn}
               onClick={e => {
@@ -215,8 +217,9 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
                 <Avatar user={user} size="xs" />
                 <p className="text-sm font-bold text-theme-text truncate">{user.fullName}</p>
               </div>
+              {/* Görev: yönetici herkese atar; çalışan yalnızca kendine ekler (başkasının kartında görev seçeneği yok). */}
               {canEditTasks && (
-                <MenuItem icon={Plus} onSelect={startNewTask}>{isSelf ? 'Yeni görev ekle' : 'Yeni görev ata'}</MenuItem>
+                <MenuItem icon={Plus} onSelect={startNewTask}>{isSelf ? 'Kendime görev ekle' : 'Yeni görev ata'}</MenuItem>
               )}
               {isAdmin && (
                 <MenuItem icon={CheckSquare} onSelect={() => { closeMenu(); actions.newTask(user.id); }}>Detaylı görev ata…</MenuItem>
@@ -232,8 +235,16 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
                   </MenuItem>
                 )}
               </>}
-              <MenuDivider />
-              <MenuItem icon={Envelope} onSelect={() => { closeMenu(); window.location.href = `mailto:${user.email}`; }}>E-posta gönder</MenuItem>
+              <MenuItem icon={ListDashes} onSelect={() => { closeMenu(); setExpanded(v => !v); }}>{expanded ? 'Görevleri gizle' : 'Görevlerini göster'}</MenuItem>
+              {isSelf && !isAdmin && <MenuItem icon={PencilSimple} onSelect={() => { closeMenu(); navigate('/settings'); }}>Profilimi düzenle</MenuItem>}
+              {!isSelf && <>
+                <MenuDivider />
+                <MenuItem icon={Envelope} onSelect={() => { closeMenu(); window.location.href = `mailto:${user.email}`; }}>E-posta gönder</MenuItem>
+                <MenuItem icon={Copy} onSelect={() => {
+                  closeMenu();
+                  navigator.clipboard.writeText(user.email).then(() => toast.success('E-posta adresi kopyalandı'), () => toast.error('Panoya kopyalanamadı.'));
+                }}>E-posta adresini kopyala</MenuItem>
+              </>}
             </motion.div>
           ) : (
             <motion.div key="projects" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 12, transition: { duration: 0.1 } }}>

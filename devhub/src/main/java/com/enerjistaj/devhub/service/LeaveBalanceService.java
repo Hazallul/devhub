@@ -16,7 +16,8 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * Yıllık izin bakiyesi. Yalnızca YILLIK türü hakkından düşer; hastalık ve mazeret izinleri bakiyeyi etkilemez.
+ * Yıllık izin bakiyesi. Hak işe giriş tarihinden kendiliğinden hesaplanır (LeavePolicy).
+ * Yalnızca YILLIK türü hakkından düşer; hastalık ve mazeret izinleri bakiyeyi etkilemez.
  * İzin yıl sınırını aşıyorsa her yıl kendi payını kullanır.
  */
 @Service
@@ -33,13 +34,17 @@ public class LeaveBalanceService {
                 LeaveType.YILLIK, List.of(LeaveState.ONAYLANDI, LeaveState.BEKLIYOR), from, to);
         Map<Long, List<LeaveRequest>> byUser = annual.stream().collect(Collectors.groupingBy(l -> l.getUser().getId()));
 
+        // Hak, o yılın hangi anına göre? Geçmiş yıl: yıl sonundaki kıdem; bu yıl: bugünkü; gelecek yıl: yıl başındaki.
+        LocalDate today = LocalDate.now(ActionLogService.ZONE);
+        LocalDate asOf = year < today.getYear() ? to : year > today.getYear() ? from : today;
         return users.stream().map(u -> {
             List<LeaveRequest> own = byUser.getOrDefault(u.getId(), List.of());
             int used = sum(own, LeaveState.ONAYLANDI, from, to, null);
             int pending = sum(own, LeaveState.BEKLIYOR, from, to, null);
+            int entitlement = LeavePolicy.entitlement(u.getHireDate(), asOf);
             return LeaveBalanceDto.builder()
-                    .userId(u.getId()).year(year).entitlement(u.getAnnualLeaveDays())
-                    .used(used).pending(pending).remaining(u.getAnnualLeaveDays() - used)
+                    .userId(u.getId()).year(year).entitlement(entitlement)
+                    .used(used).pending(pending).remaining(entitlement - used)
                     .build();
         }).toList();
     }
@@ -59,11 +64,22 @@ public class LeaveBalanceService {
                     .filter(l -> l.getUser().getId().equals(user.getId()))
                     .toList();
             int committed = sum(own, LeaveState.ONAYLANDI, from, to, excludeId) + sum(own, LeaveState.BEKLIYOR, from, to, excludeId);
-            int available = user.getAnnualLeaveDays() - committed;
+            // Hak, iznin o yıl içindeki ilk gününde geçerli kıdeme göre (yıldönümünden sonraki izin yeni hakkı kullanır).
+            LocalDate firstDay = start.isAfter(from) ? start : from;
+            int entitlement = LeavePolicy.entitlement(user.getHireDate(), firstDay);
+            if (entitlement == 0) {
+                LeavePolicy.Next next = LeavePolicy.next(user.getHireDate(), firstDay);
+                throw ApiException.badRequest(user.getHireDate() == null
+                        ? "İşe giriş tarihi kayıtlı olmadığı için yıllık izin hakkı hesaplanamıyor; yöneticinize başvurun."
+                        : "Yıllık izin hakkı, işe girişin 1. yılı dolunca başlar"
+                          + (next != null ? " (" + next.date().format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy")) + " itibarıyla " + next.days() + " gün)" : "")
+                          + ". Bu süre içinde mazeret veya hastalık izni kullanılabilir.");
+            }
+            int available = entitlement - committed;
             if (requested > available) {
                 throw ApiException.badRequest(String.format(
                         "%d yılı için yıllık izin bakiyesi yetersiz: talep %d iş günü, kullanılabilir %d iş günü (hak %d, kullanılan/bekleyen %d).",
-                        year, requested, Math.max(available, 0), user.getAnnualLeaveDays(), committed));
+                        year, requested, Math.max(available, 0), entitlement, committed));
             }
         }
     }

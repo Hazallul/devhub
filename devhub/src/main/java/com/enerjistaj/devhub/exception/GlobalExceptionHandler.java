@@ -58,6 +58,11 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.CONFLICT, "Kayıt veritabanı kurallarıyla çakışıyor (ör. aynı isimde kayıt var).");
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> handleTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
+        return body(HttpStatus.PAYLOAD_TOO_LARGE, "Dosya çok büyük; en fazla 5 MB yüklenebilir.");
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Map<String, String> handleGeneralException(Exception ex) {

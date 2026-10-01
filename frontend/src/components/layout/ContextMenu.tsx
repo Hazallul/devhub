@@ -99,7 +99,7 @@ export function ContextMenuProvider({ children, onSearch }: { children: ReactNod
 
   // Sayfaya göre işlemler (sayfanın usePageMenu ile eklediklerinden önce gelir).
   const routeItems: ContextEntry[] = !state ? [] : [
-    ['home', 'team', 'projects', 'tasks'].includes(section) && { label: isAdmin ? 'Yeni görev ata' : 'Yeni görev', icon: Plus, onSelect: () => actions.newTask() },
+    ['home', 'team', 'projects', 'tasks'].includes(section) && { label: isAdmin ? 'Yeni görev ata' : 'Kendime görev ekle', icon: Plus, onSelect: () => actions.newTask() },
     section === 'projects' && isAdmin && { label: 'Yeni proje', icon: Briefcase, onSelect: () => actions.newProject() },
     ['home', 'leaves'].includes(section) && { label: 'İzin talebi oluştur', icon: Airplane, onSelect: () => actions.newLeave() },
     section === 'home' && isAdmin && { label: 'Duyuru yayınla', icon: Megaphone, onSelect: () => actions.newAnnouncement() },

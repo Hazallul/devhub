@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, X, ShieldCheck, Warning, Sparkle,
+  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, X, ShieldCheck, Warning, Sparkle, ArrowsClockwise, Trash,
 } from '@phosphor-icons/react';
 import { PageHeader, Segmented, Skeleton, EmptyState, Avatar, Pill } from '../components/ui/primitives';
 import { Menu, MenuItem, MenuDivider } from '../components/ui/Menu';
@@ -14,10 +14,10 @@ import type { Decision } from '../components/ui/DecisionModal';
 import { ProfileDiff } from '../components/settings/ProfileCard';
 import {
   useMe, useAdminUsers, useProjects, useLeaveBalances, useCreateUser, useUpdateUser, useSetUserActive, useResetPassword,
-  useProfileRequests, useDecideProfileRequest,
+  useProfileRequests, useDecideProfileRequest, useDeleteUser, useDeleteImpact
 } from '../hooks/api';
 import type { UserInput } from '../hooks/api';
-import { formatDate, seniorityLabel, suggestedLeaveDays, timeAgo, trLower } from '../lib/format';
+import { formatDate, formatFullDate, leaveEntitlement, seniorityLabel, timeAgo, toIsoDay, trLower } from '../lib/format';
 import { listContainer, listItem } from '../lib/motion';
 import type { ProfileRequest, Role, User } from '../types';
 
@@ -43,6 +43,7 @@ function UsersPage() {
   const [menu, setMenu] = useState<{ user: User; point: MenuPoint } | null>(null);
   usePageMenu([{ label: 'Yeni kullanıcı', icon: UserPlus, onSelect: () => setEditing('new') }]);
   const [confirm, setConfirm] = useState<{ kind: 'deactivate' | 'reset'; user: User } | null>(null);
+  const [deleting, setDeleting] = useState<User | null>(null);
   const [tempPassword, setTempPassword] = useState<{ user: Pick<User, 'fullName' | 'email'>; password: string } | null>(null);
 
   // Çalışanların ad soyad / unvan değişikliği talepleri
@@ -200,6 +201,9 @@ function UsersPage() {
                     <p className="text-sm font-semibold tabular">{b.remaining} <span className="text-theme-muted font-medium">/ {b.entitlement} gün</span></p>
                   ) : <p className="text-sm font-semibold tabular">{u.annualLeaveDays} gün</p>}
                   {b && b.pending > 0 && <p className="text-xs text-theme-muted">{b.pending} gün bekliyor</p>}
+                  {(!b || b.pending === 0) && u.annualLeaveNextDate && u.annualLeaveDays === 0 && (
+                    <p className="text-xs text-theme-muted">{formatFullDate(u.annualLeaveNextDate)}: {u.annualLeaveNextDays} gün</p>
+                  )}
                 </div>
                 <div className="ml-auto flex items-center gap-2 shrink-0">
                   {u.role === 'ADMIN' && <Pill className="bg-theme-deep text-white"><ShieldCheck size={11} weight="bold" /> Yönetici</Pill>}
@@ -234,6 +238,10 @@ function UsersPage() {
               Hesabı aktifleştir
             </MenuItem>
           )}
+          {/* Kalıcı silme yalnızca pasif hesaplarda: önce pasifleştir, sonra sil (yanlışlıkla silmeye karşı iki adım). */}
+          {!menu.user.active
+            ? <MenuItem icon={Trash} tone="danger" onSelect={() => { setDeleting(menu.user); setMenu(null); }}>Kalıcı olarak sil…</MenuItem>
+            : menu.user.id !== me.id && <p className="text-[11px] text-theme-muted font-medium px-3 pt-1 pb-1.5 leading-snug">Silmek için önce hesabı pasifleştirin.</p>}
         </>}
       </Menu>
 
@@ -267,13 +275,25 @@ function UsersPage() {
       </Modal>
 
       <TempPasswordModal value={tempPassword} onClose={() => setTempPassword(null)} />
+      <DeleteUserModal user={deleting} onClose={() => setDeleting(null)} />
     </>
   );
 }
 
 // ---------------- Kullanıcı formu ----------------
-interface FormState { fullName: string; email: string; role: Role; jobTitle: string; hireDate: string; annualLeaveDays: string; currentProject: string }
-const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', hireDate: '', annualLeaveDays: '14', currentProject: '' };
+interface FormState { fullName: string; email: string; role: Role; jobTitle: string; hireDate: string; currentProject: string; password: string }
+const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', hireDate: '', currentProject: '', password: '' };
+
+/**
+ * Okunması ve söylenmesi kolay başlangıç şifresi, ör. "Zeytin-4821". Herkese aynı sabit şifre (1111 gibi) verilmez:
+ * öyle olsaydı yeni açılan her hesaba, sahibi ilk kez girene kadar şirketteki herkes girebilirdi.
+ */
+function makePassword() {
+  const words = ['Zeytin', 'Defne', 'Ceviz', 'Badem', 'Incir', 'Lavanta', 'Kekik', 'Nane', 'Mersin', 'Ihlamur', 'Papatya', 'Sedir'];
+  const n = new Uint32Array(2);
+  crypto.getRandomValues(n);
+  return `${words[n[0] % words.length]}-${String(1000 + (n[1] % 9000))}`;
+}
 
 function UserFormModal({ target, onClose, onCreated }: {
   target: User | 'new' | null;
@@ -291,31 +311,33 @@ function UserFormModal({ target, onClose, onCreated }: {
   useEffect(() => {
     if (!target) return;
     setErrors({});
-    setForm(target === 'new' ? EMPTY : {
+    setForm(target === 'new' ? { ...EMPTY, hireDate: toIsoDay(new Date()), password: makePassword() } : {
       fullName: target.fullName, email: target.email, role: target.role, jobTitle: target.jobTitle ?? '',
-      hireDate: target.hireDate ?? '', annualLeaveDays: String(target.annualLeaveDays), currentProject: target.currentProject ?? '',
+      hireDate: target.hireDate ?? '', currentProject: target.currentProject ?? '', password: '',
     });
   }, [target]);
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }));
-  const suggestion = suggestedLeaveDays(form.hireDate || null);
+  const leave = leaveEntitlement(form.hireDate || null);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const errs: typeof errors = {};
     if (form.fullName.trim().length < 3) errs.fullName = 'Ad soyad en az 3 karakter olmalı.';
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email.trim())) errs.email = 'Geçerli bir e-posta adresi girin.';
-    const days = Number(form.annualLeaveDays);
-    if (!Number.isInteger(days) || days < 0 || days > 60) errs.annualLeaveDays = '0 ile 60 arasında tam sayı girin.';
+    if (isNew && !form.hireDate) errs.hireDate = 'Yıllık izin hakkı bu tarihten hesaplanır.';
+    if (isNew && (form.password.length < 8 || !/[A-Za-zÇĞİÖŞÜçğıöşü]/.test(form.password) || !/\d/.test(form.password))) {
+      errs.password = 'En az 8 karakter olmalı ve harf ile rakam içermeli.';
+    }
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
     const body: UserInput = {
       fullName: form.fullName.trim(), email: form.email.trim(), role: form.role, jobTitle: form.jobTitle.trim() || undefined,
-      hireDate: form.hireDate || undefined, annualLeaveDays: days,
+      hireDate: form.hireDate || undefined,
     };
     if (isNew) {
-      create.mutate({ ...body, currentProject: form.currentProject || undefined }, {
+      create.mutate({ ...body, currentProject: form.currentProject || undefined, password: form.password }, {
         onSuccess: ({ user, temporaryPassword }) => onCreated(user, temporaryPassword),
       });
     } else if (target) {
@@ -364,23 +386,28 @@ function UserFormModal({ target, onClose, onCreated }: {
           </div>
         </div>
         <div className="grid sm:grid-cols-2 gap-5">
-          <Field id="u-hire" label="İşe giriş tarihi">
+          <Field id="u-hire" label="İşe giriş tarihi" required={isNew} error={errors.hireDate}>
             <input id="u-hire" type="date" className="input" value={form.hireDate} onChange={e => set('hireDate', e.target.value)} />
           </Field>
-          <Field id="u-leave" label="Yıllık izin hakkı (iş günü)" error={errors.annualLeaveDays}>
-            <input id="u-leave" type="number" min={0} max={60} className="input tabular" value={form.annualLeaveDays} onChange={e => set('annualLeaveDays', e.target.value)} />
-          </Field>
+<div>
+            <span className="label">Yıllık izin hakkı</span>
+            <p className="input bg-theme-cream/60 flex items-center justify-between gap-2 cursor-default" aria-live="polite">
+              <span className="font-bold tabular">{leave ? `${leave.days} gün` : '—'}</span>
+              <span className="text-xs font-semibold text-theme-muted">kıdeme göre otomatik</span>
+            </p>
+          </div>
         </div>
-        {suggestion && String(suggestion.days) !== form.annualLeaveDays && (
-          <button
-            type="button"
-            onClick={() => set('annualLeaveDays', String(suggestion.days))}
-            className="w-full text-left text-sm rounded-2xl p-3.5 bg-theme-lightest/70 border border-theme-light hover:bg-theme-lightest transition-colors flex items-center gap-2.5"
-          >
-            <Sparkle size={18} weight="duotone" className="text-theme-deep shrink-0" />
-            <span className="flex-1"><strong>Kıdeme göre öneri: {suggestion.days} gün</strong> <span className="text-theme-muted">({suggestion.note})</span></span>
-            <span className="text-xs font-bold text-theme-deep">Uygula</span>
-          </button>
+        {leave && (
+          <p className="text-sm rounded-2xl p-3.5 bg-theme-lightest/70 border border-theme-light flex items-start gap-2.5">
+            <Sparkle size={18} weight="duotone" className="text-theme-deep shrink-0 mt-0.5" />
+            <span>
+              <strong>{leave.note}.</strong>{' '}
+              {leave.next
+                ? <>{formatFullDate(leave.next.date)} tarihinde hak kendiliğinden <strong>{leave.next.days} gün</strong> olur.</>
+                : 'En yüksek kıdem basamağında.'}
+              <span className="block text-xs text-theme-muted mt-1">İş Kanunu: 1 yıldan az 0, 1–5 yıl 14, 5–15 yıl 20, 15 yıl ve üzeri 26 iş günü.</span>
+            </span>
+          </p>
         )}
         {isNew && (
           <Field id="u-project" label="Proje">
@@ -388,6 +415,19 @@ function UserFormModal({ target, onClose, onCreated }: {
               <option value="">Boşta (proje yok)</option>
               {projects?.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
             </select>
+          </Field>
+        )}
+        {isNew && (
+          <Field id="u-password" label="Başlangıç şifresi" required error={errors.password}>
+            <div className="flex gap-2">
+              <input id="u-password" className="input font-mono tracking-wide" value={form.password} onChange={e => set('password', e.target.value)} autoComplete="off" spellCheck={false} />
+              <button type="button" onClick={() => set('password', makePassword())} className="btn-secondary shrink-0 px-3.5" title="Yeni şifre öner">
+                <ArrowsClockwise size={17} weight="bold" /> Yenile
+              </button>
+            </div>
+            <p className="text-xs text-theme-muted font-medium mt-1.5 ml-1 leading-relaxed">
+              Kişiye bu şifreyi iletin. İlk girişte kendi şifresini belirlemeden uygulamayı kullanamaz. İsterseniz kendiniz de yazabilirsiniz (en az 8 karakter, harf ve rakam).
+            </p>
           </Field>
         )}
       </div>
@@ -445,6 +485,58 @@ function TempPasswordModal({ value, onClose }: { value: { user: Pick<User, 'full
             <Warning size={18} weight="bold" className="shrink-0 mt-px" />
             Bu şifre yalnızca şimdi gösteriliyor. Kişiye güvenli bir yoldan iletin; ilk girişte değiştirmesi istenecek.
           </p>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+// ---------------- Kalıcı silme ----------------
+function DeleteUserModal({ user, onClose }: { user: User | null; onClose: () => void }) {
+  const { data: impact, isLoading } = useDeleteImpact(user?.id ?? null);
+  const remove = useDeleteUser();
+  const [typed, setTyped] = useState('');
+  useEffect(() => { setTyped(''); }, [user]);
+  const ok = !!user && typed.trim().toLocaleLowerCase('tr-TR') === user.fullName.trim().toLocaleLowerCase('tr-TR');
+  const rows = impact ? [
+    impact.tasks > 0 && `${impact.tasks} görev (geçmiş ve yorumlarıyla)`,
+    impact.leaves > 0 && `${impact.leaves} izin kaydı`,
+    impact.todos > 0 && `${impact.todos} kişisel yapılacak kartı`,
+  ].filter(Boolean) as string[] : [];
+  return (
+    <Modal
+      open={!!user}
+      onClose={onClose}
+      size="sm"
+      title="Hesabı kalıcı olarak sil"
+      footer={<>
+        <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
+        <button type="button" disabled={!ok || remove.isPending} onClick={() => user && remove.mutate(user.id, { onSuccess: onClose })}
+          className="btn bg-[#9A3B1B] text-white hover:bg-[#7E2F15] disabled:opacity-40">
+          <Trash size={16} weight="bold" /> {remove.isPending ? 'Siliniyor…' : 'Kalıcı olarak sil'}
+        </button>
+      </>}
+    >
+      {user && (
+        <div className="space-y-4 text-sm leading-relaxed">
+          <p><strong>{user.fullName}</strong> ({user.email}) hesabı tamamen silinecek. <strong>Bu işlem geri alınamaz.</strong></p>
+          {isLoading ? <Skeleton className="h-16" /> : (
+            <div className="rounded-2xl bg-[#FBEDE5] border border-[#E8C3AE] p-3.5 text-[#7A3E1F]">
+              {rows.length > 0
+                ? <><p className="font-bold mb-1">Birlikte silinecekler:</p><ul className="list-disc pl-5 space-y-0.5">{rows.map(r => <li key={r}>{r}</li>)}</ul></>
+                : <p className="font-semibold">Bu hesaba bağlı görev, izin veya kişisel kart yok.</p>}
+              {impact && (impact.sharedListsTransferred > 0 || impact.announcements > 0) && (
+                <p className="mt-2 text-xs font-semibold">
+                  Korunacaklar: {[impact.sharedListsTransferred > 0 && `${impact.sharedListsTransferred} ortak liste kalan üyelere`, impact.announcements > 0 && `${impact.announcements} duyuru size`].filter(Boolean).join(', ')} devredilir.
+                </p>
+              )}
+            </div>
+          )}
+          <p className="text-xs text-theme-muted">Sistem loglarında kişinin adı kayıtlı kalır; silme işlemi de kritik olarak loglanır.</p>
+          <div>
+            <label htmlFor="del-confirm" className="label">Onaylamak için kişinin adını yazın</label>
+            <input id="del-confirm" data-autofocus className="input" value={typed} onChange={e => setTyped(e.target.value)} placeholder={user.fullName} autoComplete="off" />
+          </div>
         </div>
       )}
     </Modal>

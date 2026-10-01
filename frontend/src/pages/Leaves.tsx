@@ -9,7 +9,7 @@ import DecisionModal from '../components/ui/DecisionModal';
 import type { Decision } from '../components/ui/DecisionModal';
 import { useQuickActions } from '../components/layout/QuickActions';
 import { LEAVE_TYPE, LEAVE_GENERIC, leaveTypeMeta, LEAVE_STATE } from '../lib/meta';
-import { addDays, daysBetween, formatDate, toDate, toIsoDay, leaveDaysLabel } from '../lib/format';
+import { addDays, daysBetween, formatDate, toDate, toIsoDay, leaveDaysLabel, formatFullDate } from '../lib/format';
 import type { LeaveRequest, User } from '../types';
 
 const WINDOW = 14;
@@ -313,7 +313,11 @@ export default function Leaves() {
           label="Yıllık izin bakiyem"
           icon={CalendarBlank}
           value={myBalance ? <>{myBalance.remaining}<span className="text-lg text-theme-muted font-semibold">/{myBalance.entitlement}</span></> : '–'}
-          hint={myBalance ? `${myBalance.used} gün kullanıldı${myBalance.pending ? ` · ${myBalance.pending} gün bekliyor` : ''}` : 'Yükleniyor'}
+          hint={myBalance
+            ? myBalance.entitlement === 0 && me.annualLeaveNextDate
+              ? `Hakkınız ${formatFullDate(me.annualLeaveNextDate)} tarihinde başlar (${me.annualLeaveNextDays} gün)`
+              : `${myBalance.used} gün kullanıldı${myBalance.pending ? ` · ${myBalance.pending} gün bekliyor` : ''}`
+            : 'Yükleniyor'}
         />
       </div>
 

@@ -1,5 +1,5 @@
 import type { Icon } from '@phosphor-icons/react';
-import { House, Users, FolderOpen, Kanban, CalendarBlank, ChartBar, UserGear, Pulse, BookOpenText } from '@phosphor-icons/react';
+import { House, Users, FolderOpen, Kanban, CalendarBlank, ChartBar, UserGear, Pulse, BookOpenText, ListDashes } from '@phosphor-icons/react';
 import type { User } from '../../types';
 
 export interface NavItem { to: string; label: string; icon: Icon; adminOnly?: boolean }
@@ -16,6 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 /** Kenar çubuğunun "Sistem" bölümündeki yönetici sayfaları */
 export const SYSTEM_ITEMS: NavItem[] = [
+  { to: '/logs', label: 'Loglar', icon: ListDashes, adminOnly: true },
   { to: '/monitoring', label: 'Sistem İzleme', icon: Pulse, adminOnly: true },
   { to: '/users', label: 'Kullanıcılar', icon: UserGear, adminOnly: true },
 ];

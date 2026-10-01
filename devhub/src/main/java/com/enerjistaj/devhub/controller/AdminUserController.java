@@ -1,5 +1,11 @@
 package com.enerjistaj.devhub.controller;
 
+import java.time.LocalDate;
+import com.enerjistaj.devhub.service.LeavePolicy;
+import com.enerjistaj.devhub.service.ActionLogService;
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.dto.UserDto;
 import com.enerjistaj.devhub.entity.Role;
@@ -30,7 +36,9 @@ public class AdminUserController {
     private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
+    private final ActionLogService actionLogService;
     private final com.enerjistaj.devhub.todo.TodoMembershipService todoMembershipService;
+    private final com.enerjistaj.devhub.service.UserDeletionService userDeletionService;
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final PasswordEncoder passwordEncoder;
@@ -49,11 +57,17 @@ public class AdminUserController {
     @PostMapping
     @Transactional
     public ResponseEntity<Map<String, Object>> create(@RequestBody Map<String, Object> payload) {
-        currentUser.requireAdmin(ONLY_ADMIN);
+        User me = currentUser.requireAdmin(ONLY_ADMIN);
         String email = normalizedEmail(payload);
         if (userRepository.existsByEmailIgnoreCase(email)) throw ApiException.conflict("Bu e-posta ile kayıtlı bir kullanıcı var.");
 
-        String temporaryPassword = generatePassword();
+        // Başlangıç şifresi: yönetici yazdıysa o (şifre kuralına uymalı), yazmadıysa rastgele üretilir.
+        // Her iki durumda da kişi ilk girişte şifresini değiştirmeden uygulamayı kullanamaz.
+        String chosen = Payloads.text(payload, "password");
+        if (chosen != null && (chosen.length() < 8 || !chosen.matches(".*[A-Za-zÇĞİÖŞÜçğıöşü].*") || !chosen.matches(".*\\d.*"))) {
+            throw ApiException.badRequest("Başlangıç şifresi en az 8 karakter olmalı ve harf ile rakam içermeli.");
+        }
+        String temporaryPassword = chosen != null ? chosen : generatePassword();
         User user = User.builder()
                 .email(email)
                 .fullName(fullName(payload))
@@ -61,7 +75,7 @@ public class AdminUserController {
                 .role(role(payload, Role.EMPLOYEE))
                 .jobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"))
                 .hireDate(Payloads.date(payload, "hireDate", "İşe giriş tarihi"))
-                .annualLeaveDays(leaveDays(payload, 14))
+                .annualLeaveDays(0) // hak her zaman işe giriş tarihinden hesaplanır (LeavePolicy); sütun yalnızca bilgi amaçlı güncel tutulur
                 .currentProject(project(payload))
                 .status("AKTIF")
                 .workMode("AKTIF")
@@ -69,6 +83,17 @@ public class AdminUserController {
                 .mustChangePassword(true)
                 .build();
         User saved = userRepository.save(user);
+        actionLogService.record(LogCategory.KULLANICI, LogAction.OLUSTURMA, "Yeni kullanıcı oluşturuldu: " + saved.getFullName()).by(me)
+                .target("KULLANICI", saved.getId(), saved.getFullName())
+                .detail("E-posta: " + saved.getEmail())
+                .detail("Rol: " + roleLabel(saved.getRole()))
+                .detail(saved.getJobTitle() != null ? "Unvan: " + saved.getJobTitle() : null)
+                .detail(saved.getCurrentProject() != null ? "Proje: " + saved.getCurrentProject() : null)
+                .detail(saved.getHireDate() != null ? "İşe giriş: " + saved.getHireDate() : null)
+                .detail("Yıllık izin hakkı: " + LeavePolicy.entitlement(saved.getHireDate(), LocalDate.now(ActionLogService.ZONE)) + " gün (kıdeme göre otomatik)")
+                .detail(chosen != null ? "Başlangıç şifresini yönetici belirledi; ilk girişte değiştirilmesi zorunlu"
+                        : "Başlangıç şifresi otomatik oluşturuldu; ilk girişte değiştirilmesi zorunlu")
+                .level(saved.getRole() == Role.ADMIN ? LogLevel.KRITIK : LogLevel.BILGI).save();
         return ResponseEntity.ok(Map.of("user", UserDto.from(saved), "temporaryPassword", temporaryPassword));
     }
 
@@ -77,6 +102,10 @@ public class AdminUserController {
     public ResponseEntity<UserDto> update(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         User me = currentUser.requireAdmin(ONLY_ADMIN);
         User user = find(id);
+        String oName = user.getFullName(), oEmail = user.getEmail(), oTitle = user.getJobTitle();
+        Object oHire = user.getHireDate();
+        int oDays = LeavePolicy.entitlement(user.getHireDate(), LocalDate.now(ActionLogService.ZONE));
+        Role oRole = user.getRole();
 
         if (payload.containsKey("fullName")) user.setFullName(fullName(payload));
         if (payload.containsKey("email")) {
@@ -88,7 +117,6 @@ public class AdminUserController {
         }
         if (payload.containsKey("jobTitle")) user.setJobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"));
         if (payload.containsKey("hireDate")) user.setHireDate(Payloads.date(payload, "hireDate", "İşe giriş tarihi"));
-        if (payload.containsKey("annualLeaveDays")) user.setAnnualLeaveDays(leaveDays(payload, user.getAnnualLeaveDays()));
         if (payload.containsKey("role")) {
             Role role = role(payload, user.getRole());
             if (user.getRole() == Role.ADMIN && role != Role.ADMIN) ensureAnotherAdmin(user);
@@ -97,7 +125,22 @@ public class AdminUserController {
             }
             user.setRole(role);
         }
-        return ResponseEntity.ok(UserDto.from(userRepository.save(user)));
+        User saved = userRepository.save(user);
+        boolean roleChanged = oRole != saved.getRole();
+        List<String> changes = java.util.stream.Stream.of(
+                ActionLogService.diff("Ad soyad", oName, saved.getFullName()),
+                ActionLogService.diff("E-posta", oEmail, saved.getEmail()),
+                ActionLogService.diff("Unvan", oTitle, saved.getJobTitle()),
+                ActionLogService.diff("İşe giriş", oHire, saved.getHireDate()),
+                ActionLogService.diff("Yıllık izin hakkı (gün)", oDays, LeavePolicy.entitlement(saved.getHireDate(), LocalDate.now(ActionLogService.ZONE))),
+                ActionLogService.diff("Rol", roleLabel(oRole), roleLabel(saved.getRole()))).filter(java.util.Objects::nonNull).toList();
+        if (!changes.isEmpty()) {
+            actionLogService.record(LogCategory.KULLANICI, roleChanged ? LogAction.YETKI_DEGISIKLIGI : LogAction.GUNCELLEME,
+                    (roleChanged ? "Kullanıcı yetkisi değiştirildi: " : "Kullanıcı bilgileri güncellendi: ") + saved.getFullName()).by(me)
+                    .target("KULLANICI", saved.getId(), saved.getFullName()).details(changes)
+                    .level(roleChanged ? LogLevel.KRITIK : LogLevel.BILGI).save();
+        }
+        return ResponseEntity.ok(UserDto.from(saved));
     }
 
     @PutMapping("/{id}/active")
@@ -110,9 +153,17 @@ public class AdminUserController {
             if (user.getId().equals(me.getId())) throw ApiException.conflict("Kendi hesabınızı pasifleştiremezsiniz.");
             if (user.getRole() == Role.ADMIN) ensureAnotherAdmin(user);
         }
+        boolean wasActive = user.isActive();
         user.setActive(active);
         User saved = userRepository.save(user);
         if (!active) todoMembershipService.onUserDeactivated(saved);
+        if (wasActive != active) {
+            actionLogService.record(LogCategory.KULLANICI, active ? LogAction.AKTIFLESTIRME : LogAction.PASIFLESTIRME,
+                    (active ? "Hesap yeniden etkinleştirildi: " : "Hesap pasifleştirildi: ") + saved.getFullName()).by(me)
+                    .target("KULLANICI", saved.getId(), saved.getFullName())
+                    .detail(active ? "Kişi yeniden giriş yapabilir" : "Kişi giriş yapamaz; açık oturumları da geçersiz sayılır")
+                    .level(active ? LogLevel.UYARI : LogLevel.KRITIK).save();
+        }
         return ResponseEntity.ok(UserDto.from(saved));
     }
 
@@ -120,13 +171,52 @@ public class AdminUserController {
     @PostMapping("/{id}/reset-password")
     @Transactional
     public ResponseEntity<Map<String, Object>> resetPassword(@PathVariable Long id) {
-        currentUser.requireAdmin(ONLY_ADMIN);
+        User me = currentUser.requireAdmin(ONLY_ADMIN);
         User user = find(id);
         String temporaryPassword = generatePassword();
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setMustChangePassword(true);
         userRepository.save(user);
+        actionLogService.record(LogCategory.KULLANICI, LogAction.SIFRE_SIFIRLAMA, "Geçici şifre oluşturuldu: " + user.getFullName()).by(me)
+                .target("KULLANICI", user.getId(), user.getFullName())
+                .detail("Eski şifre geçersiz; kişi bir sonraki girişte şifresini değiştirmek zorunda")
+                .detail("Şifrenin kendisi loglanmaz").level(LogLevel.KRITIK).save();
         return ResponseEntity.ok(Map.of("temporaryPassword", temporaryPassword));
+    }
+
+    /** Silmeden önce: kaç görev, izin, yorum ve kişisel kart silinecek, kaç ortak liste/duyuru devredilecek. */
+    @GetMapping("/{id}/delete-impact")
+    public ResponseEntity<Map<String, Long>> deleteImpact(@PathVariable Long id) {
+        currentUser.requireAdmin(ONLY_ADMIN);
+        return ResponseEntity.ok(userDeletionService.impact(find(id)));
+    }
+
+    /**
+     * Hesabı kalıcı olarak siler. Yalnızca önceden pasifleştirilmiş hesaplar silinebilir (yanlışlıkla silmeye karşı iki adım);
+     * kişi kendini silemez. Geri alınamaz; loglarda kişinin adı kalır.
+     */
+    @DeleteMapping("/{id}")
+    @Transactional
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        User me = currentUser.requireAdmin(ONLY_ADMIN);
+        User user = find(id);
+        if (user.getId().equals(me.getId())) throw ApiException.conflict("Kendi hesabınızı silemezsiniz.");
+        if (user.isActive()) throw ApiException.conflict("Önce hesabı pasifleştirin; yalnızca pasif hesaplar kalıcı olarak silinebilir.");
+        Map<String, Long> impact = userDeletionService.impact(user);
+        String name = user.getFullName(), email = user.getEmail();
+        actionLogService.record(LogCategory.KULLANICI, LogAction.SILME, "Kullanıcı kalıcı olarak silindi: " + name).by(me)
+                .target("KULLANICI", user.getId(), name)
+                .detail("E-posta: " + email)
+                .detail("Silinen görev: " + impact.get("tasks") + ", izin kaydı: " + impact.get("leaves") + ", kişisel kart: " + impact.get("todos"))
+                .detail(impact.get("sharedListsTransferred") > 0 ? "Devredilen ortak liste: " + impact.get("sharedListsTransferred") : null)
+                .detail(impact.get("announcements") > 0 ? "Devredilen duyuru: " + impact.get("announcements") : null)
+                .level(LogLevel.KRITIK).save();
+        userDeletionService.delete(user, me);
+        return ResponseEntity.noContent().build();
+    }
+
+    private static String roleLabel(Role role) {
+        return role == Role.ADMIN ? "Yönetici" : "Çalışan";
     }
 
     private void ensureAnotherAdmin(User user) {
@@ -154,18 +244,6 @@ public class AdminUserController {
     private static Role role(Map<String, Object> payload, Role fallback) {
         Role role = Payloads.enumValue(payload, "role", Role.class, "rol");
         return role != null ? role : fallback;
-    }
-
-    private static int leaveDays(Map<String, Object> payload, int fallback) {
-        Object v = payload.get("annualLeaveDays");
-        if (v == null || v.toString().isBlank()) return fallback;
-        try {
-            int days = Integer.parseInt(v.toString().trim());
-            if (days < 0 || days > 60) throw ApiException.badRequest("Yıllık izin hakkı 0 ile 60 gün arasında olmalı.");
-            return days;
-        } catch (NumberFormatException e) {
-            throw ApiException.badRequest("Yıllık izin hakkı sayı olmalı.");
-        }
     }
 
     private String project(Map<String, Object> payload) {

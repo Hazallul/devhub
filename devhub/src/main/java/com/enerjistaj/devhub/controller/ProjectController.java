@@ -1,5 +1,9 @@
 package com.enerjistaj.devhub.controller;
 
+import java.time.LocalDate;
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.entity.Project;
 import com.enerjistaj.devhub.entity.ProjectStatus;
@@ -22,6 +26,10 @@ import java.util.Map;
 @RequestMapping("/api/projects")
 @RequiredArgsConstructor
 public class ProjectController {
+
+    private static final java.util.Map<ProjectStatus, String> STATUS = java.util.Map.of(
+            ProjectStatus.PLANLAMA, "Planlama", ProjectStatus.AKTIF, "Aktif", ProjectStatus.BEKLEMEDE, "Beklemede", ProjectStatus.TAMAMLANDI, "Tamamlandı");
+    private static final java.time.format.DateTimeFormatter DAY = java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
@@ -47,15 +55,22 @@ public class ProjectController {
         p.setStatus(status != null ? status : ProjectStatus.PLANLAMA);
         Project saved = projectRepository.save(p);
 
-        actionLogService.log(me, "Yeni '" + name + "' projesi oluşturuldu.");
+        actionLogService.record(LogCategory.PROJE, LogAction.OLUSTURMA, "Yeni proje oluşturuldu: " + name).by(me)
+                .target("PROJE", saved.getId(), name)
+                .detail("Aşama: " + STATUS.get(saved.getStatus()))
+                .detail(saved.getDeadline() != null ? "Teslim tarihi: " + saved.getDeadline().format(DAY) : null)
+                .detail(saved.getDescription() != null ? "Açıklama: " + saved.getDescription() : null).save();
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
     @Transactional
     public ResponseEntity<Project> updateProject(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
-        currentUser.requireAdmin("Projeyi yalnızca yöneticiler düzenleyebilir.");
+        User me = currentUser.requireAdmin("Projeyi yalnızca yöneticiler düzenleyebilir.");
         Project p = projectRepository.findById(id).orElseThrow(() -> ApiException.notFound("Proje"));
+        String oName = p.getName(), oDesc = p.getDescription();
+        LocalDate oDeadline = p.getDeadline();
+        ProjectStatus oStatus = p.getStatus();
 
         String name = Payloads.text(payload, "name");
         if (name != null && !name.equals(p.getName())) {
@@ -73,6 +88,17 @@ public class ProjectController {
             if (status == null) throw ApiException.badRequest("Proje aşaması boş olamaz.");
             p.setStatus(status);
         }
-        return ResponseEntity.ok(projectRepository.save(p));
+        Project saved = projectRepository.save(p);
+        List<String> changes = java.util.stream.Stream.of(
+                ActionLogService.diff("Ad", oName, saved.getName()),
+                ActionLogService.diff("Aşama", STATUS.get(oStatus), STATUS.get(saved.getStatus())),
+                ActionLogService.diff("Teslim tarihi", oDeadline != null ? oDeadline.format(DAY) : null, saved.getDeadline() != null ? saved.getDeadline().format(DAY) : null),
+                java.util.Objects.equals(oDesc, saved.getDescription()) ? null : "Açıklama güncellendi").filter(java.util.Objects::nonNull).toList();
+        if (!changes.isEmpty()) {
+            actionLogService.record(LogCategory.PROJE, LogAction.GUNCELLEME, "Proje güncellendi: " + saved.getName()).by(me)
+                    .target("PROJE", saved.getId(), saved.getName()).details(changes)
+                    .detail(!oName.equals(saved.getName()) ? "Proje üyelerinin proje adı da güncellendi" : null).save();
+        }
+        return ResponseEntity.ok(saved);
     }
 }

@@ -1,5 +1,8 @@
 package com.enerjistaj.devhub.controller;
 
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.entity.UserLink;
 import com.enerjistaj.devhub.entity.UserLinkType;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,9 +59,14 @@ public class UserController {
             throw ApiException.badRequest("Yeni şifre en az 8 karakter olmalı ve harf ile rakam içermeli.");
         }
         if (passwordEncoder.matches(next, me.getPasswordHash())) throw ApiException.badRequest("Yeni şifre mevcut şifreyle aynı olamaz.");
+        boolean forced = me.isMustChangePassword();
         me.setPasswordHash(passwordEncoder.encode(next));
         me.setMustChangePassword(false);
-        return ResponseEntity.ok(UserDto.from(userRepository.save(me)));
+        User saved = userRepository.save(me);
+        actionLogService.record(LogCategory.OTURUM, LogAction.SIFRE_DEGISTIRME, "Şifresini değiştirdi").by(me)
+                .target("KULLANICI", me.getId(), me.getFullName())
+                .detail(forced ? "Geçici şifre ilk girişte değiştirildi" : "Kullanıcı kendi isteğiyle değiştirdi").save();
+        return ResponseEntity.ok(UserDto.from(saved));
     }
 
     @PutMapping("/{id}/project")
@@ -75,11 +83,15 @@ public class UserController {
         User saved = userRepository.save(user);
 
         if (newProject == null) {
-            actionLogService.log(me, user.getFullName() + ", " + (oldProject != null ? oldProject : "Mevcut") + " projesinden çıkarıldı ve boşa alındı.");
+            actionLogService.record(LogCategory.PROJE, LogAction.PROJEDEN_CIKARMA,
+                    user.getFullName() + ", " + (oldProject != null ? oldProject : "mevcut") + " projesinden çıkarıldı").by(me)
+                    .target("KULLANICI", user.getId(), user.getFullName()).change("Proje", oldProject, null)
+                    .detail("Kişi şu an bir projeye bağlı değil").save();
             notificationService.notify(user, me, NotificationType.PROJECT_ASSIGNED,
                     "\"" + (oldProject != null ? oldProject : "Proje") + "\" projesinden çıkarıldınız", null, "/projects");
         } else {
-            actionLogService.log(me, user.getFullName() + ", " + newProject + " projesine atandı.");
+            actionLogService.record(LogCategory.PROJE, LogAction.PROJE_ATAMA, user.getFullName() + ", " + newProject + " projesine atandı").by(me)
+                    .target("KULLANICI", user.getId(), user.getFullName()).change("Proje", oldProject, newProject).save();
             notificationService.notify(user, me, NotificationType.PROJECT_ASSIGNED,
                     "\"" + newProject + "\" projesine atandınız", null, "/projects");
         }
@@ -117,6 +129,8 @@ public class UserController {
     public ResponseEntity<UserDto> updateProfile(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         User me = currentUser.requireSelfOrAdmin(id, "Yalnızca kendi profilinizi düzenleyebilirsiniz.");
         User user = findUser(id);
+        String oldName = user.getFullName();
+        String oldTitle = user.getJobTitle();
 
         String avatarColor = Payloads.text(payload, "avatarColor");
         if (avatarColor != null && !avatarColor.matches("^#[0-9A-Fa-f]{6}$")) throw ApiException.badRequest("Avatar rengi #RRGGBB biçiminde olmalı.");
@@ -134,7 +148,13 @@ public class UserController {
             user.setFullName(fullName);
             user.setJobTitle(jobTitle);
         }
-        return ResponseEntity.ok(UserDto.from(userRepository.save(user)));
+        User saved = userRepository.save(user);
+        if (!saved.getFullName().equals(oldName) || !java.util.Objects.equals(saved.getJobTitle(), oldTitle)) {
+            actionLogService.record(LogCategory.PROFIL, LogAction.GUNCELLEME, "Profil bilgileri doğrudan güncellendi: " + saved.getFullName()).by(me)
+                    .target("KULLANICI", saved.getId(), saved.getFullName())
+                    .change("Ad soyad", oldName, saved.getFullName()).change("Unvan", oldTitle, saved.getJobTitle()).save();
+        }
+        return ResponseEntity.ok(UserDto.from(saved));
     }
 
     /**
@@ -166,7 +186,12 @@ public class UserController {
         user.getLinks().clear();
         userRepository.saveAndFlush(user); // eski satırlar önce silinsin
         user.getLinks().addAll(next);
-        return ResponseEntity.ok(UserDto.from(userRepository.save(user)));
+        User saved = userRepository.save(user);
+        actionLogService.record(LogCategory.PROFIL, LogAction.GUNCELLEME, "İletişim bilgilerini güncelledi").by(user)
+                .target("KULLANICI", user.getId(), user.getFullName())
+                .detail("Bağlantı sayısı: " + next.size())
+                .detail(next.stream().map(l -> l.getType().name()).distinct().collect(java.util.stream.Collectors.joining(", ", "Türler: ", ""))).save();
+        return ResponseEntity.ok(UserDto.from(saved));
     }
 
     /** E-posta ve telefon biçim kontrolü; web adresleri yalnızca http(s) olabilir (şema yoksa https eklenir). */

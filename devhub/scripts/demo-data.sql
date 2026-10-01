@@ -78,10 +78,11 @@ INSERT INTO users (email, password_hash, full_name, role, job_title, current_pro
 SELECT 'derya.sen@devhub.local', password_hash, 'Derya Şen', 'EMPLOYEE', 'Scrum Master', 'Müşteri Portalı', 'AKTIF', 'AKTIF', '#E4D9B4'
 FROM users WHERE email = 'ali.yilmaz@devhub.local'
   AND NOT EXISTS (SELECT 1 FROM users WHERE email = 'derya.sen@devhub.local');
-UPDATE users SET job_title = 'DevOps Engineer', current_project = NULL, status = 'AKTIF', work_mode = 'AKTIF' WHERE email = 'kerem.aslan@devhub.local';
+UPDATE users SET job_title = 'DevOps Engineer', current_project = 'Veri Ambarı Göçü', status = 'AKTIF', work_mode = 'AKTIF' WHERE email = 'kerem.aslan@devhub.local';
 UPDATE users SET job_title = 'Scrum Master', current_project = 'Müşteri Portalı', status = 'AKTIF', work_mode = 'AKTIF' WHERE email = 'derya.sen@devhub.local';
 
--- İşe giriş tarihi ve kıdeme göre yıllık izin hakkı: 1–5 yıl 14, 5–15 yıl 20, 15+ yıl 26 gün (1 yıldan az: şirket politikası 14)
+-- İşe giriş tarihi ve kıdeme göre yıllık izin hakkı: 1 yıldan az 0, 1–5 yıl 14, 5–15 yıl 20, 15+ yıl 26 gün.
+-- (Uygulama hakkı her zaman işe giriş tarihinden hesaplar; bu sütun yalnızca bilgi amaçlıdır.)
 DROP TEMPORARY TABLE IF EXISTS h;
 CREATE TEMPORARY TABLE h (k VARCHAR(20), hire DATE);
 INSERT INTO h VALUES
@@ -95,7 +96,8 @@ SET us.hire_date = h.hire,
     us.annual_leave_days = CASE
         WHEN TIMESTAMPDIFF(YEAR, h.hire, CURDATE()) >= 15 THEN 26
         WHEN TIMESTAMPDIFF(YEAR, h.hire, CURDATE()) >= 5 THEN 20
-        ELSE 14 END,
+        WHEN TIMESTAMPDIFF(YEAR, h.hire, CURDATE()) >= 1 THEN 14
+        ELSE 0 END,
     us.active = b'1', us.must_change_password = b'0';
 
 -- İşten ayrılmış, hesabı pasifleştirilmiş eski çalışan (Kullanıcılar sayfasındaki "Pasif" filtresi için)
@@ -108,7 +110,8 @@ UPDATE users SET active = b'0', current_project = NULL WHERE email = 'onur.tekin
 -- E-postadan kullanıcı id'si (id'ler ortamdan ortama değişebilir)
 DROP TEMPORARY TABLE IF EXISTS u;
 CREATE TEMPORARY TABLE u (k VARCHAR(20) PRIMARY KEY, id BIGINT);
-INSERT INTO u SELECT SUBSTRING_INDEX(email, '@', 1), id FROM users;
+-- Yalnızca @devhub.local hesapları (uygulamadan eklenen başka alan adlı hesaplar aynı öneki taşıyabilir)
+INSERT INTO u SELECT SUBSTRING_INDEX(email, '@', 1), id FROM users WHERE email LIKE '%@devhub.local';
 SET @admin = (SELECT id FROM users WHERE email = 'admin@devhub.local');
 
 -- ---------------------------------------------------------------------
@@ -117,7 +120,7 @@ SET @admin = (SELECT id FROM users WHERE email = 'admin@devhub.local');
 --  * İzinli kişilerin açık görevi yoktur: işleri izinden önce tamamlanmış ya da ekip arkadaşına devredilmiştir.
 --  * Beklemedeki (Ödeme Altyapısı) ve tamamlanmış projelerde açık görev yoktur.
 --  * Açık görevlerin son tarihi projenin teslim tarihini ve kişinin izin günlerini aşmaz; hafta sonuna denk gelmez.
--- Bilerek görevi olmayanlar: Emre (Devhub Core), Volkan (Enerji Optimizasyonu), Derya (Müşteri Portalı), Kerem (boşta).
+-- Herkesin görevi vardır (sunumda boş kart kalmasın); Can'ın ve izinlilerin yalnızca tamamlanmış görevleri vardır.
 -- Can'ın yalnızca tamamlanmış görevleri var (projede, açık görevi yok).
 DROP TEMPORARY TABLE IF EXISTS t;
 CREATE TEMPORARY TABLE t (k VARCHAR(20), content VARCHAR(1000), status VARCHAR(20), priority VARCHAR(10), due INT NULL, hours_ago INT, proj VARCHAR(100) NULL DEFAULT NULL);
@@ -159,7 +162,22 @@ INSERT INTO t (k, content, status, priority, due, hours_ago) VALUES
 ('merve.can',     'Staging ortamında ilk veri aktarım denemesini yap',                'YAPILACAK',  'ORTA',   7,    26),
 ('merve.can',     'Veri kalitesi kontrolleri için SQL test paketi',                   'YAPILACAK',  'ORTA',   9,    18),
 ('merve.can',     'Mobil kullanım metriklerini panoya bağla',                         'TAMAMLANDI', 'ORTA',   NULL, 140),
-('buse.ozdemir',  'Test otomasyon araçlarını karşılaştır ve öneri hazırla',           'YAPILACAK',  'DUSUK',  7,    1);
+('buse.ozdemir',  'Test otomasyon araçlarını karşılaştır ve öneri hazırla',           'YAPILACAK',  'DUSUK',  7,    1),
+('buse.ozdemir',  'Giriş ekranı için erişilebilirlik test listesi',                   'DEVAM',      'ORTA',   4,    30),
+('buse.ozdemir',  'Hata kayıt şablonunu ekiple paylaş',                               'TAMAMLANDI', 'DUSUK',  NULL, 60),
+('emre.kurt',     'Görev panosunda klavye ile taşıma desteği',                        'DEVAM',      'ORTA',   4,    28),
+('emre.kurt',     'Bildirim merkezi için okunmamış sayacı testleri',                  'YAPILACAK',  'DUSUK',  8,    10),
+('volkan.aydin',  'Tüketim verisi için anomali tespiti prototipi',                    'DEVAM',      'YUKSEK', 6,    44),
+('volkan.aydin',  'Tasarruf önerisi algoritması için veri seti hazırlığı',            'YAPILACAK',  'ORTA',   12,   20),
+('volkan.aydin',  'Enerji Optimizasyonu teknik keşif dokümanı',                       'TAMAMLANDI', 'ORTA',   NULL, 90),
+('derya.sen',     'Müşteri Portalı için sprint 1 planlamasını yap',                   'DEVAM',      'YUKSEK', 3,    30),
+('derya.sen',     'Paydaş görüşmeleri için toplantı takvimi oluştur',                 'YAPILACAK',  'ORTA',   5,    12),
+('derya.sen',     'Portal gereksinim dokümanını müşteriyle paylaş',                   'TAMAMLANDI', 'ORTA',   NULL, 70),
+('kerem.aslan',   'Veri ambarı için CI/CD hattını kur',                               'DEVAM',      'YUKSEK', 5,    40),
+('kerem.aslan',   'Staging sunucularına izleme ajanlarını yükle',                     'YAPILACAK',  'ORTA',   9,    16),
+('kerem.aslan',   'Yeni geliştirici makinesi kurulum betiği',                         'TAMAMLANDI', 'DUSUK',  NULL, 150),
+('seda.yildiz',   'Rapor tablolarında sıralama ve sayfalama',                         'YAPILACAK',  'DUSUK',  11,   6),
+('burak.polat',   'Müşteri Portalı için ürün vizyon dokümanı',                         'TAMAMLANDI', 'ORTA',   NULL, 80);
 
 -- Son iki ayda tamamlanmış işler (Raporlar'daki haftalık grafik ve proje ilerlemesi için)
 INSERT INTO t (k, content, status, priority, due, hours_ago, proj) VALUES
@@ -204,7 +222,15 @@ INSERT INTO l VALUES
 ('zeynep.ozturk', 'YILLIK',    20, 24, 'Düğün',                            'BEKLIYOR',   FALSE, 1),
 ('burak.polat',   'YILLIK',   -12, -10,'Sprint kapanışına denk geliyor',   'REDDEDILDI', TRUE,  15),
 ('ali.yilmaz',    'YILLIK',   -25, -21,'Bayram tatili',                    'ONAYLANDI',  TRUE,  40),
-('merve.can',     'HASTALIK', -7,  -7, 'Migren',                           'ONAYLANDI',  TRUE,  7);
+('merve.can',     'HASTALIK', -7,  -7, 'Migren',                           'ONAYLANDI',  TRUE,  7),
+('zeynep.ozturk', 'YILLIK',   -33, -31,'Hafta sonuna ekleme',              'ONAYLANDI',  TRUE,  40),
+('elif.arslan',   'MAZERET',  -16, -16,'Taşınma',                          'ONAYLANDI',  TRUE,  18),
+('seda.yildiz',   'HASTALIK', -19, -18,'Soğuk algınlığı',                  'ONAYLANDI',  TRUE,  19),
+('volkan.aydin',  'YILLIK',   -45, -38,'Yaz tatili',                       'ONAYLANDI',  TRUE,  60),
+('derya.sen',     'YILLIK',   -28, -26,'Aile ziyareti',                    'ONAYLANDI',  TRUE,  35),
+('emre.kurt',     'MAZERET',  -9,  -9, 'Resmi işlemler',                   'ONAYLANDI',  TRUE,  11),
+('kerem.aslan',   'MAZERET',  -3,  -3, 'Ev taşıma',                        'REDDEDILDI', FALSE, 6),
+('can.dogan',     'HASTALIK', -36, -35,'Grip',                             'ONAYLANDI',  TRUE,  36);
 
 INSERT INTO leave_requests (user_id, type, start_date, end_date, note, state, decided_by, decided_at, finalized, finalized_at, created_at)
 SELECT u.id, l.type, CURDATE() + INTERVAL l.s DAY, CURDATE() + INTERVAL l.e DAY, l.note, l.state,
@@ -329,6 +355,16 @@ FROM tasks tk WHERE tk.content = 'Q4 yol haritası sunumunu hazırla';
 DROP TEMPORARY TABLE IF EXISTS c;
 CREATE TEMPORARY TABLE c (content VARCHAR(1000), author VARCHAR(20), text VARCHAR(1000), hours_ago INT);
 INSERT INTO c VALUES
+('Müşteri Portalı için sprint 1 planlamasını yap', 'admin', 'Portal için ilk sprintte giriş ve fatura listesi yeterli olur.', 20),
+('Müşteri Portalı için sprint 1 planlamasını yap', 'derya.sen', 'Anlaştık, kapsamı buna göre daralttım; tahminleri yarın netleştiriyorum.', 15),
+('Tüketim verisi için anomali tespiti prototipi', 'volkan.aydin', 'İlk sonuçlar umut verici; yanlış alarm oranı %8 civarında.', 10),
+('Tüketim verisi için anomali tespiti prototipi', 'admin', 'Güzel. Haftaya kısa bir demo yapalım.', 6),
+('Veri ambarı için CI/CD hattını kur', 'kerem.aslan', 'Pipeline taslağı hazır, staging deploy adımını test ediyorum.', 12),
+('Veri ambarı için CI/CD hattını kur', 'ali.yilmaz', 'Lint ve birim test adımlarını da ekleyebilir misin?', 8),
+('Görev panosunda klavye ile taşıma desteği', 'ali.yilmaz', 'Erişilebilirlik için çok iyi olur; ok tuşlarıyla sütun değiştirme de eklensin.', 14),
+('Giriş ekranı için erişilebilirlik test listesi', 'seda.yildiz', 'Kontrast kontrolünü ben de paylaştım, listeye ekleyebilirsin.', 9),
+('Staging ortamında ilk veri aktarım denemesini yap', 'kerem.aslan', 'Aktarım için ayrı bir servis hesabı açtım, bilgileri sana ilettim.', 7),
+('Rapor dışa aktarma (Excel/PDF) servisi', 'elif.arslan', 'PDF şablonu için tasarımı perşembeye kadar paylaşırım.', 5),
 ('Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'burak.polat', 'Backlog''daki müşteri taleplerini etiketledim, önceliklendirmede kullanabilirsin.', 20),
 ('Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'ali.yilmaz', 'Teşekkürler, perşembeden önce son hâlini paylaşırım.', 18),
 ('Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'admin', 'Sunumda Q4 hedefleriyle bağlantıyı da gösterelim.', 4),
@@ -357,48 +393,204 @@ FROM (
 ) x;
 
 -- ---------------------------------------------------------------------
--- Sistem logları (yalnızca proje ataması, İzinli'ye geçiş, yeni görev ve yeni proje)
+-- Sistem logları (denetim kaydı): oturumlar, kullanıcı yönetimi, projeler, görevler, duyurular, sistem
+-- (İzin ve profil talebi logları en sonda, gerçek kayıtlardan üretilir.)
 -- ---------------------------------------------------------------------
 DROP TEMPORARY TABLE IF EXISTS g;
 -- days_ago/clock: mesai saatinde geçmiş bir an (İstanbul saati); hours_ago doluysa "şu andan X saat önce".
--- actor: işlemi yapan kişinin e-posta öneki; NULL = sistem (izin zamanlayıcısı)
-CREATE TEMPORARY TABLE g (days_ago INT, clock TIME, hours_ago INT NULL, message VARCHAR(400), actor VARCHAR(20) NULL);
+-- actor: işlemi yapan kişinin e-posta öneki; NULL = sistem veya tanınmayan kişi (başarısız giriş)
+CREATE TEMPORARY TABLE g (days_ago INT, clock TIME NULL, hours_ago INT NULL, category VARCHAR(20), action VARCHAR(40), level VARCHAR(10),
+                          message VARCHAR(500), actor VARCHAR(30) NULL, target_type VARCHAR(30) NULL, target_name VARCHAR(200) NULL,
+                          details VARCHAR(2000) NULL, ip VARCHAR(45) NULL);
 INSERT INTO g VALUES
-(10, '09:40', NULL, 'Yeni ''Veri Ambarı Göçü'' projesi oluşturuldu.', 'admin'),
-(10, '09:52', NULL, 'Mustafa Koç, Veri Ambarı Göçü projesine atandı.', 'admin'),
-(10, '09:53', NULL, 'Merve Can, Veri Ambarı Göçü projesine atandı.', 'admin'),
-(8,  '14:15', NULL, 'Can Doğan için yeni görev eklendi.', 'admin'),
-(7,  '10:05', NULL, 'Yeni ''Müşteri Portalı'' projesi oluşturuldu.', 'admin'),
-(7,  '10:12', NULL, 'Derya Şen, Müşteri Portalı projesine atandı.', 'admin'),
-(5,  '16:30', NULL, 'Mustafa Koç için yeni görev eklendi.', 'admin'),
-(3,  '11:20', NULL, 'Burak Polat, Devhub Core projesine atandı.', 'admin'),
-(3,  '11:45', NULL, 'Volkan Aydın, Enerji Optimizasyonu projesine atandı.', 'admin'),
-(2,  '15:10', NULL, 'Buse Özdemir, Mobil Uygulama projesinden çıkarıldı ve boşa alındı.', 'admin'),
-(1,  '10:30', NULL, 'Ali Yılmaz için yeni görev eklendi.', 'ali.yilmaz'),
-(1,  '14:40', NULL, 'Seda Yıldız için yeni görev eklendi.', 'admin'),
-(1,  '17:05', NULL, 'Zeynep Öztürk için yeni görev eklendi.', 'zeynep.ozturk'),
-(0,  NULL,    3,    'Admin için yeni görev eklendi.', 'admin'),
-(0,  NULL,    1,    'Buse Özdemir için yeni görev eklendi.', 'admin');
+(10, '08:52', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'admin', 'KULLANICI', 'Admin', NULL, NULL),
+(10, '09:40', NULL, 'PROJE', 'OLUSTURMA', 'BILGI', 'Yeni proje oluşturuldu: Veri Ambarı Göçü', 'admin', 'PROJE', 'Veri Ambarı Göçü', 'Aşama: Aktif
+Açıklama: Eski raporlama veritabanının yeni veri ambarına taşınması.', NULL),
+(10, '09:52', NULL, 'PROJE', 'PROJE_ATAMA', 'BILGI', 'Mustafa Koç, Veri Ambarı Göçü projesine atandı', 'admin', 'KULLANICI', 'Mustafa Koç', 'Proje: — → Veri Ambarı Göçü', NULL),
+(10, '09:53', NULL, 'PROJE', 'PROJE_ATAMA', 'BILGI', 'Merve Can, Veri Ambarı Göçü projesine atandı', 'admin', 'KULLANICI', 'Merve Can', 'Proje: Raporlama Paneli → Veri Ambarı Göçü', NULL),
+(10, '11:15', NULL, 'KULLANICI', 'OLUSTURMA', 'BILGI', 'Yeni kullanıcı oluşturuldu: Kerem Aslan', 'admin', 'KULLANICI', 'Kerem Aslan', 'E-posta: kerem.aslan@devhub.local
+Rol: Çalışan
+Unvan: DevOps Engineer
+Yıllık izin hakkı: 14 gün
+Geçici şifre verildi; ilk girişte değiştirilmesi zorunlu', NULL),
+(10, '13:05', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'kerem.aslan', 'KULLANICI', 'Kerem Aslan', 'Geçici şifreyle giriş: şifre değişikliği bekleniyor', NULL),
+(10, '13:06', NULL, 'OTURUM', 'SIFRE_DEGISTIRME', 'BILGI', 'Şifresini değiştirdi', 'kerem.aslan', 'KULLANICI', 'Kerem Aslan', 'Geçici şifre ilk girişte değiştirildi', NULL),
+(9, '08:47', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'ali.yilmaz', 'KULLANICI', 'Ali Yılmaz', NULL, NULL),
+(9, '09:02', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'ayse.kaya', 'KULLANICI', 'Ayşe Kaya', NULL, NULL),
+(9, '09:15', NULL, 'OTURUM', 'GIRIS_BASARISIZ', 'UYARI', 'Hatalı şifreyle giriş denemesi', NULL, 'KULLANICI', 'Burak Polat', 'Denenen e-posta: burak.polat@devhub.local', '10.20.0.10'),
+(9, '09:16', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'burak.polat', 'KULLANICI', 'Burak Polat', NULL, NULL),
+(9, '10:30', NULL, 'SISTEM', 'OLUSTURMA', 'BILGI', 'Resmi tatil eklendi: Cumhuriyet Bayramı', 'admin', 'TATIL', 'Cumhuriyet Bayramı', 'Tarih: 29.10
+Bu gün izin hesaplarında iş günü sayılmaz', NULL),
+(8, '14:15', NULL, 'GOREV', 'OLUSTURMA', 'BILGI', 'Can Doğan için yeni görev: Ödeme sağlayıcısı API dokümanını incele', 'admin', 'GOREV', 'Ödeme sağlayıcısı API dokümanını incele', 'Atanan: Can Doğan
+Öncelik: Orta
+Proje: Ödeme Altyapısı', NULL),
+(7, '10:00', NULL, 'KULLANICI', 'OLUSTURMA', 'BILGI', 'Yeni kullanıcı oluşturuldu: Derya Şen', 'admin', 'KULLANICI', 'Derya Şen', 'E-posta: derya.sen@devhub.local
+Rol: Çalışan
+Unvan: Scrum Master
+Yıllık izin hakkı: 14 gün
+Geçici şifre verildi; ilk girişte değiştirilmesi zorunlu', NULL),
+(7, '10:05', NULL, 'PROJE', 'OLUSTURMA', 'BILGI', 'Yeni proje oluşturuldu: Müşteri Portalı', 'admin', 'PROJE', 'Müşteri Portalı', 'Aşama: Planlama
+Açıklama: Kurumsal müşteriler için self-servis fatura, sözleşme ve destek portalı.', NULL),
+(7, '10:12', NULL, 'PROJE', 'PROJE_ATAMA', 'BILGI', 'Derya Şen, Müşteri Portalı projesine atandı', 'admin', 'KULLANICI', 'Derya Şen', 'Proje: — → Müşteri Portalı', NULL),
+(6, '09:10', NULL, 'KULLANICI', 'GUNCELLEME', 'BILGI', 'Kullanıcı bilgileri güncellendi: Volkan Aydın', 'admin', 'KULLANICI', 'Volkan Aydın', 'Yıllık izin hakkı (gün): 14 → 20
+İşe giriş: — → 2019-03-11', NULL),
+(6, '11:00', NULL, 'GOREV', 'GOREV_AKTARMA', 'BILGI', 'Görev başka birine aktarıldı: iOS 19 çökme hatasını yeniden üret ve kayıt altına al (Ahmet''ten devir)', 'admin', 'GOREV', 'iOS 19 çökme hatasını yeniden üret ve kayıt altına al (Ahmet''ten devir)', 'Atanan: Ahmet Şahin → Zeynep Öztürk
+Görevin sahibi: Zeynep Öztürk', NULL),
+(5, '16:30', NULL, 'GOREV', 'OLUSTURMA', 'BILGI', 'Mustafa Koç için yeni görev: Eski raporlama tablolarının veri eşlemesini çıkar', 'admin', 'GOREV', 'Eski raporlama tablolarının veri eşlemesini çıkar', 'Atanan: Mustafa Koç
+Öncelik: Yüksek
+Proje: Veri Ambarı Göçü
+Açıklama eklendi', NULL),
+(5, '17:45', NULL, 'KULLANICI', 'PASIFLESTIRME', 'KRITIK', 'Hesap pasifleştirildi: Onur Tekin', 'admin', 'KULLANICI', 'Onur Tekin', 'Kişi giriş yapamaz; açık oturumları da geçersiz sayılır', NULL),
+(4, '09:20', NULL, 'OTURUM', 'GIRIS_BASARISIZ', 'UYARI', 'Pasifleştirilmiş hesapla giriş denemesi', NULL, 'KULLANICI', 'Onur Tekin', 'Denenen e-posta: onur.tekin@devhub.local', '10.20.0.19'),
+(4, '09:22', NULL, 'OTURUM', 'GIRIS_BASARISIZ', 'UYARI', 'Pasifleştirilmiş hesapla giriş denemesi', NULL, 'KULLANICI', 'Onur Tekin', 'Denenen e-posta: onur.tekin@devhub.local', '10.20.0.19'),
+(4, '14:10', NULL, 'KULLANICI', 'SIFRE_SIFIRLAMA', 'KRITIK', 'Geçici şifre oluşturuldu: Emre Kurt', 'admin', 'KULLANICI', 'Emre Kurt', 'Eski şifre geçersiz; kişi bir sonraki girişte şifresini değiştirmek zorunda
+Şifrenin kendisi loglanmaz', NULL),
+(4, '14:31', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'emre.kurt', 'KULLANICI', 'Emre Kurt', 'Geçici şifreyle giriş: şifre değişikliği bekleniyor', NULL),
+(4, '14:32', NULL, 'OTURUM', 'SIFRE_DEGISTIRME', 'BILGI', 'Şifresini değiştirdi', 'emre.kurt', 'KULLANICI', 'Emre Kurt', 'Geçici şifre ilk girişte değiştirildi', NULL),
+(3, '11:20', NULL, 'PROJE', 'PROJE_ATAMA', 'BILGI', 'Burak Polat, Devhub Core projesine atandı', 'admin', 'KULLANICI', 'Burak Polat', 'Proje: Mobil Uygulama → Devhub Core', NULL),
+(3, '11:45', NULL, 'PROJE', 'PROJE_ATAMA', 'BILGI', 'Volkan Aydın, Enerji Optimizasyonu projesine atandı', 'admin', 'KULLANICI', 'Volkan Aydın', 'Proje: — → Enerji Optimizasyonu', NULL),
+(3, '15:30', NULL, 'PROJE', 'GUNCELLEME', 'BILGI', 'Proje güncellendi: Ödeme Altyapısı', 'admin', 'PROJE', 'Ödeme Altyapısı', 'Aşama: Aktif → Beklemede
+Açıklama güncellendi', NULL),
+(2, '15:10', NULL, 'PROJE', 'PROJEDEN_CIKARMA', 'BILGI', 'Buse Özdemir, Mobil Uygulama projesinden çıkarıldı', 'admin', 'KULLANICI', 'Buse Özdemir', 'Proje: Mobil Uygulama → —
+Kişi şu an bir projeye bağlı değil', NULL),
+(2, '16:00', NULL, 'GOREV', 'SILME', 'UYARI', 'Görev silindi: Eski sprint notlarını arşivle', 'ali.yilmaz', 'GOREV', 'Eski sprint notlarını arşivle', 'Atanan: Ali Yılmaz
+Durum: Yapılacak
+Proje: Devhub Core
+Oluşturan: Ali Yılmaz', NULL),
+(1, '08:55', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'ali.yilmaz', 'KULLANICI', 'Ali Yılmaz', NULL, NULL),
+(1, '09:05', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'fatma.celik', 'KULLANICI', 'Fatma Çelik', NULL, NULL),
+(1, '09:10', NULL, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'zeynep.ozturk', 'KULLANICI', 'Zeynep Öztürk', NULL, NULL),
+(1, '10:30', NULL, 'GOREV', 'OLUSTURMA', 'BILGI', 'Ali Yılmaz için yeni görev: Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'ali.yilmaz', 'GOREV', 'Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'Atanan: Ali Yılmaz
+Öncelik: Yüksek', NULL),
+(1, '11:40', NULL, 'GOREV', 'DURUM_DEGISIKLIGI', 'BILGI', 'Görev durumu değişti: Yavaş çalışan tüketim sorgusunu optimize et', 'fatma.celik', 'GOREV', 'Yavaş çalışan tüketim sorgusunu optimize et', 'Durum: Yapılacak → Devam Ediyor', NULL),
+(1, '12:15', NULL, 'GOREV', 'GUNCELLEME', 'BILGI', 'Görev güncellendi: Yavaş çalışan tüketim sorgusunu optimize et', 'admin', 'GOREV', 'Yavaş çalışan tüketim sorgusunu optimize et', 'Öncelik: Orta → Yüksek
+Görevin sahibi: Fatma Çelik', NULL),
+(1, '14:40', NULL, 'GOREV', 'OLUSTURMA', 'BILGI', 'Seda Yıldız için yeni görev: Filtre çubuğunu mobil uyumlu hâle getir', 'admin', 'GOREV', 'Filtre çubuğunu mobil uyumlu hâle getir', 'Atanan: Seda Yıldız
+Öncelik: Orta
+Proje: Raporlama Paneli', NULL),
+(1, '15:25', NULL, 'GOREV', 'YORUM', 'BILGI', 'Göreve yorum yazıldı: iOS 19 çökme hatasını yeniden üret ve kayıt altına al (Ahmet''ten devir)', 'zeynep.ozturk', 'GOREV', 'iOS 19 çökme hatasını yeniden üret ve kayıt altına al (Ahmet''ten devir)', 'Yorum: Hata yalnızca iOS 19.1''de ve çevrimdışıyken çıkıyor; ekran kaydını ortak klasöre ekledim.', NULL),
+(1, '17:05', NULL, 'GOREV', 'OLUSTURMA', 'BILGI', 'Zeynep Öztürk için yeni görev: Regresyon test listesini güncelle', 'zeynep.ozturk', 'GOREV', 'Regresyon test listesini güncelle', 'Atanan: Zeynep Öztürk
+Öncelik: Düşük', NULL),
+(1, '18:02', NULL, 'OTURUM', 'CIKIS', 'BILGI', 'Oturumu kapattı', 'ali.yilmaz', 'KULLANICI', 'Ali Yılmaz', NULL, NULL),
+(0, NULL, 6, 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı', 'admin', 'KULLANICI', 'Admin', NULL, NULL),
+(0, NULL, 4, 'GOREV', 'YORUM', 'BILGI', 'Göreve yorum yazıldı: Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'admin', 'GOREV', 'Sprint 15 planlamasını hazırla ve backlog önceliklerini netleştir', 'Yorum: Sunumda Q4 hedefleriyle bağlantıyı da gösterelim.', NULL),
+(0, NULL, 3, 'GOREV', 'OLUSTURMA', 'BILGI', 'Admin için yeni görev: Q4 yol haritası sunumunu hazırla', 'admin', 'GOREV', 'Q4 yol haritası sunumunu hazırla', 'Atanan: Admin
+Öncelik: Yüksek
+Açıklama eklendi', NULL),
+(0, NULL, 2, 'KULLANICI', 'DURUM_DEGISIKLIGI', 'BILGI', 'Ayşe Kaya durumu: Aktif → Toplantıda', 'ayse.kaya', 'KULLANICI', 'Ayşe Kaya', 'Durum: Aktif → Toplantıda
+Kişi kendi durumunu değiştirdi', NULL),
+(0, NULL, 1, 'GOREV', 'OLUSTURMA', 'BILGI', 'Buse Özdemir için yeni görev: Test otomasyon araçlarını karşılaştır ve öneri hazırla', 'admin', 'GOREV', 'Test otomasyon araçlarını karşılaştır ve öneri hazırla', 'Atanan: Buse Özdemir
+Öncelik: Orta', NULL),
+(0, NULL, 1, 'OTURUM', 'GIRIS_BASARISIZ', 'UYARI', 'Kayıtlı olmayan e-postayla giriş denemesi', NULL, 'KULLANICI', 'test@devhub.local', 'Denenen e-posta: test@devhub.local', '185.34.12.7');
 
--- İzinli geçişi, bugün süren her onaylı iznin başladığı gece zamanlayıcı tarafından (Sistem) loglanır.
-INSERT INTO g (days_ago, clock, hours_ago, message, actor)
-SELECT DATEDIFF(CURDATE(), lr.start_date), '00:05', NULL,
-       CONCAT(us.full_name, ' durumu ''AKTIF'' -> ''IZINLI'' olarak güncellendi.'), NULL
+-- Görev ve oturum logları aşağıda gerçek kayıtlardan üretilir; elle yazılanlardan yalnızca özel olanlar kalır
+-- (silinen görev, geçici şifreyle ilk giriş vb.).
+DELETE FROM g WHERE category = 'GOREV' AND action <> 'SILME';
+DELETE FROM g WHERE action IN ('GIRIS', 'CIKIS') AND details IS NULL;
+INSERT INTO g VALUES (9, '10:05', NULL, 'PROJE', 'PROJE_ATAMA', 'BILGI', 'Kerem Aslan, Veri Ambarı Göçü projesine atandı', 'admin', 'KULLANICI', 'Kerem Aslan', 'Proje: — → Veri Ambarı Göçü', NULL);
+
+-- Hafta sonuna düşen log mesai günü olsun: Cumartesi/Pazar → önceki Cuma (saat aynı kalır)
+UPDATE g SET days_ago = days_ago + CASE DAYOFWEEK(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL days_ago DAY) WHEN 1 THEN 2 WHEN 7 THEN 1 ELSE 0 END
+WHERE hours_ago IS NULL;
+
+-- Bugün süren her onaylı iznin başladığı gece zamanlayıcı kişiyi İzinli yapar (Sistem).
+INSERT INTO g (days_ago, clock, hours_ago, category, action, level, message, actor, target_type, target_name, details, ip)
+SELECT DATEDIFF(CURDATE(), lr.start_date), '00:05', NULL, 'KULLANICI', 'DURUM_DEGISIKLIGI', 'BILGI',
+       CONCAT(us.full_name, ' durumu: Aktif → İzinli'), NULL, 'KULLANICI', us.full_name,
+       'Durum: Aktif → İzinli\nİzin takvimine göre sistem tarafından otomatik güncellendi', NULL
 FROM leave_requests lr JOIN users us ON us.id = lr.user_id
 WHERE lr.state = 'ONAYLANDI' AND CURDATE() BETWEEN lr.start_date AND lr.end_date;
 
--- created_at UTC saklanır; mesajdaki damga İstanbul saatidir.
-INSERT INTO action_logs (message, created_at, actor_id)
-SELECT CONCAT('[', DATE_FORMAT(CONVERT_TZ(x.at_utc, '+00:00', '+03:00'), '%d.%m.%Y %H:%i'), '] ', x.message), x.at_utc,
-       (SELECT id FROM users WHERE email = CONCAT(x.actor, '@devhub.local'))
+-- created_at UTC saklanır; hedef id'leri ada göre bulunur; IP: kişiye özel iç ağ adresi (başarısız girişte kayıtlı adres).
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT x.category, x.action, x.level, x.message, x.at_utc, x.actor_id, x.target_type,
+       CASE x.target_type
+         WHEN 'KULLANICI' THEN (SELECT id FROM users WHERE full_name = x.target_name LIMIT 1)
+         WHEN 'PROJE' THEN (SELECT id FROM projects WHERE name = x.target_name LIMIT 1)
+         WHEN 'GOREV' THEN (SELECT id FROM tasks WHERE content = x.target_name LIMIT 1)
+         WHEN 'TATIL' THEN (SELECT id FROM holidays WHERE name = x.target_name ORDER BY date LIMIT 1)
+       END,
+       x.target_name, x.details,
+       COALESCE(x.ip, IF(x.actor_id IS NULL, NULL, CONCAT('10.20.0.', x.actor_id)))
 FROM (
-  SELECT message, actor,
+  SELECT g.*, (SELECT id FROM users WHERE email = CONCAT(g.actor, '@devhub.local')) AS actor_id,
          IF(hours_ago IS NOT NULL,
             NOW() - INTERVAL hours_ago HOUR,
             CONVERT_TZ(TIMESTAMP(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL days_ago DAY, clock), '+03:00', '+00:00')) AS at_utc
   FROM g
 ) x
 ORDER BY x.at_utc;
+
+-- Görevlerin oluşturulması (görevi atayan kişi tarafından)
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'GOREV', 'OLUSTURMA', 'BILGI', CONCAT(ow.full_name, ' için yeni görev: ', tk.content), tk.created_at, COALESCE(tk.created_by_id, tk.user_id),
+       'GOREV', tk.id, LEFT(tk.content, 200),
+       CONCAT('Atanan: ', ow.full_name,
+              '\nÖncelik: ', CASE tk.priority WHEN 'YUKSEK' THEN 'Yüksek' WHEN 'DUSUK' THEN 'Düşük' ELSE 'Orta' END,
+              IF(tk.due_date IS NULL, '', CONCAT('\nSon tarih: ', DATE_FORMAT(tk.due_date, '%d.%m.%Y'))),
+              IF(pr.name IS NULL, '', CONCAT('\nProje: ', pr.name)),
+              IF(tk.description IS NULL, '', '\nAçıklama eklendi')),
+       CONCAT('10.20.0.', COALESCE(tk.created_by_id, tk.user_id))
+FROM tasks tk JOIN users ow ON ow.id = tk.user_id LEFT JOIN projects pr ON pr.id = tk.project_id;
+
+-- Görev geçmişindeki olaylar (durum, tamamlama, aktarma, öncelik/son tarih) ve yorumlar
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'GOREV',
+       CASE WHEN a.kind = 'COMMENT' THEN 'YORUM'
+            WHEN a.message LIKE '%→ Tamamlandı' THEN 'TAMAMLAMA'
+            WHEN a.message LIKE 'durumu değiştirdi:%' THEN 'DURUM_DEGISIKLIGI'
+            WHEN a.message LIKE 'görevi aktardı:%' THEN 'GOREV_AKTARMA'
+            ELSE 'GUNCELLEME' END,
+       'BILGI',
+       CONCAT(CASE WHEN a.kind = 'COMMENT' THEN 'Göreve yorum yazıldı: '
+                   WHEN a.message LIKE '%→ Tamamlandı' THEN 'Görev tamamlandı: '
+                   WHEN a.message LIKE 'durumu değiştirdi:%' THEN 'Görev durumu değişti: '
+                   WHEN a.message LIKE 'görevi aktardı:%' THEN 'Görev başka birine aktarıldı: '
+                   ELSE 'Görev güncellendi: ' END, tk.content),
+       a.created_at, a.actor_id, 'GOREV', tk.id, LEFT(tk.content, 200),
+       CASE WHEN a.kind = 'COMMENT' THEN CONCAT('Yorum: ', LEFT(a.message, 300))
+            WHEN a.message LIKE 'durumu değiştirdi:%' THEN CONCAT('Durum: ', SUBSTRING(a.message, LENGTH('durumu değiştirdi: ') + 1))
+            WHEN a.message LIKE 'görevi aktardı:%' THEN CONCAT('Atanan: ', SUBSTRING(a.message, LENGTH('görevi aktardı: ') + 1))
+            WHEN a.message LIKE 'önceliği değiştirdi:%' THEN CONCAT('Öncelik: ', SUBSTRING(a.message, LENGTH('önceliği değiştirdi: ') + 1))
+            ELSE CONCAT(UPPER(LEFT(a.message, 1)), SUBSTRING(a.message, 2)) END,
+       IF(a.actor_id IS NULL, NULL, CONCAT('10.20.0.', a.actor_id))
+FROM task_activity a JOIN tasks tk ON tk.id = a.task_id
+WHERE a.kind = 'COMMENT' OR a.message NOT LIKE 'görevi oluşturdu%';
+
+-- Oturumlar: son iki haftanın iş günlerinde aktif çalışanların sabah girişleri (izinli günler hariç), bazılarının akşam çıkışları
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, ip_address)
+WITH RECURSIVE d(n) AS (SELECT 0 UNION ALL SELECT n + 1 FROM d WHERE n < 13)
+SELECT 'OTURUM', 'GIRIS', 'BILGI', 'Sisteme giriş yaptı',
+       CONVERT_TZ(TIMESTAMP(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY, '08:20') + INTERVAL ((us.id * 37 + d.n * 11) % 70) MINUTE, '+03:00', '+00:00'),
+       us.id, 'KULLANICI', us.id, us.full_name, CONCAT('10.20.0.', us.id)
+FROM d CROSS JOIN users us
+WHERE us.active = b'1' AND us.email LIKE '%@devhub.local'
+  AND (us.id * 7 + d.n * 3) % 10 < 8
+  AND DAYOFWEEK(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY) NOT IN (1, 7)
+  AND (us.hire_date IS NULL OR us.hire_date <= DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY)
+  AND NOT EXISTS (SELECT 1 FROM leave_requests lr WHERE lr.user_id = us.id AND lr.state = 'ONAYLANDI'
+                  AND DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY BETWEEN lr.start_date AND lr.end_date)
+  AND CONVERT_TZ(TIMESTAMP(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY, '08:20') + INTERVAL ((us.id * 37 + d.n * 11) % 70) MINUTE, '+03:00', '+00:00') < NOW();
+
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, ip_address)
+WITH RECURSIVE d(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM d WHERE n < 13)
+SELECT 'OTURUM', 'CIKIS', 'BILGI', 'Oturumu kapattı',
+       CONVERT_TZ(TIMESTAMP(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY, '17:35') + INTERVAL ((us.id * 13 + d.n * 7) % 55) MINUTE, '+03:00', '+00:00'),
+       us.id, 'KULLANICI', us.id, us.full_name, CONCAT('10.20.0.', us.id)
+FROM d CROSS JOIN users us
+WHERE us.active = b'1' AND us.email LIKE '%@devhub.local'
+  AND (us.id * 7 + d.n * 3) % 10 < 8 AND (us.id + d.n) % 3 = 0
+  AND DAYOFWEEK(DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY) NOT IN (1, 7)
+  AND (us.hire_date IS NULL OR us.hire_date <= DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY)
+  AND NOT EXISTS (SELECT 1 FROM leave_requests lr WHERE lr.user_id = us.id AND lr.state = 'ONAYLANDI'
+                  AND DATE(CONVERT_TZ(NOW(), '+00:00', '+03:00')) - INTERVAL d.n DAY BETWEEN lr.start_date AND lr.end_date);
+
+-- Duyurular: yayın anında loglanır
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'DUYURU', 'YAYIN', 'BILGI', CONCAT('Duyuru yayınlandı: ', a.title), a.created_at, a.author_id, 'DUYURU', a.id, a.title,
+       CONCAT(IF(a.pinned, 'Sabitlenmiş duyuru\n', ''), 'İçerik: ', LEFT(a.content, 200), '\nTüm aktif çalışanlara bildirim gönderildi'),
+       CONCAT('10.20.0.', a.author_id)
+FROM announcements a;
 
 -- ---------------------------------------------------------------------
 -- Bildirimler (uygulamanın ürettiği olaylarla aynı metinler)
@@ -481,6 +673,9 @@ FROM (
   SELECT 'admin' AS k, 'Yönetim' AS name, '#9CAB84' AS color, 0 AS pos
   UNION ALL SELECT 'admin', 'Kişisel', '#D9A88A', 1
   UNION ALL SELECT 'ali.yilmaz', 'Sprint 15', '#C5D89D', 0
+  UNION ALL SELECT 'derya.sen', 'Portal Kickoff', '#D9A88A', 0
+  UNION ALL SELECT 'fatma.celik', 'Raporlama', '#9CAB84', 0
+  UNION ALL SELECT 'zeynep.ozturk', 'Test planı', '#B7C4A0', 0
 ) x JOIN users us ON us.email = CONCAT(x.k, '@devhub.local');
 
 -- Her listenin oluşturanı o listenin yöneticisidir. "Sprint 15" ortak bir listedir: Ali yönetir,
@@ -495,11 +690,38 @@ FROM (
   UNION ALL SELECT 'seda.yildiz', 'MEMBER', 2
 ) x JOIN users us ON us.email = CONCAT(x.k, '@devhub.local')
 JOIN todo_lists tl ON tl.name = 'Sprint 15';
+-- "Portal Kickoff": Derya'nın ortak listesi (Burak ve Elif üye)
+INSERT INTO todo_list_members (list_id, user_id, role, joined_at)
+SELECT tl.id, us.id, 'MEMBER', NOW() - INTERVAL 3 DAY
+FROM users us JOIN todo_lists tl ON tl.name = 'Portal Kickoff'
+WHERE us.email IN ('burak.polat@devhub.local', 'elif.arslan@devhub.local');
 
 DROP TEMPORARY TABLE IF EXISTS td;
 CREATE TEMPORARY TABLE td (k VARCHAR(20), list VARCHAR(80) NULL, title VARCHAR(300), note VARCHAR(4000) NULL, done BOOLEAN, important BOOLEAN,
                            myday BOOLEAN, due INT NULL, pos INT, sender VARCHAR(20) NULL, msg VARCHAR(500) NULL, seen BOOLEAN);
 INSERT INTO td VALUES
+('derya.sen',   'Portal Kickoff', 'Kickoff sunumunu hazırla', 'Kapsam, takvim ve ekip rolleri.', FALSE, TRUE, FALSE, 1, 0, NULL, NULL, TRUE),
+('derya.sen',   'Portal Kickoff', 'Müşteri tarafı katılımcı listesini netleştir', NULL, TRUE, FALSE, FALSE, NULL, 1, NULL, NULL, TRUE),
+('burak.polat', 'Portal Kickoff', 'Ürün vizyonunu iki slayta indir', NULL, FALSE, FALSE, FALSE, 1, 2, NULL, NULL, TRUE),
+('elif.arslan', 'Portal Kickoff', 'Portal için ilk ekran taslaklarını ekle', NULL, FALSE, FALSE, FALSE, 2, 3, NULL, NULL, TRUE),
+('derya.sen',   NULL, 'Retrospektif notlarını ekiple paylaş', NULL, FALSE, FALSE, FALSE, 0, 0, NULL, NULL, TRUE),
+('derya.sen',   NULL, 'Scrum eğitimi için kaynak listesi', NULL, FALSE, FALSE, FALSE, NULL, 1, NULL, NULL, TRUE),
+('fatma.celik', 'Raporlama', 'WebSocket bağlantı kopmalarını logla', NULL, FALSE, TRUE, FALSE, 0, 0, NULL, NULL, TRUE),
+('fatma.celik', 'Raporlama', 'Sorgu planlarını karşılaştır', 'EXPLAIN çıktılarını wiki sayfasına ekle.', FALSE, FALSE, FALSE, 1, 1, NULL, NULL, TRUE),
+('fatma.celik', NULL, 'Yan haklar formunu doldur', NULL, FALSE, FALSE, FALSE, 3, 0, NULL, NULL, TRUE),
+('zeynep.ozturk', 'Test planı', 'iOS 19.1 cihazını test laboratuvarından al', NULL, TRUE, FALSE, FALSE, NULL, 0, NULL, NULL, TRUE),
+('zeynep.ozturk', 'Test planı', 'Çevrimdışı senaryolar için test verisi hazırla', NULL, FALSE, TRUE, FALSE, 1, 1, NULL, NULL, TRUE),
+('zeynep.ozturk', NULL, 'Hata raporu şablonunu güncelle', NULL, FALSE, FALSE, FALSE, 2, 0, 'ali.yilmaz', 'Yeni alanları ekleyebilir misin?', TRUE),
+('elif.arslan', NULL, 'Tasarım sistemi renk tokenlarını gözden geçir', NULL, FALSE, FALSE, FALSE, 2, 0, NULL, NULL, TRUE),
+('burak.polat', NULL, 'Q4 hedeflerini yönetimle teyit et', NULL, FALSE, TRUE, FALSE, 1, 0, NULL, NULL, TRUE),
+('merve.can',   NULL, 'Veri sözlüğüne yeni tabloları ekle', NULL, FALSE, FALSE, FALSE, 1, 0, NULL, NULL, TRUE),
+('merve.can',   NULL, 'SQL eğitimi videolarını izle', NULL, FALSE, FALSE, FALSE, NULL, 1, NULL, NULL, TRUE),
+('emre.kurt',   NULL, 'Klavye kısayolları dokümanını yaz', NULL, FALSE, FALSE, FALSE, 2, 0, NULL, NULL, TRUE),
+('volkan.aydin', NULL, 'Anomali sonuçlarını grafikle', NULL, FALSE, TRUE, FALSE, 1, 0, NULL, NULL, TRUE),
+('kerem.aslan', NULL, 'VPN erişim talebini takip et', NULL, FALSE, FALSE, FALSE, 0, 0, NULL, NULL, TRUE),
+('kerem.aslan', NULL, 'Oryantasyon dokümanını oku', NULL, TRUE, FALSE, FALSE, NULL, 1, NULL, NULL, TRUE),
+('buse.ozdemir', NULL, 'Otomasyon araçları için deneme hesapları aç', NULL, FALSE, FALSE, FALSE, 1, 0, NULL, NULL, TRUE),
+('can.dogan',   NULL, 'İzin öncesi devir notlarını hazırla', NULL, FALSE, TRUE, FALSE, 2, 0, NULL, NULL, TRUE),
 ('admin', NULL,      'Haftalık durum raporunu gönder',          NULL, FALSE, FALSE, TRUE,  0,    0, NULL, NULL, TRUE),
 ('admin', NULL,      'Yeni stajyer için hesap aç',              'Kullanıcılar sayfasından eklenecek; geçici şifre ilk gün elden verilecek.', FALSE, FALSE, FALSE, 2, 1, NULL, NULL, TRUE),
 ('admin', NULL,      'Müşteri ziyareti gündemini onayla',       'Gündem taslağı ortak klasörde. Katılımcı listesi de eklenecek.', FALSE, FALSE, FALSE, 3, 2, 'burak.polat', 'Perşembeye kadar dönüş yapabilir misin?', FALSE),
@@ -610,6 +832,22 @@ FROM (
   UNION ALL SELECT 'elif.arslan', 'LINKEDIN', NULL, 'https://www.linkedin.com/in/elif-arslan-ornek', 1
 ) x JOIN users us ON us.email = CONCAT(x.k, '@devhub.local');
 
+-- Zenginleştirme: bağlantısı olmayan her aktif kişiye dahili hat ve LinkedIn; yazılımcılara GitHub, bazılarına kişisel e-posta
+INSERT INTO user_links (user_id, type, label, value, position)
+SELECT us.id, 'PHONE', 'Dahili', CONCAT('+90 212 555 01 ', LPAD(us.id + 10, 2, '0')), 0
+FROM users us WHERE us.active = b'1' AND us.email LIKE '%@devhub.local' AND NOT EXISTS (SELECT 1 FROM user_links l WHERE l.user_id = us.id);
+INSERT INTO user_links (user_id, type, label, value, position)
+SELECT us.id, 'LINKEDIN', NULL, CONCAT('https://www.linkedin.com/in/', REPLACE(SUBSTRING_INDEX(us.email, '@', 1), '.', '-'), '-ornek'), 1
+FROM users us WHERE us.active = b'1' AND us.email LIKE '%@devhub.local' AND (SELECT COUNT(*) FROM user_links l WHERE l.user_id = us.id) = 1;
+INSERT INTO user_links (user_id, type, label, value, position)
+SELECT us.id, 'GITHUB', NULL, CONCAT('https://github.com/', REPLACE(SUBSTRING_INDEX(us.email, '@', 1), '.', ''), '-ornek'), 2
+FROM users us WHERE us.active = b'1' AND us.email LIKE '%@devhub.local' AND (SELECT COUNT(*) FROM user_links l WHERE l.user_id = us.id) = 2
+  AND (us.job_title LIKE '%Developer%' OR us.job_title LIKE '%DevOps%' OR us.job_title LIKE '%QA%' OR us.job_title LIKE '%Data%');
+INSERT INTO user_links (user_id, type, label, value, position)
+SELECT us.id, 'EMAIL', 'Kişisel', CONCAT(SUBSTRING_INDEX(us.email, '@', 1), '@example.com'), 3
+FROM users us WHERE us.active = b'1' AND us.email LIKE '%@devhub.local' AND us.id % 3 = 0
+  AND NOT EXISTS (SELECT 1 FROM user_links l WHERE l.user_id = us.id AND l.type = 'EMAIL');
+
 -- ---------------------------------------------------------------------
 -- Ad / unvan değişikliği talepleri: biri bekliyor, biri açıklamayla reddedilmiş
 -- ---------------------------------------------------------------------
@@ -625,6 +863,54 @@ INSERT INTO notifications (user_id, actor_id, type, title, body, link, created_a
 SELECT @admin, r.user_id, 'PROFILE_REQUESTED', CONCAT(us.full_name, ' profil değişikliği istedi'),
        CONCAT('Unvan: ', COALESCE(r.previous_job_title, '—'), ' → ', COALESCE(r.job_title, '—')), '/users', r.created_at
 FROM profile_change_requests r JOIN users us ON us.id = r.user_id WHERE r.state = 'BEKLIYOR';
+
+
+-- ---------------------------------------------------------------------
+-- İzin ve profil talebi logları: yukarıdaki gerçek kayıtlardan üretilir (talep, karar, kesinleştirme)
+-- ---------------------------------------------------------------------
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'IZIN', 'TALEP', 'BILGI', 'İzin talebi oluşturuldu', lr.created_at, lr.user_id, 'IZIN', lr.id, us.full_name,
+       CONCAT(CASE lr.type WHEN 'YILLIK' THEN 'Yıllık izin' WHEN 'HASTALIK' THEN 'Hastalık' ELSE 'Mazeret' END, ' · ',
+              DATE_FORMAT(lr.start_date, '%d.%m'), IF(lr.end_date = lr.start_date, '', CONCAT(' – ', DATE_FORMAT(lr.end_date, '%d.%m'))),
+              IF(lr.note IS NULL, '', CONCAT('\nNot: ', lr.note)), '\nYönetici onayı bekleniyor'),
+       CONCAT('10.20.0.', lr.user_id)
+FROM leave_requests lr JOIN users us ON us.id = lr.user_id;
+
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'IZIN', IF(lr.state = 'ONAYLANDI', 'ONAY', 'RET'), 'BILGI',
+       CONCAT(IF(lr.state = 'ONAYLANDI', 'İzin talebi onaylandı: ', 'İzin talebi reddedildi: '), us.full_name),
+       lr.decided_at, lr.decided_by, 'IZIN', lr.id, us.full_name,
+       CONCAT(CASE lr.type WHEN 'YILLIK' THEN 'Yıllık izin' WHEN 'HASTALIK' THEN 'Hastalık' ELSE 'Mazeret' END, ' · ',
+              DATE_FORMAT(lr.start_date, '%d.%m'), IF(lr.end_date = lr.start_date, '', CONCAT(' – ', DATE_FORMAT(lr.end_date, '%d.%m'))),
+              IF(lr.decision_note IS NULL, '', CONCAT('\nAçıklama: ', lr.decision_note)), '\nKarar kesinleşene kadar geri alınabilir'),
+       CONCAT('10.20.0.', lr.decided_by)
+FROM leave_requests lr JOIN users us ON us.id = lr.user_id
+WHERE lr.state IN ('ONAYLANDI', 'REDDEDILDI') AND lr.decided_at IS NOT NULL;
+
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'IZIN', 'KESINLESTIRME', 'BILGI', CONCAT('İzin kararı kesinleştirildi: ', us.full_name), lr.finalized_at, lr.decided_by, 'IZIN', lr.id, us.full_name,
+       CONCAT('Karar: ', IF(lr.state = 'ONAYLANDI', 'Onaylandı', 'Reddedildi'), '\nBu karar artık değiştirilemez'), CONCAT('10.20.0.', lr.decided_by)
+FROM leave_requests lr JOIN users us ON us.id = lr.user_id
+WHERE lr.finalized = b'1' AND lr.finalized_at IS NOT NULL AND lr.decided_by IS NOT NULL;
+
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'PROFIL', 'TALEP', 'BILGI', 'Profil değişikliği talep edildi', r.created_at, r.user_id, 'PROFIL_TALEBI', r.id, us.full_name,
+       CONCAT('Unvan: ', COALESCE(r.previous_job_title, '—'), ' → ', COALESCE(r.job_title, '—'), '\nYönetici onayı bekleniyor'), CONCAT('10.20.0.', r.user_id)
+FROM profile_change_requests r JOIN users us ON us.id = r.user_id;
+
+INSERT INTO action_logs (category, action, level, message, created_at, actor_id, target_type, target_id, target_name, details, ip_address)
+SELECT 'PROFIL', IF(r.state = 'ONAYLANDI', 'ONAY', 'RET'), 'BILGI',
+       CONCAT(IF(r.state = 'ONAYLANDI', 'Profil değişikliği onaylandı: ', 'Profil değişikliği reddedildi: '), us.full_name),
+       r.decided_at, r.decided_by, 'PROFIL_TALEBI', r.id, us.full_name,
+       CONCAT('Unvan: ', COALESCE(r.previous_job_title, '—'), ' → ', COALESCE(r.job_title, '—'), IF(r.decision_note IS NULL, '', CONCAT('\nAçıklama: ', r.decision_note))),
+       CONCAT('10.20.0.', r.decided_by)
+FROM profile_change_requests r JOIN users us ON us.id = r.user_id
+WHERE r.state IN ('ONAYLANDI', 'REDDEDILDI') AND r.decided_at IS NOT NULL;
+
+-- Hafta sonuna düşen tüm log kayıtları (ör. izin kararları, duyurular) önceki Cuma'ya alınır: ofis hafta sonu çalışmaz.
+UPDATE action_logs
+SET created_at = created_at - INTERVAL (CASE DAYOFWEEK(CONVERT_TZ(created_at, '+00:00', '+03:00')) WHEN 1 THEN 2 ELSE 1 END) DAY
+WHERE DAYOFWEEK(CONVERT_TZ(created_at, '+00:00', '+03:00')) IN (1, 7);
 
 DROP TEMPORARY TABLE IF EXISTS u, t, l, g, h, c, td;
 
@@ -700,6 +986,8 @@ FROM todo_items ti JOIN users us ON us.id = ti.user_id WHERE ti.due_date IS NULL
 UNION ALL
 SELECT 'Kişisel kartta hafta sonu tarihi', us.full_name, ti.title
 FROM todo_items ti JOIN users us ON us.id = ti.user_id WHERE DAYOFWEEK(ti.due_date) IN (1, 7)
+UNION ALL
+SELECT 'Gelecek tarihli log', lg.category, lg.message FROM action_logs lg WHERE lg.created_at > NOW() + INTERVAL 1 MINUTE
 UNION ALL
 SELECT 'İzin bitişi başlangıçtan önce', us.full_name, CONCAT(lr.start_date, ' – ', lr.end_date)
 FROM leave_requests lr JOIN users us ON us.id = lr.user_id WHERE lr.end_date < lr.start_date

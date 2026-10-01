@@ -5,20 +5,20 @@ import Modal from '../ui/Modal';
 import { EmptyState, Segmented, Skeleton } from '../ui/primitives';
 import { useLogs } from '../../hooks/api';
 import { parseLog, trLower } from '../../lib/format';
-import { LOG_TYPE } from '../../lib/meta';
-import type { ActionLogType } from '../../types';
+import { LOG_CATEGORY, logActorName } from '../../lib/meta';
+import type { LogCategory } from '../../types';
 
-type Filter = 'ALL' | ActionLogType;
+type Filter = 'ALL' | LogCategory;
 
 export default function LogsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data: logs, isLoading } = useLogs(open);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('ALL');
 
-  const parsed = useMemo(() => (logs ?? []).map(l => ({ ...parseLog(l), id: l.id, actor: l.actorName ?? 'Sistem' })), [logs]);
+  const parsed = useMemo(() => (logs ?? []).map(l => ({ ...parseLog(l), id: l.id, actor: logActorName(l), details: l.details })), [logs]);
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { ALL: parsed.length, PROJE: 0, IZIN: 0, GOREV: 0, SISTEM: 0 };
-    parsed.forEach(p => { c[p.type] += 1; });
+    const c: Partial<Record<Filter, number>> = { ALL: parsed.length };
+    parsed.forEach(p => { c[p.type] = (c[p.type] ?? 0) + 1; });
     return c;
   }, [parsed]);
 
@@ -26,7 +26,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
   const visible = parsed.filter(l => (filter === 'ALL' || l.type === filter) && (!q || trLower(`${l.text} ${l.actor}`).includes(q)));
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" title="Sistem Logları" description="Proje atamaları, izinler, yeni görev ve projeler kaydedilir.">
+    <Modal open={open} onClose={onClose} size="lg" title="Ekip Akışı" description="Projeler, görevler, duyurular ve durum değişiklikleri. Ayrıntılı sistem loglarını yöneticiler görür.">
       <div className="space-y-4 -mt-2">
         <div className="relative">
           <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted" size={18} aria-hidden="true" />
@@ -46,10 +46,11 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
           value={filter}
           onChange={setFilter}
           options={[
-            { value: 'ALL', label: 'Tümü', count: counts.ALL },
-            { value: 'PROJE', label: 'Proje', count: counts.PROJE },
-            { value: 'GOREV', label: 'Görev', count: counts.GOREV },
-            { value: 'IZIN', label: 'İzin', count: counts.IZIN },
+            { value: 'ALL', label: 'Tümü', count: counts.ALL ?? 0 },
+            { value: 'PROJE', label: 'Proje', count: counts.PROJE ?? 0 },
+            { value: 'GOREV', label: 'Görev', count: counts.GOREV ?? 0 },
+            { value: 'DUYURU', label: 'Duyuru', count: counts.DUYURU ?? 0 },
+            { value: 'KULLANICI', label: 'Durum', count: counts.KULLANICI ?? 0 },
           ]}
         />
 
@@ -61,7 +62,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
           <ol className="relative pl-6 space-y-3 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-theme-light">
             <AnimatePresence initial={false}>
               {visible.map((log, i) => {
-                const meta = LOG_TYPE[log.type];
+                const meta = LOG_CATEGORY[log.type];
                 return (
                   <motion.li
                     key={log.id}
@@ -76,6 +77,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
                     </span>
                     <div className="ml-3 p-3.5 rounded-2xl bg-theme-cream/60 border border-theme-light/40">
                       <p className="text-sm font-medium text-theme-text leading-relaxed">{log.text}</p>
+                      {log.details && <p className="text-xs text-theme-muted mt-1 whitespace-pre-line">{log.details}</p>}
                       <p className="text-xs font-semibold text-theme-muted mt-1.5 flex items-center gap-2">
                         <span>{meta.label}</span>
                         {log.time && <><span aria-hidden="true">·</span><time>{log.time}</time></>}

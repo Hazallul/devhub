@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Star, Check, FloppyDisk, CalendarBlank, ListBullets, Plus, Trash, PaperPlaneTilt, NoteBlank, Bell, Repeat, CheckSquare, ArrowSquareOut, ChatCircleText } from '@phosphor-icons/react';
+import { X, Star, FloppyDisk, CalendarBlank, ListBullets, Plus, Trash, PaperPlaneTilt, NoteBlank, Bell, Repeat, CheckSquare, ArrowSquareOut, ChatCircleText } from '@phosphor-icons/react';
 import { DoneToggle } from './TodoCard';
 import { canDeleteCard, nextMonday, REPEAT, REPEATS } from './views';
 import { useQuickActions } from '../layout/QuickActions';
+import { useToast } from '../ui/Toast';
 import { useUpdateTodo, useDeleteTodo, useAddStep, useUpdateStep, useDeleteStep, useTodoComments, useAddTodoComment, useDeleteTodoComment } from '../../hooks/todos';
 import { useMe } from '../../hooks/api';
 import { addDays, dueLabel, firstName, formatDate, parseServerDate, timeAgo, toIsoDay } from '../../lib/format';
@@ -49,7 +50,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
   const me = useMe();
   const shared = (lists.find(l => l.id === item.listId)?.members.length ?? 1) > 1;
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [justSaved, setJustSaved] = useState(false);
+  const toast = useToast();
   const now = new Date();
   const today = toIsoDay(now);
   const due = item.dueDate && !item.done ? dueLabel(item.dueDate) : null;
@@ -59,17 +60,13 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
   const title = titleField.value;
   const note = noteField.value;
 
-  // Her şey zaten kendiliğinden kaydedilir; bu düğme bekleyen yazıyı hemen yazar ve kaydedildiğini açıkça gösterir.
+  // Her şey zaten kendiliğinden kaydedilir; bu düğme bekleyen yazıyı hemen yazar, kaydedildiğini bildirir ve ayrıntıyı kapatır.
   const saveNow = () => {
     if (title.trim()) titleField.flush(); else titleField.reset();
     noteField.flush();
-    setJustSaved(true);
+    toast.success('Kart kaydedildi');
+    onClose();
   };
-  useEffect(() => {
-    if (!justSaved) return;
-    const t = setTimeout(() => setJustSaved(false), 1800);
-    return () => clearTimeout(t);
-  }, [justSaved]);
 
   useEffect(() => {
     if (!confirmDelete) return;
@@ -238,8 +235,8 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
           {item.done && item.doneAt ? `${item.doneById !== null && item.doneById !== me.id && item.doneByName ? `${firstName(item.doneByName)} tamamladı` : 'Tamamlandı'} · ${timeAgo(item.doneAt)}` : `Oluşturuldu · ${formatDate(toIsoDay(parseServerDate(item.createdAt)))}`}
         </p>
         <button type="button" onClick={onSend} className="icon-btn border border-theme-light/70 text-theme-deep" aria-label="Kartı birine gönder" title="Kartı birine gönder"><PaperPlaneTilt size={17} weight="bold" /></button>
-        <button type="button" onClick={saveNow} className="btn-primary min-h-[40px] px-4 text-sm" aria-live="polite">
-          {justSaved ? <><Check size={16} weight="bold" /> Kaydedildi</> : <><FloppyDisk size={16} weight="bold" /> Kaydet</>}
+        <button type="button" onClick={saveNow} className="btn-primary min-h-[40px] px-4 text-sm">
+          <FloppyDisk size={16} weight="bold" /> Kaydet
         </button>
         {!canDeleteCard(item, lists, me.id) ? null : confirmDelete ? (
           <button type="button" onClick={() => remove.mutate(item.id, { onSuccess: onClose })} className="h-10 px-3 rounded-xl text-xs font-bold bg-[#FBEDE5] text-[#9A3B1B] hover:bg-[#F6DCCD] transition-colors">Silinsin mi?</button>

@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import {
-  Gear, SignOut, ListDashes, Key, ListChecks, ArrowUpRight, House, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
+  Gear, ListDashes, ListChecks, ArrowUpRight, House, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
 } from '@phosphor-icons/react';
-import { getStoredUser, clearSession } from '../../lib/session';
+import { getStoredUser } from '../../lib/session';
 import { useAllTasks, useLeaves, useMe, usePendingProfileCount } from '../../hooks/api';
+import { useDocPendingCount } from '../../hooks/docs';
 import { page, pageWipe, wipeEdge } from '../../lib/motion';
-import { Avatar } from '../ui/primitives';
 import { Menu, MenuItem, MenuDivider } from '../ui/Menu';
 import { navFor, systemNavFor } from './nav';
 import TodoSpace from '../todo/TodoSpace';
@@ -15,6 +15,8 @@ import { useTodoUnseen } from '../../hooks/todos';
 import NotificationBell from './NotificationBell';
 import { QuickActionsProvider, useQuickActions } from './QuickActions';
 import CommandPalette from './CommandPalette';
+import UserCard, { useLogout } from './UserCard';
+import PasswordCard from '../settings/PasswordCard';
 import { ContextMenuProvider } from './ContextMenu';
 
 /** Oturum yoksa login'e yönlendirir; varsa kalıcı iskeleti (sidebar + üst bar) çizer. */
@@ -98,7 +100,8 @@ function Shell() {
 
       <div inert={isTodo} className="flex-1 flex flex-col min-w-0">
         <Topbar onOpenPalette={() => setPaletteOpen(true)} onOpenDrawer={() => setDrawerOpen(true)} />
-        <main ref={mainRef} tabIndex={-1} id="main-scroll-container" className="relative flex-1 overflow-y-auto overscroll-contain scrollbar-thin outline-none">
+        {/* layoutScroll: içindeki layout/layoutId animasyonları kaydırma konumunu hesaba katar (yoksa sayfa boyu değişince "aşağıdan uçar") */}
+        <motion.main layoutScroll ref={mainRef} tabIndex={-1} id="main-scroll-container" className="relative flex-1 overflow-y-auto overscroll-contain scrollbar-thin outline-none">
           <AnimatePresence mode="wait" initial={false}>
             {/* Tam genişlikte sarmalayıcı: açılma menünün kenarından başlar, ortalanmış içerikten değil. */}
             <motion.div key={shownSection} variants={reduceMotion ? page : pageWipe} initial="hidden" animate="visible" exit="exit" className="relative min-h-full">
@@ -110,12 +113,11 @@ function Shell() {
                 />
               )}
               <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10">
-                <PasswordNotice />
-                {shownOutlet}
+                                {shownOutlet}
               </div>
             </motion.div>
           </AnimatePresence>
-        </main>
+        </motion.main>
       </div>
 
       <AnimatePresence>
@@ -123,6 +125,7 @@ function Shell() {
       </AnimatePresence>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <PasswordGate />
     </div>
     </ContextMenuProvider>
   );
@@ -139,12 +142,9 @@ function SidebarContent() {
 
   const pendingLeaves = me.role === 'ADMIN' ? leaves?.filter(l => l.state === 'BEKLIYOR').length ?? 0 : 0;
   const myOpenTasks = tasks?.filter(t => t.userId === me.id && t.status !== 'TAMAMLANDI').length ?? 0;
-  const badges: Record<string, number> = { '/tasks': myOpenTasks, '/leaves': pendingLeaves, '/users': pendingProfiles };
+  const pendingDocs = useDocPendingCount(me.role === 'ADMIN').data?.count ?? 0;
+  const badges: Record<string, number> = { '/tasks': myOpenTasks, '/leaves': pendingLeaves, '/users': pendingProfiles, '/docs': pendingDocs };
 
-  const logout = () => {
-    clearSession();
-    navigate('/login');
-  };
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 p-5 overflow-y-auto overscroll-contain scrollbar-hover">
@@ -199,10 +199,13 @@ function SidebarContent() {
 
       <p className="eyebrow px-4 mb-2 mt-8">Sistem</p>
       <div className="space-y-1">
-        <button onClick={actions.openLogs} className="w-full flex items-center gap-3 px-4 py-3 text-theme-muted hover:text-theme-deep hover:bg-theme-lightest/50 font-medium rounded-2xl transition-colors">
-          <ListDashes size={22} weight="duotone" aria-hidden="true" />
-          <span>Loglar</span>
-        </button>
+        {/* Yönetici için "Loglar" bir sayfadır (Sistem bölümündeki bağlantı); çalışan ekip akışını pencerede görür. */}
+        {me.role !== 'ADMIN' && (
+          <button onClick={actions.openLogs} className="w-full flex items-center gap-3 px-4 py-3 text-theme-muted hover:text-theme-deep hover:bg-theme-lightest/50 font-medium rounded-2xl transition-colors">
+            <ListDashes size={22} weight="duotone" aria-hidden="true" />
+            <span>Ekip akışı</span>
+          </button>
+        )}
         {systemNavFor(me).map(item => (
           <NavLink key={item.to} to={item.to} className="block rounded-2xl">
             {({ isActive }) => (
@@ -231,16 +234,7 @@ function SidebarContent() {
       </div>
 
       <div className="mt-auto pt-6 shrink-0">
-        <div className="bg-theme-cream p-3 rounded-3xl flex items-center gap-3 border border-theme-light/40">
-          <Avatar user={me} size="sm" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-theme-text truncate">{me.fullName}</p>
-            <p className="text-xs text-theme-muted font-medium truncate">{me.role === 'ADMIN' ? 'Yönetici' : me.jobTitle || 'Çalışan'}</p>
-          </div>
-          <button onClick={logout} className="icon-btn hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Çıkış yap" title="Çıkış yap">
-            <SignOut size={20} weight="bold" />
-          </button>
-        </div>
+        <UserCard />
       </div>
     </div>
   );
@@ -292,16 +286,28 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
 }
 
 /** Yönetici şifreyi sıfırladıysa kullanıcı geçici şifreyle girmiştir: şifresini değiştirmesi istenir. */
-function PasswordNotice() {
+/**
+ * Geçici (yöneticinin verdiği) şifreyle giren kişi, yeni şifresini belirlemeden uygulamayı kullanamaz:
+ * tüm ekranı kaplayan, kapatılamayan bir pencere açılır. Şifre değişince kendiliğinden kalkar.
+ */
+function PasswordGate() {
   const me = useMe();
-  const navigate = useNavigate();
-  const location = useLocation();
-  if (!me.mustChangePassword || location.pathname === '/settings') return null;
+  const logout = useLogout();
+  if (!me.mustChangePassword) return null;
   return (
-    <div role="status" className="mb-6 flex items-center gap-3 p-4 rounded-3xl bg-[#FBEDE5] border border-[#E8C3AE] text-[#7A3E1F]">
-      <Key size={22} weight="duotone" className="shrink-0" aria-hidden="true" />
-      <p className="text-sm font-semibold flex-1">Geçici bir şifreyle giriş yaptınız. Hesabınızın güvenliği için şifrenizi değiştirin.</p>
-      <button onClick={() => navigate('/settings')} className="btn-primary h-10 min-h-0 px-4 text-sm">Şifreyi değiştir</button>
+    <div className="fixed inset-0 z-[140] bg-theme-text/40 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+      <div className="w-full max-w-md space-y-4 my-auto">
+        <div className="card p-6">
+          <p className="eyebrow mb-1">Hoş geldiniz, {me.fullName.split(' ')[0]}</p>
+          <h2 id="gate-title" className="text-xl font-bold tracking-tight">Önce kendi şifrenizi belirleyin</h2>
+          <p className="text-sm text-theme-muted font-medium mt-1.5 leading-relaxed">
+            Hesabınız yöneticinin verdiği başlangıç şifresiyle açıldı. Güvenliğiniz için bu şifreyi şimdi değiştirmeniz gerekiyor;
+            "Mevcut şifre" alanına size verilen başlangıç şifresini yazın.
+          </p>
+        </div>
+        <PasswordCard />
+        <button type="button" onClick={logout} className="btn-ghost w-full">Çıkış yap</button>
+      </div>
     </div>
   );
 }

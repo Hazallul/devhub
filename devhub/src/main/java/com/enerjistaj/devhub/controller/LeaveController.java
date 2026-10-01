@@ -1,5 +1,8 @@
 package com.enerjistaj.devhub.controller;
 
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.dto.LeaveBalanceDto;
 import com.enerjistaj.devhub.dto.LeaveDto;
 import com.enerjistaj.devhub.dto.Payloads;
@@ -34,6 +37,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LeaveController {
 
+    private final ActionLogService actionLogService;
     private final LeaveRequestRepository leaveRepository;
     private final UserStatusService userStatusService;
     private final CurrentUser currentUser;
@@ -125,6 +129,13 @@ public class LeaveController {
         if (onBehalf && saved.covers(LocalDate.now(ActionLogService.ZONE))) {
             userStatusService.change(target, UserStatusService.IZINLI, me);
         }
+        actionLogService.record(LogCategory.IZIN, onBehalf ? LogAction.KAYIT : LogAction.TALEP,
+                onBehalf ? target.getFullName() + " adına izin kaydı oluşturuldu" : "İzin talebi oluşturuldu").by(me)
+                .target("IZIN", saved.getId(), target.getFullName())
+                .detail(summary(saved))
+                .detail(saved.getNote() != null ? "Not: " + saved.getNote() : null)
+                .detail(onBehalf ? "Yönetici kaydı: doğrudan onaylı" : "Yönetici onayı bekleniyor")
+                .detail(!onBehalf && saved.getStartDate().isBefore(LocalDate.now(ActionLogService.ZONE)) ? "Geçmiş tarihli hastalık bildirimi" : null).save();
         if (onBehalf) {
             notificationService.notify(target, me, NotificationType.LEAVE_DECIDED, "Adınıza izin kaydedildi", summary(saved), "/leaves");
         } else {
@@ -156,6 +167,12 @@ public class LeaveController {
         if (decision == LeaveState.ONAYLANDI && leave.covers(LocalDate.now(ActionLogService.ZONE))) {
             userStatusService.change(leave.getUser(), UserStatusService.IZINLI, me);
         }
+        actionLogService.record(LogCategory.IZIN, decision == LeaveState.ONAYLANDI ? LogAction.ONAY : LogAction.RET,
+                (decision == LeaveState.ONAYLANDI ? "İzin talebi onaylandı: " : "İzin talebi reddedildi: ") + leave.getUser().getFullName()).by(me)
+                .target("IZIN", leave.getId(), leave.getUser().getFullName())
+                .detail(summary(leave))
+                .detail(leave.getDecisionNote() != null ? "Açıklama: " + leave.getDecisionNote() : null)
+                .detail("Karar kesinleşene kadar geri alınabilir").save();
         notificationService.notify(leave.getUser(), me, NotificationType.LEAVE_DECIDED,
                 decision == LeaveState.ONAYLANDI ? "İzin talebiniz onaylandı" : "İzin talebiniz reddedildi",
                 summary(leave) + (leave.getDecisionNote() != null ? " — " + leave.getDecisionNote() : ""), "/leaves");
@@ -182,6 +199,10 @@ public class LeaveController {
         if (wasApproved && UserStatusService.IZINLI.equals(user.getStatus()) && !leaveRepository.existsApprovedOn(user.getId(), today)) {
             userStatusService.change(user, user.getWorkMode(), me);
         }
+        actionLogService.record(LogCategory.IZIN, LogAction.GERI_ALMA, "İzin kararı geri alındı: " + user.getFullName()).by(me)
+                .target("IZIN", leave.getId(), user.getFullName())
+                .detail("Önceki karar: " + (wasApproved ? "Onaylandı" : "Reddedildi"))
+                .detail(summary(leave)).detail("Talep yeniden onay bekliyor").level(LogLevel.UYARI).save();
         notificationService.notify(user, me, NotificationType.LEAVE_REOPENED,
                 "İzin kararı geri alındı; talebiniz yeniden değerlendirilecek", summary(leave), "/leaves");
         return ResponseEntity.ok(LeaveDto.from(leave));
@@ -191,11 +212,16 @@ public class LeaveController {
     @PutMapping("/{id}/finalize")
     @Transactional
     public ResponseEntity<LeaveDto> finalizeDecision(@PathVariable Long id) {
-        currentUser.requireAdmin("Kararı yalnızca yöneticiler kesinleştirebilir.");
+        User me = currentUser.requireAdmin("Kararı yalnızca yöneticiler kesinleştirebilir.");
         LeaveRequest leave = findDecidedOpen(id);
         leave.setFinalized(true);
         leave.setFinalizedAt(LocalDateTime.now());
-        return ResponseEntity.ok(LeaveDto.from(leaveRepository.save(leave)));
+        LeaveRequest saved = leaveRepository.save(leave);
+        actionLogService.record(LogCategory.IZIN, LogAction.KESINLESTIRME, "İzin kararı kesinleştirildi: " + saved.getUser().getFullName()).by(me)
+                .target("IZIN", saved.getId(), saved.getUser().getFullName())
+                .detail("Karar: " + (saved.getState() == LeaveState.ONAYLANDI ? "Onaylandı" : "Reddedildi"))
+                .detail(summary(saved)).detail("Bu karar artık değiştirilemez").save();
+        return ResponseEntity.ok(LeaveDto.from(saved));
     }
 
     /** "Yıllık izin · 1 Eki – 4 Eki · 2 iş günü" */
@@ -222,6 +248,8 @@ public class LeaveController {
         if (!leave.getUser().getId().equals(me.getId()) || leave.getState() != LeaveState.BEKLIYOR) {
             throw ApiException.forbidden("Yalnızca bekleyen kendi talebinizi geri çekebilirsiniz.");
         }
+        actionLogService.record(LogCategory.IZIN, LogAction.GERI_CEKME, "İzin talebi geri çekildi").by(me)
+                .target("IZIN", leave.getId(), me.getFullName()).detail(summary(leave)).save();
         leaveRepository.delete(leave);
         return ResponseEntity.noContent().build();
     }

@@ -1,5 +1,8 @@
 package com.enerjistaj.devhub.controller;
 
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.dto.TaskActivityDto;
 import com.enerjistaj.devhub.dto.TaskDto;
@@ -101,6 +104,7 @@ public class TaskController {
 
         List<TaskDto> created = new ArrayList<>();
         List<String> names = new ArrayList<>();
+        List<Long> ids = new ArrayList<>();
         for (Long id : userIds) {
             User user = userRepository.findById(id).orElseThrow(() -> ApiException.notFound("Kullanıcı"));
             if (!user.isActive()) throw ApiException.badRequest(user.getFullName() + " pasif bir hesap; görev atanamaz.");
@@ -116,13 +120,22 @@ public class TaskController {
             if (explicitProject) t.setProject(chosenProject);
             else if (user.getCurrentProject() != null) projectRepository.findByName(user.getCurrentProject()).ifPresent(t::setProject);
             Task saved = taskRepository.save(t);
+            ids.add(saved.getId());
 
             event(saved, me, user.getId().equals(me.getId()) ? "görevi oluşturdu" : "görevi oluşturdu ve " + user.getFullName() + " kişisine atadı");
             notificationService.notify(user, me, NotificationType.TASK_ASSIGNED, "Size yeni görev atandı", content, link(saved));
             created.add(TaskDto.from(saved));
             names.add(user.getFullName());
         }
-        actionLogService.log(me, String.join(", ", names) + " için yeni görev eklendi.");
+        actionLogService.record(LogCategory.GOREV, LogAction.OLUSTURMA,
+                (names.size() == 1 ? names.get(0) + " için yeni görev: " : names.size() + " kişiye görev atandı: ") + content).by(me)
+                .target("GOREV", ids.get(0), content)
+                .detail("Atanan: " + String.join(", ", names))
+                .detail("Öncelik: " + PRIORITY_LABEL.get(priority != null ? priority : TaskPriority.ORTA))
+                .detail(dueDate != null ? "Son tarih: " + dueDate.format(DAY) : null)
+                .detail(explicitProject ? "Proje: " + (chosenProject != null ? chosenProject.getName() : "Projesiz") : null)
+                .detail(description != null ? "Açıklama eklendi" : null)
+                .detail(ids.size() > 1 ? "Görev kayıtları: #" + ids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", #")) : null).save();
         return created;
     }
 
@@ -133,6 +146,13 @@ public class TaskController {
         Task t = findOwnTask(taskId);
         User me = currentUser.get();
         boolean admin = CurrentUser.isAdmin(me);
+        // Değişiklikler sonunda tek bir log kaydında özetlenir.
+        String oContent = t.getContent(), oDescription = t.getDescription();
+        TaskStatus oStatus = t.getStatus();
+        TaskPriority oPriority = t.getPriority();
+        LocalDate oDue = t.getDueDate();
+        String oProject = t.getProject() != null ? t.getProject().getName() : null;
+        String oUser = t.getUser().getFullName();
 
         if (payload.containsKey("content")) {
             String content = Payloads.requiredText(payload, "content", "Görev içeriği boş olamaz.", 1000, "Görev");
@@ -192,12 +212,21 @@ public class TaskController {
             }
         }
         Task saved = taskRepository.save(t);
+        logTaskChanges(saved, me, oContent, oDescription, oStatus, oPriority, oDue, oProject, oUser);
         return ResponseEntity.ok(TaskDto.from(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
     }
 
     @DeleteMapping("/{taskId}")
     public ResponseEntity<Void> deleteTask(@PathVariable Long taskId) {
-        taskRepository.delete(findOwnTask(taskId));
+        Task t = findOwnTask(taskId);
+        actionLogService.record(LogCategory.GOREV, LogAction.SILME, "Görev silindi: " + t.getContent()).by(currentUser.get())
+                .target("GOREV", t.getId(), t.getContent())
+                .detail("Atanan: " + t.getUser().getFullName())
+                .detail("Durum: " + TaskStatusService.STATUS_LABEL.get(t.getStatus()))
+                .detail(t.getProject() != null ? "Proje: " + t.getProject().getName() : null)
+                .detail(t.getCreatedBy() != null ? "Oluşturan: " + t.getCreatedBy().getFullName() : null)
+                .level(LogLevel.UYARI).save();
+        taskRepository.delete(t);
         return ResponseEntity.noContent().build();
     }
 
@@ -222,6 +251,9 @@ public class TaskController {
         a.setKind(TaskActivityKind.COMMENT);
         a.setMessage(text);
         TaskActivity saved = activityRepository.save(a);
+        actionLogService.record(LogCategory.GOREV, LogAction.YORUM, "Göreve yorum yazıldı: " + t.getContent()).by(me)
+                .target("GOREV", t.getId(), t.getContent())
+                .detail("Yorum: " + (text.length() > 300 ? text.substring(0, 297) + "..." : text)).save();
 
         Map<Long, User> recipients = new LinkedHashMap<>();
         recipients.put(t.getUser().getId(), t.getUser());
@@ -240,6 +272,33 @@ public class TaskController {
         currentUser.requireSelfOrAdmin(a.getActor() != null ? a.getActor().getId() : null, "Yalnızca kendi yorumlarınızı silebilirsiniz.");
         activityRepository.delete(a);
         return ResponseEntity.noContent().build();
+    }
+
+    /** Görev güncellemesinin özeti: ne değiştiyse "Alan: eski → yeni" satırları; değişiklik yoksa kayıt düşmez. */
+    private void logTaskChanges(Task t, User me, String oContent, String oDescription, TaskStatus oStatus, TaskPriority oPriority,
+                                LocalDate oDue, String oProject, String oUser) {
+        String project = t.getProject() != null ? t.getProject().getName() : null;
+        List<String> changes = java.util.stream.Stream.of(
+                ActionLogService.diff("Başlık", oContent, t.getContent()),
+                Objects.equals(oDescription, t.getDescription()) ? null : "Açıklama güncellendi",
+                ActionLogService.diff("Durum", TaskStatusService.STATUS_LABEL.get(oStatus), TaskStatusService.STATUS_LABEL.get(t.getStatus())),
+                ActionLogService.diff("Öncelik", PRIORITY_LABEL.get(oPriority), PRIORITY_LABEL.get(t.getPriority())),
+                ActionLogService.diff("Son tarih", oDue != null ? oDue.format(DAY) : null, t.getDueDate() != null ? t.getDueDate().format(DAY) : null),
+                ActionLogService.diff("Proje", oProject != null ? oProject : "Projesiz", project != null ? project : "Projesiz"),
+                ActionLogService.diff("Atanan", oUser, t.getUser().getFullName())).filter(Objects::nonNull).toList();
+        if (changes.isEmpty()) return;
+        boolean completed = oStatus != TaskStatus.TAMAMLANDI && t.getStatus() == TaskStatus.TAMAMLANDI;
+        boolean moved = !oUser.equals(t.getUser().getFullName());
+        LogAction action = completed ? LogAction.TAMAMLAMA : moved ? LogAction.GOREV_AKTARMA : oStatus != t.getStatus() ? LogAction.DURUM_DEGISIKLIGI : LogAction.GUNCELLEME;
+        String title = switch (action) {
+            case TAMAMLAMA -> "Görev tamamlandı: ";
+            case GOREV_AKTARMA -> "Görev başka birine aktarıldı: ";
+            case DURUM_DEGISIKLIGI -> "Görev durumu değişti: ";
+            default -> "Görev güncellendi: ";
+        };
+        actionLogService.record(LogCategory.GOREV, action, title + t.getContent()).by(me)
+                .target("GOREV", t.getId(), t.getContent()).details(changes)
+                .detail(moved || !t.getUser().getId().equals(me.getId()) ? "Görevin sahibi: " + t.getUser().getFullName() : null).save();
     }
 
     private void event(Task t, User actor, String message) {

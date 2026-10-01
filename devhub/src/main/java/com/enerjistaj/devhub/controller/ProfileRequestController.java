@@ -1,5 +1,9 @@
 package com.enerjistaj.devhub.controller;
 
+import com.enerjistaj.devhub.service.ActionLogService;
+import com.enerjistaj.devhub.entity.LogAction;
+import com.enerjistaj.devhub.entity.LogCategory;
+import com.enerjistaj.devhub.entity.LogLevel;
 import com.enerjistaj.devhub.dto.Payloads;
 import com.enerjistaj.devhub.dto.ProfileRequestDto;
 import com.enerjistaj.devhub.entity.NotificationType;
@@ -30,6 +34,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ProfileRequestController {
 
+    private final ActionLogService actionLogService;
     private final ProfileChangeRequestRepository requests;
     private final UserRepository users;
     private final CurrentUser currentUser;
@@ -75,6 +80,9 @@ public class ProfileRequestController {
         r.setPreviousJobTitle(me.getJobTitle());
         ProfileChangeRequest saved = requests.save(r);
 
+        actionLogService.record(LogCategory.PROFIL, LogAction.TALEP, "Profil değişikliği talep edildi").by(me)
+                .target("PROFIL_TALEBI", saved.getId(), me.getFullName()).details(List.of(summary(saved).split(" · ")))
+                .detail("Yönetici onayı bekleniyor").save();
         notifications.notifyAdmins(me, NotificationType.PROFILE_REQUESTED, me.getFullName() + " profil değişikliği istedi", summary(saved), "/users");
         return ResponseEntity.ok(ProfileRequestDto.from(saved));
     }
@@ -103,6 +111,11 @@ public class ProfileRequestController {
         }
         ProfileChangeRequest saved = requests.save(r);
 
+        actionLogService.record(LogCategory.PROFIL, decision == ProfileRequestState.ONAYLANDI ? LogAction.ONAY : LogAction.RET,
+                (decision == ProfileRequestState.ONAYLANDI ? "Profil değişikliği onaylandı: " : "Profil değişikliği reddedildi: ") + r.getUser().getFullName()).by(me)
+                .target("PROFIL_TALEBI", saved.getId(), r.getUser().getFullName()).details(List.of(summary(saved).split(" · ")))
+                .detail(saved.getDecisionNote() != null ? "Açıklama: " + saved.getDecisionNote() : null)
+                .detail(decision == ProfileRequestState.ONAYLANDI ? "Değişiklik profile uygulandı" : null).save();
         String detail = summary(saved) + (saved.getDecisionNote() != null ? " — " + saved.getDecisionNote() : "");
         notifications.notify(r.getUser(), me, NotificationType.PROFILE_DECIDED,
             decision == ProfileRequestState.ONAYLANDI ? "Profil değişikliğiniz onaylandı" : "Profil değişikliğiniz reddedildi", detail, "/settings");
@@ -118,6 +131,8 @@ public class ProfileRequestController {
         if (r.getState() != ProfileRequestState.BEKLIYOR) throw ApiException.conflict("Yalnızca bekleyen talepler geri çekilebilir.");
         r.setState(ProfileRequestState.IPTAL);
         requests.save(r);
+        actionLogService.record(LogCategory.PROFIL, LogAction.GERI_CEKME, "Profil değişikliği talebi geri çekildi").by(me)
+                .target("PROFIL_TALEBI", r.getId(), me.getFullName()).details(List.of(summary(r).split(" · "))).save();
         return ResponseEntity.noContent().build();
     }
 

@@ -46,6 +46,8 @@ public class SecurityConfig {
             }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/api/health", "/error").permitAll()
+                // Doküman görselleri: <img> istekleri token taşımaz; adresler tahmin edilemeyen UUID'lerdir.
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/docs/images/*").permitAll()
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             )

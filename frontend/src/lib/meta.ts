@@ -4,12 +4,12 @@ import {
   CircleDashed, Hourglass, CheckCircle,
   Umbrella, FirstAid, Clock,
   PencilSimple, Target, Pause, Flag,
-  Briefcase, ListDashes, Gear,
-  WarningCircle, XCircle, Question,
+  Briefcase, ListDashes, Gear, SignIn, UserGear, IdentificationCard, Megaphone, Info, Warning, ShieldWarning,
+  WarningCircle, XCircle, Question, BookOpenText,
   EnvelopeSimple, Phone, LinkedinLogo, GithubLogo, Globe, LinkSimple,
 } from '@phosphor-icons/react';
 import type {
-  User, UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState, ActionLogType, HealthStatus, UserLink, UserLinkType,
+  User, UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState, LogCategory, LogLevel, LogAction, HealthStatus, UserLink, UserLinkType,
 } from '../types';
 
 interface Meta { label: string; icon: Icon; className: string }
@@ -80,12 +80,42 @@ export const LEAVE_STATE: Record<LeaveState, { label: string; className: string 
   IPTAL: { label: 'İptal edildi', className: 'bg-gray-100 text-theme-muted line-through' },
 };
 
-export const LOG_TYPE: Record<ActionLogType, Meta> = {
+/** Sistem logu kategorileri (renk tek başına anlam taşımaz: her yerde simge ve adla birlikte gösterilir) */
+export const LOG_CATEGORY: Record<LogCategory, Meta> = {
+  OTURUM: { label: 'Oturum', icon: SignIn, className: 'bg-theme-lightest text-theme-deep' },
+  KULLANICI: { label: 'Kullanıcı', icon: UserGear, className: 'bg-theme-light text-theme-deep' },
+  PROFIL: { label: 'Profil', icon: IdentificationCard, className: 'bg-theme-lightest text-theme-deep' },
   PROJE: { label: 'Proje', icon: Briefcase, className: 'bg-theme-light text-theme-deep' },
-  IZIN: { label: 'İzin', icon: Airplane, className: 'bg-theme-lightest text-theme-deep' },
   GOREV: { label: 'Görev', icon: ListDashes, className: 'bg-theme-medium/30 text-theme-deep' },
+  IZIN: { label: 'İzin', icon: Airplane, className: 'bg-theme-lightest text-theme-deep' },
+  DUYURU: { label: 'Duyuru', icon: Megaphone, className: 'bg-theme-medium/30 text-theme-deep' },
+  DOKUMAN: { label: 'Doküman', icon: BookOpenText, className: 'bg-theme-light text-theme-deep' },
   SISTEM: { label: 'Sistem', icon: Gear, className: 'bg-gray-100 text-theme-muted' },
 };
+export const LOG_CATEGORIES: LogCategory[] = ['OTURUM', 'KULLANICI', 'PROFIL', 'PROJE', 'GOREV', 'IZIN', 'DUYURU', 'DOKUMAN', 'SISTEM'];
+/** Eski ad */
+export const LOG_TYPE = LOG_CATEGORY;
+
+export const LOG_LEVEL: Record<LogLevel, Meta> = {
+  BILGI: { label: 'Bilgi', icon: Info, className: 'bg-theme-lightest text-theme-deep' },
+  UYARI: { label: 'Uyarı', icon: Warning, className: 'bg-[#FBF0D9] text-[#7A4F0E]' },
+  KRITIK: { label: 'Kritik', icon: ShieldWarning, className: 'bg-[#FBEDE5] text-[#9A3B1B]' },
+};
+
+export const LOG_ACTION: Record<LogAction, string> = {
+  GIRIS: 'Giriş', GIRIS_BASARISIZ: 'Başarısız giriş', CIKIS: 'Çıkış', SIFRE_DEGISTIRME: 'Şifre değişikliği', SIFRE_SIFIRLAMA: 'Şifre sıfırlama',
+  OLUSTURMA: 'Oluşturma', GUNCELLEME: 'Güncelleme', SILME: 'Silme', TAMAMLAMA: 'Tamamlama', YORUM: 'Yorum',
+  DURUM_DEGISIKLIGI: 'Durum değişikliği', PROJE_ATAMA: 'Projeye atama', PROJEDEN_CIKARMA: 'Projeden çıkarma', GOREV_AKTARMA: 'Görev aktarma',
+  AKTIFLESTIRME: 'Hesap açma', PASIFLESTIRME: 'Hesap kapatma', YETKI_DEGISIKLIGI: 'Yetki değişikliği',
+  TALEP: 'Talep', ONAY: 'Onay', RET: 'Ret', GERI_ALMA: 'Karar geri alma', KESINLESTIRME: 'Kesinleştirme', GERI_CEKME: 'Geri çekme', KAYIT: 'Yönetici kaydı',
+  YAYIN: 'Yayın', BILGI: 'Bilgi',
+};
+
+/** Logda işlemi yapan: kişi, sistem ya da (başarısız girişte) tanınmayan biri */
+export function logActorName(log: { actorName: string | null; action: LogAction }) {
+  if (log.actorName) return log.actorName;
+  return log.action === 'GIRIS_BASARISIZ' ? 'Bilinmeyen kişi' : 'Sistem';
+}
 
 export const AVATAR_COLORS = ['#F6F0D7', '#C5D89D', '#9CAB84', '#89986D', '#E4D9B4', '#B7C4A0'];
 
