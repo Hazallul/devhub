@@ -195,13 +195,13 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
         </div>
       )}
       {outdated && (
-        <div className="flex items-start gap-3 rounded-2xl border border-[#E8D39C] bg-[#F7ECD0] p-4 mb-5 text-sm font-medium text-[#5C4410]">
+        <div className="flex items-start gap-3 rounded-2xl border border-warn-line bg-warn-soft p-4 mb-5 text-sm font-medium text-warn-ink">
           <Warning size={20} weight="fill" className="shrink-0 mt-0.5" aria-hidden="true" />
           <span>Öneriniz hazırlandıktan sonra doküman güncellendi (sürüm {baseVersion} → {currentVersion}). Gönderirseniz yönetici aradaki farkı görecek; dilerseniz dokümanın son hâlini açıp değişikliğinizi yeniden yapın.</span>
         </div>
       )}
       {stored && (
-        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-theme-light bg-white p-4 mb-5 text-sm shadow-soft">
+        <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-theme-light bg-surface p-4 mb-5 text-sm shadow-soft">
           <ClockCounterClockwise size={20} weight="duotone" className="text-theme-deep shrink-0" aria-hidden="true" />
           <span className="flex-1 min-w-[220px] font-semibold text-theme-text">Bu tarayıcıda gönderilmemiş bir taslağınız var ({timeAgo(new Date(stored.savedAt).toISOString().slice(0, 19))} kaydedildi).</span>
           <button type="button" onClick={() => { clearDraft(); setStored(null); }} className="btn-secondary min-h-[36px] px-3 text-xs">Sil</button>
@@ -223,7 +223,7 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
               aria-describedby={errors.title ? 'doc-title-err' : undefined}
               className="w-full bg-transparent text-3xl sm:text-4xl font-bold tracking-tight text-theme-text placeholder:text-theme-muted/50 focus:outline-none border-b-2 border-transparent focus:border-theme-light pb-1"
             />
-            {errors.title && <p id="doc-title-err" className="text-sm font-semibold text-[#9A3B1B] mt-1">{errors.title}</p>}
+            {errors.title && <p id="doc-title-err" className="text-sm font-semibold text-danger mt-1">{errors.title}</p>}
           </div>
           <div>
             <label htmlFor="doc-summary" className="sr-only">Özet</label>
@@ -234,7 +234,7 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
               placeholder="Kısa özet: bu doküman ne anlatıyor? (listede ve aramada görünür)"
               rows={2}
               maxLength={500}
-              className="w-full resize-none bg-transparent text-lg text-theme-muted font-medium placeholder:text-theme-muted/50 focus:outline-none rounded-xl focus:bg-white/60 px-0 py-1"
+              className="w-full resize-none bg-transparent text-lg text-theme-muted font-medium placeholder:text-theme-muted/50 focus:outline-none rounded-xl focus:bg-surface/60 px-0 py-1"
             />
           </div>
         </div>
@@ -260,7 +260,7 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
       ) : (
         <>
           <DocEditor key={editorKey} initial={editorInitial} onChange={c => { set('content', c); if (errors.content) setErrors(x => ({ ...x, content: undefined })); }} />
-          {errors.content && <p role="alert" className="text-sm font-semibold text-[#9A3B1B] mt-2">{errors.content}</p>}
+          {errors.content && <p role="alert" className="text-sm font-semibold text-danger mt-2">{errors.content}</p>}
           <p className="flex items-start gap-2 text-xs text-theme-muted font-semibold mt-3">
             <Lightbulb size={15} weight="bold" className="shrink-0 mt-px" aria-hidden="true" />
             <span>Boş satıra <kbd className="px-1 rounded bg-theme-lightest text-theme-deep">/</kbd> yazarak blok ekleyin. Görselleri sürükleyip bırakabilir ya da yapıştırabilirsiniz. Kısayollar: <kbd className="px-1 rounded bg-theme-lightest">##</kbd> + boşluk başlık, <kbd className="px-1 rounded bg-theme-lightest">-</kbd> + boşluk liste, <kbd className="px-1 rounded bg-theme-lightest">```</kbd> kod bloğu.</span>
@@ -271,7 +271,7 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
       {/* Alt eylem çubuğu: uzun dokümanda da hep erişilebilir */}
       <div className="sticky bottom-4 z-30 mt-6">
         <div>
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-white/95 backdrop-blur border border-theme-light/70 shadow-float px-4 py-3">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface/95 backdrop-blur border border-theme-light/70 shadow-float px-4 py-3">
             <span className="text-xs text-theme-muted font-semibold flex-1 min-w-[160px]" aria-live="polite">
               {dirty ? (savedAt ? 'Taslak bu tarayıcıda saklandı' : 'Değişiklikler kaydedilmedi') : 'Değişiklik yok'}
             </span>
@@ -310,7 +310,7 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
         }
       >
         {conflict ? (
-          <div role="alert" className="flex items-start gap-3 rounded-2xl border border-[#E8D39C] bg-[#F7ECD0] p-4 text-sm font-medium text-[#5C4410]">
+          <div role="alert" className="flex items-start gap-3 rounded-2xl border border-warn-line bg-warn-soft p-4 text-sm font-medium text-warn-ink">
             <Warning size={20} weight="fill" className="shrink-0 mt-0.5" />
             <span>{conflict}</span>
           </div>
@@ -352,7 +352,7 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
   return (
     <div>
       <label htmlFor="doc-tags" className="eyebrow block mb-1.5">Etiketler</label>
-      <div className="flex flex-wrap gap-1.5 p-2 rounded-2xl border border-theme-light/70 bg-white focus-within:ring-2 focus-within:ring-theme-medium">
+      <div className="flex flex-wrap gap-1.5 p-2 rounded-2xl border border-theme-light/70 bg-surface focus-within:ring-2 focus-within:ring-theme-medium">
         {tags.map(t => (
           <span key={t} className="inline-flex items-center gap-1 text-xs font-bold pl-2 pr-1 py-1 rounded-full bg-theme-lightest text-theme-deep">
             #{t}

@@ -34,7 +34,7 @@ export default function TaskDrawer({ taskId, onClose }: { taskId: number | null;
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-theme-text/25 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/25 backdrop-blur-sm"
           />
           <motion.aside
             role="dialog"
@@ -111,7 +111,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
 
   return (
     <>
-      <div className="p-6 sm:p-8 pb-6 bg-white border-b border-theme-light/40">
+      <div className="p-6 sm:p-8 pb-6 bg-surface border-b border-theme-light/40">
         <div className="flex items-center gap-2">
           {project ? (
             <button onClick={openProject} className="inline-flex items-center gap-2 text-xs font-bold text-theme-deep bg-theme-cream hover:bg-theme-lightest px-2.5 py-1.5 rounded-xl transition-colors min-w-0" title="Projeyi aç">
@@ -124,11 +124,11 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           <div className="ml-auto flex gap-1 shrink-0">
             {canEdit && (
               confirmDelete ? (
-                <button onClick={() => remove.mutate(task.id, { onSuccess: onClose })} className="h-10 px-3 rounded-xl text-xs font-bold bg-[#FBEDE5] text-[#9A3B1B] hover:bg-[#F6DCCD] transition-colors">
+                <button onClick={() => remove.mutate(task.id, { onSuccess: onClose })} className="h-10 px-3 rounded-xl text-xs font-bold bg-danger-soft text-danger hover:bg-clay-soft transition-colors">
                   Silinsin mi?
                 </button>
               ) : (
-                <button onClick={() => setConfirmDelete(true)} className="icon-btn hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Görevi sil" title="Görevi sil"><Trash size={18} weight="bold" /></button>
+                <button onClick={() => setConfirmDelete(true)} className="icon-btn hover:text-danger hover:bg-danger-soft" aria-label="Görevi sil" title="Görevi sil"><Trash size={18} weight="bold" /></button>
               )
             )}
             <button onClick={onClose} className="icon-btn bg-theme-lightest text-theme-deep hover:bg-theme-light" aria-label="Kapat"><X size={18} weight="bold" /></button>
@@ -197,7 +197,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
               ) : <PriorityBadge priority={task.priority ?? 'ORTA'} />}
             </Prop>
 
-            <Prop icon={CalendarBlank} label="Son tarih" hint={due ? <span className={due.tone === 'danger' ? 'text-[#9A3B1B]' : ''}>{due.text}</span> : null}>
+            <Prop icon={CalendarBlank} label="Son tarih" hint={due ? <span className={due.tone === 'danger' ? 'text-danger' : ''}>{due.text}</span> : null}>
               {canEdit ? (
                 <input
                   type="date"
@@ -308,7 +308,7 @@ function Description({ task, canEdit }: { task: Task; canEdit: boolean }) {
           </div>
         </div>
       ) : task.description ? (
-        <p className="text-sm text-theme-text leading-relaxed whitespace-pre-wrap break-words bg-white rounded-2xl border border-theme-light/40 p-4">{task.description}</p>
+        <p className="text-sm text-theme-text leading-relaxed whitespace-pre-wrap break-words bg-surface rounded-2xl border border-theme-light/40 p-4">{task.description}</p>
       ) : (
         <p className="text-sm text-theme-muted font-medium">Açıklama eklenmemiş.</p>
       )}
@@ -388,12 +388,12 @@ function Comment({ item, canDelete, onDelete }: { item: TaskActivity; canDelete:
   return (
     <>
       <ActorDot item={item} />
-      <div className="group bg-white rounded-2xl rounded-tl-md border border-theme-light/50 p-3.5 shadow-soft">
+      <div className="group bg-surface rounded-2xl rounded-tl-md border border-theme-light/50 p-3.5 shadow-soft">
         <div className="flex items-center gap-2 mb-1">
           <span className="text-sm font-bold text-theme-text">{item.actorName ?? 'Sistem'}</span>
           <time className="text-xs text-theme-muted font-medium" dateTime={item.createdAt} title={parseServerDate(item.createdAt).toLocaleString('tr-TR')}>{timeAgo(item.createdAt)}</time>
           {canDelete && (
-            <button onClick={onDelete} className="ml-auto icon-btn w-7 h-7 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] transition-opacity" aria-label="Yorumu sil" title="Yorumu sil">
+            <button onClick={onDelete} className="ml-auto icon-btn w-7 h-7 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-danger hover:bg-danger-soft transition-opacity" aria-label="Yorumu sil" title="Yorumu sil">
               <Trash size={13} weight="bold" />
             </button>
           )}
@@ -416,7 +416,7 @@ function CommentBox({ taskId }: { taskId: number }) {
   };
 
   return (
-    <div className="p-4 sm:px-8 sm:py-5 bg-white border-t border-theme-light/40">
+    <div className="p-4 sm:px-8 sm:py-5 bg-surface border-t border-theme-light/40">
       <div className="flex items-end gap-2">
         <label htmlFor={`comment-${taskId}`} className="sr-only">Yorum yaz</label>
         <div className="relative flex-1">

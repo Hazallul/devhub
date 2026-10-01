@@ -34,7 +34,7 @@ export default function UserCard() {
         <p className="text-sm font-bold text-theme-text truncate">{me.fullName}</p>
         <p className="text-xs text-theme-muted font-medium truncate">{me.role === 'ADMIN' ? 'Yönetici' : me.jobTitle || 'Çalışan'}</p>
       </div>
-      <button onClick={logout} className="icon-btn hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Çıkış yap" title="Çıkış yap">
+      <button onClick={logout} className="icon-btn hover:text-danger hover:bg-danger-soft" aria-label="Çıkış yap" title="Çıkış yap">
         <SignOut size={20} weight="bold" />
       </button>
     </div>

@@ -106,7 +106,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
       </div>
 
       {pending && rev.outdated && (
-        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-[#E8D39C] bg-[#F7ECD0] p-4 mb-5 text-sm font-medium text-[#5C4410]">
+        <div role="alert" className="flex items-start gap-3 rounded-2xl border border-warn-line bg-warn-soft p-4 mb-5 text-sm font-medium text-warn-ink">
           <Warning size={20} weight="fill" className="shrink-0 mt-0.5" aria-hidden="true" />
           <span>
             Bu öneri hazırlandıktan sonra doküman güncellendi (sürüm {rev.baseVersion} → {rev.docVersion}). Onaylarsanız doküman bu önerideki hâle gelir;
@@ -123,7 +123,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
               <div key={m.label} className="grid sm:grid-cols-[100px_1fr] gap-1 sm:gap-3">
                 <dt className="font-bold text-theme-muted">{m.label}</dt>
                 <dd className="flex flex-wrap items-center gap-2">
-                  <span className="line-through decoration-[#C9744F]/70 text-theme-muted">{m.before || '—'}</span>
+                  <span className="line-through decoration-clay/70 text-theme-muted">{m.before || '—'}</span>
                   <ArrowRight size={13} weight="bold" className="text-theme-muted" aria-label="yerine" />
                   <span className="font-semibold text-theme-text">{m.after || '—'}</span>
                 </dd>

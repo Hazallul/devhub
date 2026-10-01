@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
-import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText, ListChecks } from '@phosphor-icons/react';
+import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText, ListChecks, Sun, Moon } from '@phosphor-icons/react';
+import { setThemePref, useTheme } from '../../lib/theme';
 import { DOC_CATEGORIES } from '../../docs';
 import { useDocs } from '../../hooks/docs';
 import { useUsers, useProjects, useMe } from '../../hooks/api';
@@ -26,6 +27,7 @@ interface Item {
 
 export default function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
+  const [, dark] = useTheme();
   const me = useMe();
   const actions = useQuickActions();
   const { data: users } = useUsers();
@@ -65,6 +67,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
         run: go(() => navigate('/projects', { state: { openProjectId: p.id } })),
       })),
       { id: 'act-doc', group: 'İşlemler' as const, label: 'Doküman yaz', icon: BookOpenText, run: go(() => navigate('/docs/yeni')) },
+      { id: 'act-theme', group: 'İşlemler' as const, label: dark ? 'Açık temaya geç' : 'Koyu temaya geç', hint: 'Görünüm', icon: dark ? Sun : Moon, run: go(() => setThemePref(dark ? 'light' : 'dark')) },
       ...(docs ?? []).map(d => ({
         id: `doc-${d.slug}`, group: 'Dokümanlar' as const, label: d.title, icon: BookOpenText,
         hint: [DOC_CATEGORIES.find(c => c.id === d.category)?.name, ...d.tags].filter(Boolean).join(' · '),
@@ -74,7 +77,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
     const q = trLower(query.trim());
     if (!q) return all.filter(i => i.group !== 'Kişiler' && i.group !== 'Projeler' && i.group !== 'Dokümanlar');
     return all.filter(i => trLower(`${i.label} ${i.hint ?? ''}`).includes(q)).slice(0, 12);
-  }, [query, users, projects, docs, me, navigate, onClose, actions]);
+  }, [query, users, projects, docs, me, navigate, onClose, actions, dark]);
 
   useEffect(() => { setActive(0); }, [query]);
 
@@ -98,7 +101,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.12 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-theme-text/25 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/25 backdrop-blur-sm"
           />
           <motion.div
             role="dialog"
@@ -109,7 +112,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
             animate="visible"
             exit="exit"
             onKeyDown={onKeyDown}
-            className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl overflow-hidden"
+            className="relative w-full max-w-xl bg-surface rounded-3xl shadow-2xl overflow-hidden"
           >
             <div className="flex items-center gap-3 px-5 border-b border-theme-light/50">
               <MagnifyingGlass size={20} className="text-theme-muted shrink-0" aria-hidden="true" />
@@ -150,7 +153,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
                       {selected && <motion.span layoutId="cmd-active" className="absolute inset-0 bg-theme-lightest rounded-xl" transition={{ type: 'spring', stiffness: 500, damping: 38 }} />}
                       <span className="relative flex items-center gap-3 flex-1 min-w-0">
                         {item.user ? <Avatar user={item.user} size="sm" /> : item.icon && (
-                          <span className="w-9 h-9 rounded-xl bg-white border border-theme-light/60 flex items-center justify-center text-theme-deep shrink-0">
+                          <span className="w-9 h-9 rounded-xl bg-surface border border-theme-light/60 flex items-center justify-center text-theme-deep shrink-0">
                             <item.icon size={18} weight="duotone" />
                           </span>
                         )}

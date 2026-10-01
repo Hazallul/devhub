@@ -1,6 +1,7 @@
 package com.enerjistaj.devhub.service;
 
 import com.enerjistaj.devhub.entity.*;
+import com.enerjistaj.devhub.realtime.RealtimeService;
 import com.enerjistaj.devhub.repository.ActionLogRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class ActionLogService {
     public static final ZoneId ZONE = ZoneId.of("Europe/Istanbul");
 
     private final ActionLogRepository actionLogRepository;
+    private final RealtimeService realtime;
 
     public Entry record(LogCategory category, LogAction action, String message) {
         return new Entry(category, action, message);
@@ -92,7 +94,13 @@ public class ActionLogService {
                 log.setDetails(text.length() > 2000 ? text.substring(0, 1997) + "..." : text);
             }
             log.setIpAddress(clientIp());
-            return actionLogRepository.save(log);
+            ActionLog saved = actionLogRepository.save(log);
+            // HTTP dışından gelen (zamanlanmış) işler, ör. izin başlayınca durumun İzinli olması: açık ekranlar tazelensin.
+            // HTTP isteklerini RealtimeInterceptor duyurur.
+            if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes)) {
+                realtime.invalidate(List.of("users", "leaves", "tasks", "logs"), null);
+            }
+            return saved;
         }
     }
 

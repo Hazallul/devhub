@@ -78,7 +78,7 @@ export default function Modal({ open, onClose, title, description, children, siz
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.15 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-theme-text/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
           />
           <motion.div
             ref={panelRef}
@@ -90,7 +90,7 @@ export default function Modal({ open, onClose, title, description, children, siz
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`relative w-full ${WIDTH[size]} bg-white rounded-4xl shadow-2xl max-h-[88vh] flex flex-col outline-none`}
+            className={`relative w-full ${WIDTH[size]} bg-surface rounded-4xl shadow-2xl max-h-[88vh] flex flex-col outline-none`}
           >
             {onSubmit ? <form onSubmit={onSubmit} className="flex flex-col min-h-0">{body}</form> : body}
           </motion.div>

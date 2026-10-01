@@ -72,7 +72,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
                     exit={{ opacity: 0, transition: { duration: 0.1 } }}
                     className="relative"
                   >
-                    <span className={`absolute -left-6 top-3 w-6 h-6 rounded-lg flex items-center justify-center ring-4 ring-white ${meta.className}`}>
+                    <span className={`absolute -left-6 top-3 w-6 h-6 rounded-lg flex items-center justify-center ring-4 ring-surface ${meta.className}`}>
                       <meta.icon size={13} weight="bold" aria-hidden="true" />
                     </span>
                     <div className="ml-3 p-3.5 rounded-2xl bg-theme-cream/60 border border-theme-light/40">

@@ -73,7 +73,7 @@ export default function ListMembersModal({ list, onClose, onLeft }: Props) {
           <div className="relative p-2 border-b border-theme-light/50">
             <MagnifyingGlass size={16} className="absolute left-5 top-1/2 -translate-y-1/2 text-theme-muted" aria-hidden="true" />
             <input type="search" data-autofocus value={query} onChange={e => setQuery(e.target.value)} placeholder="Kişi ara…" aria-label="Kişi ara"
-              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium" />
+              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-surface border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium" />
           </div>
           <ul role="group" aria-label="Eklenecek kişiler" className="max-h-[280px] overflow-y-auto scrollbar-thin p-1.5">
             {candidates.length === 0 && <li className="text-sm text-theme-muted font-medium text-center py-6">Eklenebilecek kişi yok.</li>}
@@ -82,8 +82,8 @@ export default function ListMembersModal({ list, onClose, onLeft }: Props) {
               return (
                 <li key={u.id}>
                   <button type="button" role="checkbox" aria-checked={checked} onClick={() => toggle(u.id)}
-                    className={`w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-colors ${checked ? 'bg-white shadow-soft' : 'hover:bg-white/70'}`}>
-                    <span className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? 'bg-theme-deep border-theme-deep text-white' : 'border-theme-medium bg-white'}`} aria-hidden="true">
+                    className={`w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-colors ${checked ? 'bg-surface shadow-soft' : 'hover:bg-surface/70'}`}>
+                    <span className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? 'bg-accent border-theme-deep text-white' : 'border-theme-medium bg-surface'}`} aria-hidden="true">
                       {checked && <Check size={12} weight="bold" />}
                     </span>
                     <Avatar user={u} size="xs" />
@@ -122,7 +122,7 @@ export default function ListMembersModal({ list, onClose, onLeft }: Props) {
                 )}
                 {admin && !self && (
                   <button type="button" onClick={() => list && remove.mutate({ id: list.id, userId: m.userId, self: false })}
-                    className="icon-btn w-9 h-9 hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label={`${m.fullName} kişisini listeden çıkar`} title="Listeden çıkar">
+                    className="icon-btn w-9 h-9 hover:text-danger hover:bg-danger-soft" aria-label={`${m.fullName} kişisini listeden çıkar`} title="Listeden çıkar">
                     <UserMinus size={17} weight="bold" />
                   </button>
                 )}
@@ -130,7 +130,7 @@ export default function ListMembersModal({ list, onClose, onLeft }: Props) {
                   <button type="button" disabled={lastAdmin}
                     title={lastAdmin ? 'Tek yönetici sizsiniz: önce başka bir üyeyi yönetici yapın' : undefined}
                     onClick={() => list && remove.mutate({ id: list.id, userId: me.id, self: true }, { onSuccess: () => { onClose(); onLeft(); } })}
-                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold text-[#9A3B1B] hover:bg-[#FBEDE5] disabled:opacity-40 disabled:hover:bg-transparent transition-colors whitespace-nowrap">
+                    className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl text-xs font-bold text-danger hover:bg-danger-soft disabled:opacity-40 disabled:hover:bg-transparent transition-colors whitespace-nowrap">
                     <SignOut size={15} weight="bold" aria-hidden="true" /> Ayrıl
                   </button>
                 )}

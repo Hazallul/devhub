@@ -62,7 +62,7 @@ export default function SendTodoModal({ item, onClose }: { item: TodoItem | null
               onChange={e => setQuery(e.target.value)}
               placeholder="Kişi ara…"
               aria-label="Kişi ara"
-              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
+              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-surface border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
             />
           </div>
           <ul role="group" aria-label="Alıcılar" className="max-h-[240px] overflow-y-auto scrollbar-thin p-1.5">
@@ -72,8 +72,8 @@ export default function SendTodoModal({ item, onClose }: { item: TodoItem | null
               return (
                 <li key={u.id}>
                   <button type="button" role="checkbox" aria-checked={checked} onClick={() => toggle(u.id)}
-                    className={`w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-colors ${checked ? 'bg-white shadow-soft' : 'hover:bg-white/70'}`}>
-                    <span className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? 'bg-theme-deep border-theme-deep text-white' : 'border-theme-medium bg-white'}`} aria-hidden="true">
+                    className={`w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-colors ${checked ? 'bg-surface shadow-soft' : 'hover:bg-surface/70'}`}>
+                    <span className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? 'bg-accent border-theme-deep text-white' : 'border-theme-medium bg-surface'}`} aria-hidden="true">
                       {checked && <Check size={12} weight="bold" />}
                     </span>
                     <Avatar user={u} size="xs" />

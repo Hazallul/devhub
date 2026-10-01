@@ -102,7 +102,7 @@ export function Menu({ open, onClose, anchor, point, align = 'end', children, wi
           style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width, transformOrigin: 'top' }}
           onClick={e => e.stopPropagation()}
           onContextMenu={e => e.preventDefault()}
-          className="fixed z-[150] bg-white rounded-2xl shadow-float border border-theme-light/70 p-1.5"
+          className="fixed z-[150] bg-surface rounded-2xl shadow-float border border-theme-light/70 p-1.5"
         >
           {children}
         </motion.div>
@@ -131,7 +131,7 @@ export function MenuItem({ icon: IconCmp, children, onSelect, tone = 'default', 
       onClick={e => { e.stopPropagation(); onSelect(); }}
       className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-xl text-left transition-colors outline-none disabled:opacity-40 ${
         tone === 'danger'
-          ? 'text-[#9A3B1B] hover:bg-[#FBEDE5] focus-visible:bg-[#FBEDE5]'
+          ? 'text-danger hover:bg-danger-soft focus-visible:bg-danger-soft'
           : active
             ? 'bg-theme-lightest text-theme-deep font-semibold'
             : 'text-theme-text font-medium hover:bg-theme-lightest/70 focus-visible:bg-theme-lightest/70'

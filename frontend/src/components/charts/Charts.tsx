@@ -32,7 +32,7 @@ function useTooltip() {
   const node = tip && createPortal(
     <div
       role="tooltip"
-      className="fixed z-[170] pointer-events-none bg-theme-text text-white rounded-xl shadow-float px-3 py-2 text-left"
+      className="fixed z-[170] pointer-events-none bg-ink text-white rounded-xl shadow-float px-3 py-2 text-left"
       style={{ left: Math.min(tip.x + 14, window.innerWidth - 220), top: Math.max(tip.y - 56, 8), maxWidth: 220 }}
     >
       <p className="text-base font-bold tabular leading-tight">{tip.value}</p>
@@ -180,7 +180,7 @@ export function Meter({ value, max, label }: { value: number; max: number; label
     <div className="h-2 rounded-full bg-theme-lightest overflow-hidden" role="meter" aria-valuenow={value} aria-valuemin={0} aria-valuemax={max} aria-label={label}>
       <motion.div
         className="h-full rounded-full origin-left"
-        style={{ width: `${pct * 100}%`, backgroundColor: pct >= 1 ? '#9A3B1B' : SERIES_COLOR }}
+        style={{ width: `${pct * 100}%`, backgroundColor: pct >= 1 ? 'rgb(var(--danger))' : SERIES_COLOR }}
         initial={{ scaleX: 0 }}
         animate={{ scaleX: 1 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}

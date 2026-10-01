@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient, useIsMutating } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
+import { livePoll } from '../lib/realtime';
 import { useToast } from '../components/ui/Toast';
 import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete';
 import type { TodoComment, TodoData, TodoItem, TodoList, TodoListRole, TodoRepeat, TodoStep } from '../types';
@@ -19,14 +20,14 @@ export const useTodos = () => {
   return useQuery({
     queryKey: KEY,
     queryFn: async () => (await api.get<TodoData>('/todos')).data,
-    refetchInterval: 20_000,
+    refetchInterval: livePoll(20_000),
     select: d => (hidden.size ? { ...d, items: d.items.filter(i => !hidden.has(`todo:${i.id}`)) } : d),
   });
 };
 
 /** Kenar çubuğundaki rozet: açılmamış gelen kart sayısı */
 export const useTodoUnseen = () =>
-  useQuery({ queryKey: ['todos', 'unseen'], queryFn: async () => (await api.get<{ count: number }>('/todos/unseen-count')).data, refetchInterval: 30_000 });
+  useQuery({ queryKey: ['todos', 'unseen'], queryFn: async () => (await api.get<{ count: number }>('/todos/unseen-count')).data, refetchInterval: livePoll(30_000) });
 
 /** Bekleyen yazma var mı ("Kaydediliyor…" göstergesi için) */
 export const useTodoSaving = () => useIsMutating({ mutationKey: MUTATION }) > 0;
@@ -169,7 +170,7 @@ export const useTodoComments = (itemId: number, enabled: boolean) =>
     queryKey: ['todos', 'comments', itemId],
     queryFn: async () => (await api.get<TodoComment[]>(`/todos/items/${itemId}/comments`)).data,
     enabled,
-    refetchInterval: 20_000,
+    refetchInterval: livePoll(20_000),
   });
 
 export const useAddTodoComment = () =>

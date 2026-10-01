@@ -26,9 +26,9 @@ export type CalloutKind = 'NOT' | 'IPUCU' | 'UYARI' | 'ONEMLI';
 /** Bilgi kutuları: editör ve okuma görünümü aynı görünümü kullanır. Renk tek başına anlam taşımaz, etiket ve ikon her zaman var. */
 export const CALLOUT: Record<CalloutKind, { label: string; icon: Icon; className: string; iconClass: string; hint: string }> = {
   NOT: { label: 'Not', icon: Info, className: 'bg-theme-lightest/70 border-theme-light', iconClass: 'text-theme-deep', hint: 'Ek bilgi' },
-  IPUCU: { label: 'İpucu', icon: Lightbulb, className: 'bg-[#F1F5E6] border-[#C5D89D]', iconClass: 'text-[#5E7D2C]', hint: 'İşi kolaylaştıran öneri' },
-  UYARI: { label: 'Uyarı', icon: Warning, className: 'bg-[#F7ECD0] border-[#E8D39C]', iconClass: 'text-[#6E5210]', hint: 'Dikkat edilmesi gereken' },
-  ONEMLI: { label: 'Önemli', icon: WarningOctagon, className: 'bg-[#FBEDE5] border-[#EFC9B5]', iconClass: 'text-[#9A3B1B]', hint: 'Atlanmaması gereken kural' },
+  IPUCU: { label: 'İpucu', icon: Lightbulb, className: 'bg-good-soft border-theme-light', iconClass: 'text-good-ink', hint: 'İşi kolaylaştıran öneri' },
+  UYARI: { label: 'Uyarı', icon: Warning, className: 'bg-warn-soft border-warn-line', iconClass: 'text-warn-ink', hint: 'Dikkat edilmesi gereken' },
+  ONEMLI: { label: 'Önemli', icon: WarningOctagon, className: 'bg-danger-soft border-danger-line', iconClass: 'text-danger', hint: 'Atlanmaması gereken kural' },
 };
 export const CALLOUT_KINDS = Object.keys(CALLOUT) as CalloutKind[];
 
@@ -82,7 +82,7 @@ export const EMPTY_DOC: DocNode = { type: 'doc', content: [{ type: 'paragraph' }
 /** Önerinin durumu: etiket + ikon (renk tek başına anlam taşımaz). */
 export const REVISION_STATUS: Record<DocRevisionStatus, { label: string; icon: Icon; className: string }> = {
   BEKLIYOR: { label: 'Onay bekliyor', icon: HourglassMedium, className: 'bg-theme-lightest text-theme-deep' },
-  ONAYLANDI: { label: 'Yayınlandı', icon: CheckCircle, className: 'bg-[#F1F5E6] text-[#3F5A1A]' },
-  REDDEDILDI: { label: 'Reddedildi', icon: XCircle, className: 'bg-[#FBEDE5] text-[#9A3B1B]' },
+  ONAYLANDI: { label: 'Yayınlandı', icon: CheckCircle, className: 'bg-good-soft text-good-ink' },
+  REDDEDILDI: { label: 'Reddedildi', icon: XCircle, className: 'bg-danger-soft text-danger' },
   GERI_CEKILDI: { label: 'Geri çekildi', icon: X, className: 'bg-theme-cream text-theme-muted' },
 };

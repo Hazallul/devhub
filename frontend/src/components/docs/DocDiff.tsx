@@ -46,9 +46,9 @@ export default function DocDiff({ before, after }: { before: DocNode; after: Doc
       <p className="text-sm font-semibold text-theme-muted mb-4" aria-live="polite">
         {added || removed ? (
           <>
-            <span className="text-[#3F5A1A]">{added} bölüm eklendi / değişti</span>
+            <span className="text-good-ink">{added} bölüm eklendi / değişti</span>
             {' · '}
-            <span className="text-[#9A3B1B]">{removed} bölüm kaldırıldı / değişti</span>
+            <span className="text-danger">{removed} bölüm kaldırıldı / değişti</span>
           </>
         ) : 'İçerikte değişiklik yok (yalnızca başlık, özet, kategori veya etiketler değişmiş olabilir).'}
       </p>
@@ -76,11 +76,11 @@ function DiffRow({ row }: { row: Row }) {
   if (row.kind === 'same') return <div className="opacity-60 pl-4 border-l-4 border-transparent"><Block node={row.node} /></div>;
   const add = row.kind === 'add';
   return (
-    <div className={`relative rounded-r-2xl pl-4 pr-3 py-2 border-l-4 ${add ? 'border-[#7E9A4B] bg-[#F1F5E6]' : 'border-[#C9744F] bg-[#FBEDE5]'}`}>
-      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider mb-1 ${add ? 'text-[#3F5A1A]' : 'text-[#9A3B1B]'}`}>
+    <div className={`relative rounded-r-2xl pl-4 pr-3 py-2 border-l-4 ${add ? 'border-good bg-good-soft' : 'border-clay bg-danger-soft'}`}>
+      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider mb-1 ${add ? 'text-good-ink' : 'text-danger'}`}>
         {add ? <Plus size={11} weight="bold" /> : <Minus size={11} weight="bold" />} {add ? 'Eklendi' : 'Kaldırıldı'}
       </span>
-      <div className={add ? '' : 'line-through decoration-[#C9744F]/60 opacity-80'}><Block node={row.node} /></div>
+      <div className={add ? '' : 'line-through decoration-clay/60 opacity-80'}><Block node={row.node} /></div>
     </div>
   );
 }

@@ -41,7 +41,7 @@ export default function DecisionModal({ decision, onClose, subject, children, on
       onSubmit={e => { e.preventDefault(); onConfirm(note.trim() || undefined); }}
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
-        <button type="submit" disabled={pending} className={reject ? 'btn bg-[#9A3B1B] text-white hover:bg-[#7E2F15]' : 'btn-primary'}>
+        <button type="submit" disabled={pending} className={reject ? 'btn bg-danger-solid text-white hover:bg-danger-solid-hover' : 'btn-primary'}>
           {reject ? <X size={16} weight="bold" /> : <Check size={16} weight="bold" />}
           {pending ? 'Kaydediliyor…' : reject ? 'Reddet' : 'Onayla'}
         </button>

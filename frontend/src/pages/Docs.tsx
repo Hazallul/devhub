@@ -191,7 +191,7 @@ function PendingReviews() {
       <h2 id="pending-docs" className="flex items-center gap-2 text-base font-bold text-theme-text mb-3">
         <HourglassMedium size={20} weight="duotone" className="text-theme-deep" aria-hidden="true" />
         Onay bekleyen değişiklikler
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-theme-deep text-white">{data.length}</span>
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-accent text-white">{data.length}</span>
       </h2>
       <ul className="divide-y divide-theme-light/40">
         {data.map(r => (
@@ -203,7 +203,7 @@ function PendingReviews() {
                   {r.isNew && <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-theme-light text-theme-text">Yeni doküman</span>}
                   {r.isNew ? r.title : r.docTitle}
                   {r.outdated && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#6E5210]" title="Öneriden sonra doküman güncellendi">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-warn-ink" title="Öneriden sonra doküman güncellendi">
                       <Warning size={13} weight="fill" /> Eski sürüm üzerine
                     </span>
                   )}
@@ -371,7 +371,7 @@ function DocView({ doc }: { doc: DocDetail }) {
           </div>
 
           {confirmDelete && (
-            <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-[#EFC9B5] bg-[#FBEDE5] p-4 mb-5 text-sm font-semibold text-[#7A3E1F]">
+            <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-danger-line bg-danger-soft p-4 mb-5 text-sm font-semibold text-danger-ink">
               <Warning size={20} weight="fill" className="shrink-0" />
               <span className="flex-1 min-w-[200px]">“{doc.title}” geçmişi ve bekleyen önerileriyle birlikte silinecek. Bu geri alınamaz.</span>
               <button type="button" onClick={() => setConfirmDelete(false)} className="btn-secondary min-h-[36px] px-3 text-xs">Vazgeç</button>
@@ -379,7 +379,7 @@ function DocView({ doc }: { doc: DocDetail }) {
                 type="button"
                 onClick={() => remove.mutate(doc.id, { onSuccess: () => navigate('/docs', { replace: true }) })}
                 disabled={remove.isPending}
-                className="min-h-[36px] px-3 rounded-xl text-xs font-bold bg-[#9A3B1B] text-white hover:bg-[#7A2E15]"
+                className="min-h-[36px] px-3 rounded-xl text-xs font-bold bg-danger-solid text-white hover:bg-danger-solid-hover"
               >
                 Evet, sil
               </button>
@@ -475,7 +475,7 @@ function DocsNav({ docs, onNavigate }: { docs: DocSummary[]; onNavigate: () => v
           onChange={e => setFilter(e.target.value)}
           placeholder="Filtrele…"
           aria-label="Dokümanları filtrele"
-          className="w-full pl-9 pr-8 py-2 rounded-xl bg-white border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
+          className="w-full pl-9 pr-8 py-2 rounded-xl bg-surface border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
         />
         {filter && (
           <button type="button" onClick={() => setFilter('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-theme-muted hover:text-theme-deep rounded" aria-label="Filtreyi temizle">
@@ -495,7 +495,7 @@ function DocsNav({ docs, onNavigate }: { docs: DocSummary[]; onNavigate: () => v
                   <NavLink
                     to={`/docs/${d.slug}`}
                     onClick={onNavigate}
-                    className={({ isActive }) => `block px-3 py-1.5 rounded-xl text-sm transition-colors ${isActive ? 'bg-theme-lightest text-theme-deep font-bold' : 'text-theme-muted font-medium hover:text-theme-deep hover:bg-white'}`}
+                    className={({ isActive }) => `block px-3 py-1.5 rounded-xl text-sm transition-colors ${isActive ? 'bg-theme-lightest text-theme-deep font-bold' : 'text-theme-muted font-medium hover:text-theme-deep hover:bg-surface'}`}
                   >
                     {d.title}
                   </NavLink>
@@ -506,7 +506,7 @@ function DocsNav({ docs, onNavigate }: { docs: DocSummary[]; onNavigate: () => v
         );
       })}
       {visible && visible.size === 0 && <p className="text-sm text-theme-muted font-medium px-2">Eşleşen doküman yok.</p>}
-      <Link to="/docs/yeni" onClick={onNavigate} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-theme-deep hover:bg-white transition-colors">
+      <Link to="/docs/yeni" onClick={onNavigate} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-bold text-theme-deep hover:bg-surface transition-colors">
         <Plus size={15} weight="bold" /> Yeni doküman
       </Link>
     </nav>

@@ -1,8 +1,9 @@
 /**
  * Grafik renkleri. Sıralı zeytin rampası (açık → koyu) dataviz doğrulayıcısından geçti:
  * tek ton, monoton açıklık, adımlar arası yeterli fark, açık uç beyaz yüzeyde >= 2:1.
+ * Değerler CSS değişkeninden gelir (index.css --ramp-*): koyu temada rampa ters döner, "çok" yine en belirgin (en açık) basamaktır.
  */
-export const OLIVE_RAMP = ['#9CAB84', '#6F7F52', '#465233'] as const;
+export const OLIVE_RAMP = ['rgb(var(--ramp-1))', 'rgb(var(--ramp-2))', 'rgb(var(--ramp-3))'] as const;
 /** Tek serili grafikler için rampanın orta basamağı */
 export const SERIES_COLOR = OLIVE_RAMP[1];
 

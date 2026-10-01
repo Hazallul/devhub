@@ -115,7 +115,7 @@ export default function Projects() {
         tabIndex={0}
         onKeyDown={e => { if (e.key === 'Enter') navigate('/team', { state: { highlightUserId: u.id } }); }}
         title={isAdmin ? 'Tıkla: ekipte göster · Sürükle: projeye ata · Sağ tık: işlemler' : 'Ekipte göster'}
-        className={`group flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-2xl bg-white border border-theme-light/60 hover:border-theme-medium hover:shadow-soft transition-all ${
+        className={`group flex items-center gap-2.5 pl-1.5 pr-3 py-1.5 rounded-2xl bg-surface border border-theme-light/60 hover:border-theme-medium hover:shadow-soft transition-all ${
           isAdmin ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
         } ${dragUser?.id === u.id ? 'opacity-40' : ''}`}
       >
@@ -149,7 +149,7 @@ export default function Projects() {
             aria-labelledby="pool-title"
             {...dropProps('pool', null)}
             className={`rounded-4xl p-6 border-2 border-dashed mb-8 transition-colors ${
-              dropTarget === 'pool' ? 'border-theme-deep bg-theme-lightest/60' : 'border-theme-light/70 bg-white/50'
+              dropTarget === 'pool' ? 'border-theme-deep bg-theme-lightest/60' : 'border-theme-light/70 bg-surface/50'
             }`}
           >
             <div className="flex items-center justify-between mb-4">
@@ -167,7 +167,7 @@ export default function Projects() {
           </section>
 
           {/* Projede olup açık görevi olmayanlar */}
-          <section aria-labelledby="idle-title" className="rounded-4xl p-6 border-2 border-dashed border-theme-light/70 bg-white/50 mb-8">
+          <section aria-labelledby="idle-title" className="rounded-4xl p-6 border-2 border-dashed border-theme-light/70 bg-surface/50 mb-8">
             <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
               <div className="flex items-center gap-3">
                 <h2 id="idle-title" className="text-lg font-bold text-theme-text tracking-tight">Projede, Görevi Olmayanlar</h2>
@@ -234,7 +234,7 @@ export default function Projects() {
                     })}
                     whileHover={{ y: -3 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-                    className={`relative bg-white rounded-4xl p-6 border shadow-soft hover:shadow-diffusion transition-[border-color,box-shadow] flex flex-col gap-5 ${
+                    className={`relative bg-surface rounded-4xl p-6 border shadow-soft hover:shadow-diffusion transition-[border-color,box-shadow] flex flex-col gap-5 ${
                       isDrop ? 'border-theme-deep shadow-glow' : 'border-theme-light/40'
                     }`}
                   >
@@ -265,7 +265,7 @@ export default function Projects() {
                         <span className="text-xs font-semibold text-theme-muted flex items-center gap-1"><Users size={14} weight="bold" /> {list.length}</span>
                       </div>
                       {due && (
-                        <span className={`text-xs font-bold flex items-center gap-1 ${due.tone === 'danger' ? 'text-[#9A3B1B]' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
+                        <span className={`text-xs font-bold flex items-center gap-1 ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
                           <CalendarBlank size={14} weight="bold" /> {due.text}
                         </span>
                       )}

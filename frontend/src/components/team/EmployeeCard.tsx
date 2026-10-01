@@ -111,7 +111,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
       layout="position"
       animate={controls}
       onContextMenu={handleContextMenu}
-      className={`relative bg-white rounded-3xl border transition-colors ${
+      className={`relative bg-surface rounded-3xl border transition-colors ${
         highlighted ? 'border-theme-medium' : expanded ? 'border-theme-light' : 'border-theme-light/40 hover:border-theme-light'
       } ${expanded ? 'shadow-diffusion' : 'shadow-soft hover:shadow-diffusion'}`}
     >
@@ -133,7 +133,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-theme-text tracking-tight truncate">{user.fullName}</h3>
             {isSelf && <span className="hidden sm:inline text-[10px] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md shrink-0">Sen</span>}
-            {user.role === 'ADMIN' && <span className="hidden sm:inline text-[10px] font-bold uppercase bg-theme-deep text-white px-1.5 py-0.5 rounded-md shrink-0">Yönetici</span>}
+            {user.role === 'ADMIN' && <span className="hidden sm:inline text-[10px] font-bold uppercase bg-accent text-white px-1.5 py-0.5 rounded-md shrink-0">Yönetici</span>}
           </div>
           <p className="text-xs text-theme-muted font-medium truncate">{user.jobTitle || 'Çalışan'}</p>
         </div>
@@ -157,7 +157,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
           {tasks ? (
             <div className="flex items-center gap-2 text-sm font-semibold text-theme-text tabular">
               <span title="Açık görev">{openCount} açık</span>
-              {urgent > 0 && <span className="text-[11px] font-bold text-[#8A4B2A] bg-[#F3E1D6] px-1.5 rounded-md" title="Yüksek öncelikli">{urgent}!</span>}
+              {urgent > 0 && <span className="text-[11px] font-bold text-clay-ink bg-clay-soft px-1.5 rounded-md" title="Yüksek öncelikli">{urgent}!</span>}
               {doneCount > 0 && <span className="text-theme-muted font-medium text-xs">· {doneCount} bitti</span>}
             </div>
           ) : <span className="text-sm text-theme-muted">—</span>}

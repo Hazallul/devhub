@@ -17,7 +17,7 @@ export function DoneToggle({ done, onToggle, size = 'md', label }: { done: boole
       aria-pressed={done}
       aria-label={label}
       className={`${box} shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${
-        done ? 'bg-theme-deep border-theme-deep text-white' : 'border-theme-medium bg-white hover:border-theme-deep hover:bg-theme-lightest'
+        done ? 'bg-accent border-theme-deep text-white' : 'border-theme-medium bg-surface hover:border-theme-deep hover:bg-theme-lightest'
       }`}
     >
       <AnimatePresence initial={false}>
@@ -57,7 +57,7 @@ export default function TodoCard({ item, selected, listName, ownerLabel, onSelec
   return (
     <div
       onContextMenu={e => menu(e, item, { onOpen: onSelect, onSend })}
-      className={`group relative flex items-center gap-3 rounded-3xl border bg-white pl-3 pr-2 py-3 shadow-soft transition-[border-color,box-shadow] ${
+      className={`group relative flex items-center gap-3 rounded-3xl border bg-surface pl-3 pr-2 py-3 shadow-soft transition-[border-color,box-shadow] ${
         selected ? 'border-theme-deep shadow-diffusion' : 'border-theme-light/50 hover:border-theme-light hover:shadow-diffusion'
       }`}
     >
@@ -66,7 +66,7 @@ export default function TodoCard({ item, selected, listName, ownerLabel, onSelec
 
       <button type="button" onClick={onSelect} aria-expanded={selected} className="min-w-0 flex-1 text-left rounded-xl py-0.5">
         <span className="flex items-center gap-2">
-          {!item.seen && <span className="w-2 h-2 rounded-full bg-[#9A3B1B] shrink-0" aria-label="Yeni" />}
+          {!item.seen && <span className="w-2 h-2 rounded-full bg-danger-solid shrink-0" aria-label="Yeni" />}
           <span className={`block text-[15px] font-semibold leading-snug break-words ${item.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{item.title}</span>
         </span>
         {hasMeta && (
@@ -75,7 +75,7 @@ export default function TodoCard({ item, selected, listName, ownerLabel, onSelec
             {listName && <span>{listName}</span>}
             {ownerLabel && <span className="inline-flex items-center gap-1"><User size={12} weight="bold" aria-hidden="true" /> {ownerLabel} ekledi</span>}
             {due && (
-              <span className={`inline-flex items-center gap-1 ${due.tone === 'danger' ? 'text-[#9A3B1B]' : due.tone === 'warn' ? 'text-theme-deep' : ''}`}>
+              <span className={`inline-flex items-center gap-1 ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : ''}`}>
                 <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}{item.dueTime && <span className="tabular"> · {item.dueTime}</span>}
               </span>
             )}
@@ -94,7 +94,7 @@ export default function TodoCard({ item, selected, listName, ownerLabel, onSelec
         onClick={() => update.mutate({ id: item.id, important: !item.important })}
         aria-pressed={item.important}
         aria-label={item.important ? 'Önemli işaretini kaldır' : 'Önemli olarak işaretle'}
-        className={`icon-btn w-9 h-9 shrink-0 ${item.important ? 'text-[#B8861B] hover:text-[#B8861B]' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
+        className={`icon-btn w-9 h-9 shrink-0 ${item.important ? 'text-warn hover:text-warn' : 'opacity-0 group-hover:opacity-100 focus:opacity-100'}`}
       >
         <Star size={18} weight={item.important ? 'fill' : 'bold'} />
       </button>

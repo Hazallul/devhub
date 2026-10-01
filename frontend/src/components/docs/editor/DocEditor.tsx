@@ -165,7 +165,7 @@ export default function DocEditor({ initial, onChange }: Props) {
   };
 
   return (
-    <div className="doc-editor rounded-3xl border border-theme-light/70 bg-white shadow-soft" onContextMenu={onContextMenu}>
+    <div className="doc-editor rounded-3xl border border-theme-light/70 bg-surface shadow-soft" onContextMenu={onContextMenu}>
       <Toolbar editor={editor} onImage={pickImage} uploading={uploading > 0} />
       <EditorContent editor={editor} className="px-5 sm:px-8 py-6" />
       <input
@@ -200,7 +200,7 @@ function SlashMenu({ state, index, onPick, onHover }: { state: SlashState; index
       role="listbox"
       aria-label="Blok ekle"
       style={{ left: Math.min(state.left, window.innerWidth - 300), ...(below ? { top: state.top + 6 } : { bottom: window.innerHeight - state.top + 30 }) }}
-      className="fixed z-[150] w-[284px] max-h-[320px] overflow-y-auto scrollbar-thin bg-white rounded-2xl shadow-float border border-theme-light/70 p-1.5"
+      className="fixed z-[150] w-[284px] max-h-[320px] overflow-y-auto scrollbar-thin bg-surface rounded-2xl shadow-float border border-theme-light/70 p-1.5"
       onMouseDown={e => e.preventDefault()}
     >
       <p className="eyebrow px-2.5 pt-1.5 pb-1">Blok ekle {state.query && `· “${state.query}”`}</p>
@@ -215,7 +215,7 @@ function SlashMenu({ state, index, onPick, onHover }: { state: SlashState; index
           onClick={() => onPick(b)}
           className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left ${i === index ? 'bg-theme-lightest' : ''}`}
         >
-          <span className="w-9 h-9 shrink-0 rounded-xl border border-theme-light/70 bg-white flex items-center justify-center text-theme-deep"><b.icon size={18} weight="bold" /></span>
+          <span className="w-9 h-9 shrink-0 rounded-xl border border-theme-light/70 bg-surface flex items-center justify-center text-theme-deep"><b.icon size={18} weight="bold" /></span>
           <span className="min-w-0">
             <span className="block text-sm font-bold text-theme-text">{b.label}</span>
             <span className="block text-xs text-theme-muted font-medium truncate">{b.hint}</span>
@@ -256,7 +256,7 @@ function Toolbar({ editor, onImage, uploading }: { editor: Editor; onImage: () =
   const c = () => editor.chain().focus();
 
   return (
-    <div className="sticky top-0 z-20 rounded-t-3xl bg-white/95 backdrop-blur border-b border-theme-light/60">
+    <div className="sticky top-0 z-20 rounded-t-3xl bg-surface/95 backdrop-blur border-b border-theme-light/60">
       <div role="toolbar" aria-label="Biçimlendirme" className="flex flex-wrap items-center gap-1 px-3 py-2">
         <Btn icon={ArrowCounterClockwise} label="Geri al" shortcut="Ctrl+Z" disabled={!s.canUndo} onClick={() => c().undo().run()} />
         <Btn icon={ArrowClockwise} label="Yinele" shortcut="Ctrl+Y" disabled={!s.canRedo} onClick={() => c().redo().run()} />
@@ -445,7 +445,7 @@ function TableBar({ editor }: { editor: Editor }) {
             onClick={a.run}
             title={a.label}
             aria-label={a.label}
-            className={`h-8 px-2 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors ${a.danger ? 'text-[#9A3B1B] hover:bg-[#FBEDE5]' : 'text-theme-deep hover:bg-theme-lightest'}`}
+            className={`h-8 px-2 rounded-lg flex items-center gap-1.5 text-xs font-semibold transition-colors ${a.danger ? 'text-danger hover:bg-danger-soft' : 'text-theme-deep hover:bg-theme-lightest'}`}
           >
             <a.icon size={15} weight="bold" />
             <span className="hidden xl:inline">{a.label.replace(' ekle', '').replace(' aç/kapat', '')}</span>

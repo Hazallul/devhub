@@ -6,6 +6,7 @@ import com.enerjistaj.devhub.exception.ApiException;
 import com.enerjistaj.devhub.repository.ActionLogRepository;
 import com.enerjistaj.devhub.security.CurrentUser;
 import com.enerjistaj.devhub.service.ActionLogService;
+import com.enerjistaj.devhub.util.XlsxWriter;
 import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -109,6 +110,10 @@ public class ActionLogController {
     }
 
     /** Süzülmüş kayıtları (en fazla 5000) Excel'in doğrudan açabileceği CSV olarak indirir. */
+    /**
+     * Süzülmüş kayıtları indirir (en fazla 5000). format=xlsx: biçimlendirilmiş Excel dosyası (sabit ve filtreli başlık,
+     * Türkçe etiketler, gerçek tarih, satır satır ayrıntılar). format=csv: standart virgüllü CSV (UTF-8 BOM'lu), başka araçlar için.
+     */
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(@RequestParam(required = false) LogCategory category,
                                          @RequestParam(required = false) LogLevel level,
@@ -117,28 +122,65 @@ public class ActionLogController {
                                          @RequestParam(required = false) String from,
                                          @RequestParam(required = false) String to,
                                          @RequestParam(required = false) String q,
-                                         @RequestParam(required = false) Integer sinceHours) {
+                                         @RequestParam(required = false) Integer sinceHours,
+                                         @RequestParam(defaultValue = "xlsx") String format) {
         currentUser.requireAdmin(ONLY_ADMIN);
         List<ActionLog> rows = logs.findAll(spec(category, level, action, actorId, from, to, q, sinceHours), PageRequest.of(0, 5000, NEWEST)).getContent();
-        StringBuilder csv = new StringBuilder("﻿"); // Excel Türkçe karakterleri doğru okusun
-        csv.append("Kayıt No;Tarih;Seviye;Kategori;İşlem;Yapan;Açıklama;Hedef;Ayrıntılar;IP\r\n");
-        for (ActionLog l : rows) {
-            csv.append(l.getId()).append(';')
-                .append(localTime(l.getCreatedAt()).format(CSV_TIME)).append(';')
-                .append(l.getLevel()).append(';')
-                .append(l.getCategory()).append(';')
-                .append(l.getAction()).append(';')
-                .append(cell(l.getActor() != null ? l.getActor().getFullName() : "Sistem")).append(';')
-                .append(cell(l.getMessage())).append(';')
-                .append(cell(l.getTargetName())).append(';')
-                .append(cell(l.getDetails() != null ? l.getDetails().replace("\n", " | ") : null)).append(';')
-                .append(cell(l.getIpAddress())).append("\r\n");
+        String stamp = LocalDateTime.now(ActionLogService.ZONE).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm"));
+        if ("csv".equalsIgnoreCase(format)) {
+            StringBuilder csv = new StringBuilder("\uFEFF"); // Türkçe karakterler doğru okunsun
+            csv.append(String.join(",", EXPORT_HEADERS)).append("\r\n");
+            for (ActionLog l : rows) {
+                csv.append(l.getId()).append(',')
+                    .append(localTime(l.getCreatedAt()).format(CSV_TIME)).append(',')
+                    .append(csvCell(l.getLevel().label())).append(',')
+                    .append(csvCell(l.getCategory().label())).append(',')
+                    .append(csvCell(l.getAction().label())).append(',')
+                    .append(csvCell(actorLabel(l))).append(',')
+                    .append(csvCell(l.getMessage())).append(',')
+                    .append(csvCell(l.getTargetName())).append(',')
+                    .append(csvCell(l.getDetails())).append(',')
+                    .append(csvCell(l.getIpAddress())).append("\r\n");
+            }
+            return download(csv.toString().getBytes(StandardCharsets.UTF_8), "devhub-loglar-" + stamp + ".csv", new MediaType("text", "csv", StandardCharsets.UTF_8));
         }
-        String name = "devhub-loglar-" + LocalDateTime.now(ActionLogService.ZONE).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmm")) + ".csv";
+
+        List<XlsxWriter.Column> cols = List.of(
+            new XlsxWriter.Column(EXPORT_HEADERS.get(0), 10, false), new XlsxWriter.Column(EXPORT_HEADERS.get(1), 19, false),
+            new XlsxWriter.Column(EXPORT_HEADERS.get(2), 10, false), new XlsxWriter.Column(EXPORT_HEADERS.get(3), 12, false),
+            new XlsxWriter.Column(EXPORT_HEADERS.get(4), 18, false), new XlsxWriter.Column(EXPORT_HEADERS.get(5), 20, true),
+            new XlsxWriter.Column(EXPORT_HEADERS.get(6), 52, true), new XlsxWriter.Column(EXPORT_HEADERS.get(7), 30, true),
+            new XlsxWriter.Column(EXPORT_HEADERS.get(8), 62, true), new XlsxWriter.Column(EXPORT_HEADERS.get(9), 15, false));
+        List<List<XlsxWriter.Cell>> data = new ArrayList<>(rows.size());
+        for (ActionLog l : rows) {
+            int levelStyle = l.getLevel() == LogLevel.KRITIK ? XlsxWriter.CRITICAL : l.getLevel() == LogLevel.UYARI ? XlsxWriter.WARNING : XlsxWriter.TEXT;
+            data.add(List.of(
+                new XlsxWriter.Cell(l.getId(), XlsxWriter.NUMBER),
+                new XlsxWriter.Cell(localTime(l.getCreatedAt()), XlsxWriter.DATE),
+                new XlsxWriter.Cell(l.getLevel().label(), levelStyle),
+                XlsxWriter.Cell.text(l.getCategory().label()),
+                XlsxWriter.Cell.text(l.getAction().label()),
+                XlsxWriter.Cell.text(actorLabel(l)),
+                XlsxWriter.Cell.text(l.getMessage()),
+                XlsxWriter.Cell.text(l.getTargetName()),
+                XlsxWriter.Cell.text(l.getDetails()),
+                XlsxWriter.Cell.text(l.getIpAddress())));
+        }
+        return download(XlsxWriter.write("Loglar", cols, data), "devhub-loglar-" + stamp + ".xlsx",
+            MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+    }
+
+    private static final List<String> EXPORT_HEADERS = List.of("Kayıt No", "Tarih", "Seviye", "Kategori", "İşlem", "Yapan", "Açıklama", "Hedef", "Ayrıntılar", "IP adresi");
+
+    private static String actorLabel(ActionLog l) {
+        return l.getActor() != null ? l.getActor().getFullName() : "Sistem";
+    }
+
+    private static ResponseEntity<byte[]> download(byte[] body, String name, MediaType type) {
         return ResponseEntity.ok()
             .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
-            .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
-            .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+            .contentType(type)
+            .body(body);
     }
 
     // ---------------------------------------------------------------- yardımcılar
@@ -198,10 +240,11 @@ public class ActionLogController {
     }
 
     /** CSV hücresi: ayırıcı, tırnak veya satır sonu içeriyorsa tırnak içine alınır. */
-    private static String cell(String v) {
+    /** RFC 4180 CSV hücresi; = + - @ ile başlayan metin Excel'de formül sayılmasın diye başına ' eklenir. */
+    private static String csvCell(String v) {
         if (v == null) return "";
-        String s = v.replace("\r", " ").replace("\n", " ");
-        if (!s.isEmpty() && "=+-@".indexOf(s.charAt(0)) >= 0) s = "'" + s; // Excel formül enjeksiyonuna karşı
-        return s.contains(";") || s.contains("\"") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
+        String s = v;
+        if (!s.isEmpty() && "=+-@".indexOf(s.charAt(0)) >= 0) s = "'" + s;
+        return s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r") ? "\"" + s.replace("\"", "\"\"") + "\"" : s;
     }
 }

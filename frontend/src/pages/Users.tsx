@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, X, ShieldCheck, Warning, Sparkle, ArrowsClockwise, Trash,
+  UserPlus, MagnifyingGlass, DotsThree, PencilSimple, Key, Prohibit, ArrowCounterClockwise, Copy, Check, X, ShieldCheck, Warning, Sparkle, ArrowsClockwise, Trash, Flag,
 } from '@phosphor-icons/react';
+import OnboardingStepsModal from '../components/settings/OnboardingStepsModal';
+import { useOnboardingProgress, useOnboardingSteps, useSetUserOnboarding } from '../hooks/onboarding';
 import { PageHeader, Segmented, Skeleton, EmptyState, Avatar, Pill } from '../components/ui/primitives';
 import { Menu, MenuItem, MenuDivider } from '../components/ui/Menu';
 import type { MenuPoint } from '../components/ui/Menu';
@@ -19,7 +21,7 @@ import {
 import type { UserInput } from '../hooks/api';
 import { formatDate, formatFullDate, leaveEntitlement, seniorityLabel, timeAgo, toIsoDay, trLower } from '../lib/format';
 import { listContainer, listItem } from '../lib/motion';
-import type { ProfileRequest, Role, User } from '../types';
+import type { OnboardingProgress, ProfileRequest, Role, User } from '../types';
 
 type Filter = 'ACTIVE' | 'INACTIVE' | 'ALL';
 
@@ -41,7 +43,14 @@ function UsersPage() {
   const [search, setSearch] = useState('');
   const [editing, setEditing] = useState<User | 'new' | null>(null);
   const [menu, setMenu] = useState<{ user: User; point: MenuPoint } | null>(null);
-  usePageMenu([{ label: 'Yeni kullanıcı', icon: UserPlus, onSelect: () => setEditing('new') }]);
+  const [stepsOpen, setStepsOpen] = useState(false);
+  usePageMenu([
+    { label: 'Yeni kullanıcı', icon: UserPlus, onSelect: () => setEditing('new') },
+    { label: 'İşe başlangıç adımları', icon: Flag, onSelect: () => setStepsOpen(true) },
+  ]);
+  const { data: onboardingProgress } = useOnboardingProgress();
+  const setOnboarding = useSetUserOnboarding();
+  const progressOf = useMemo(() => new Map((onboardingProgress ?? []).map(p => [p.userId, p])), [onboardingProgress]);
   const [confirm, setConfirm] = useState<{ kind: 'deactivate' | 'reset'; user: User } | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
   const [tempPassword, setTempPassword] = useState<{ user: Pick<User, 'fullName' | 'email'>; password: string } | null>(null);
@@ -87,7 +96,12 @@ function UsersPage() {
         eyebrow="Sistem"
         title="Kullanıcılar"
         description="Çalışan ekleyin, rol ve izin hakkını düzenleyin, ayrılan çalışanların hesabını pasifleştirin."
-        actions={<button onClick={() => setEditing('new')} className="btn-primary"><UserPlus size={18} weight="bold" /> Yeni Kullanıcı</button>}
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={() => setStepsOpen(true)} className="btn-secondary" title="Yeni başlayanların Genel Bakış'ta gördüğü adımlar"><Flag size={18} weight="bold" /> Başlangıç adımları</button>
+            <button onClick={() => setEditing('new')} className="btn-primary"><UserPlus size={18} weight="bold" /> Yeni Kullanıcı</button>
+          </div>
+        }
       />
 
       <AnimatePresence initial={false}>
@@ -95,7 +109,7 @@ function UsersPage() {
           <motion.section initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden" aria-labelledby="profile-requests-title">
             <div className="mb-8">
               <h2 id="profile-requests-title" className="text-lg font-bold tracking-tight mb-1 flex items-center gap-2">
-                Profil Değişikliği Talepleri <Pill className="bg-theme-deep text-white">{pendingRequests.length}</Pill>
+                Profil Değişikliği Talepleri <Pill className="bg-accent text-white">{pendingRequests.length}</Pill>
               </h2>
               <p className="text-sm text-theme-muted mb-4">Çalışanlar ad soyad ve unvanlarını doğrudan değiştiremez; onayladığınızda değişiklik profile uygulanır.</p>
               <ul className="space-y-3">
@@ -110,7 +124,7 @@ function UsersPage() {
                           <div className="mt-1"><ProfileDiff request={r} /></div>
                         </div>
                         <div className="flex gap-2 shrink-0 ml-auto">
-                          <button onClick={() => setDeciding({ request: r, decision: 'REDDEDILDI' })} className="icon-btn border border-theme-light/70 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
+                          <button onClick={() => setDeciding({ request: r, decision: 'REDDEDILDI' })} className="icon-btn border border-theme-light/70 hover:text-danger hover:bg-danger-soft hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
                             <X size={18} weight="bold" />
                           </button>
                           <button onClick={() => setDeciding({ request: r, decision: 'ONAYLANDI' })} className="btn-primary h-10 min-h-0 px-4 text-sm" aria-label={`${u?.fullName} talebini onayla`}>
@@ -206,9 +220,10 @@ function UsersPage() {
                   )}
                 </div>
                 <div className="ml-auto flex items-center gap-2 shrink-0">
-                  {u.role === 'ADMIN' && <Pill className="bg-theme-deep text-white"><ShieldCheck size={11} weight="bold" /> Yönetici</Pill>}
-                  {!u.active && <Pill className="bg-gray-100 text-theme-muted"><Prohibit size={11} weight="bold" /> Pasif</Pill>}
-                  {u.mustChangePassword && u.active && <Pill className="bg-[#FBEDE5] text-[#7A3E1F]"><Key size={11} weight="bold" /> Geçici şifre</Pill>}
+                  {u.role === 'ADMIN' && <Pill className="bg-accent text-white"><ShieldCheck size={11} weight="bold" /> Yönetici</Pill>}
+                  <OnboardingPill progress={progressOf.get(u.id)} active={u.active} />
+                  {!u.active && <Pill className="bg-theme-lightest text-theme-muted"><Prohibit size={11} weight="bold" /> Pasif</Pill>}
+                  {u.mustChangePassword && u.active && <Pill className="bg-danger-soft text-danger-ink"><Key size={11} weight="bold" /> Geçici şifre</Pill>}
                   <button
                     onClick={e => { const r = e.currentTarget.getBoundingClientRect(); setMenu({ user: u, point: { x: r.right - 230, y: r.bottom + 8 } }); }}
                     className="icon-btn"
@@ -228,6 +243,9 @@ function UsersPage() {
         {menu && <>
           <MenuItem icon={PencilSimple} onSelect={() => { setEditing(menu.user); setMenu(null); }}>Düzenle</MenuItem>
           <MenuItem icon={Key} disabled={!menu.user.active} onSelect={() => { setConfirm({ kind: 'reset', user: menu.user }); setMenu(null); }}>Şifreyi sıfırla</MenuItem>
+          {menu.user.active && (progressOf.has(menu.user.id)
+            ? <MenuItem icon={Flag} onSelect={() => { setOnboarding.mutate({ userId: menu.user.id, active: false }); setMenu(null); }}>Başlangıç listesini kaldır</MenuItem>
+            : <MenuItem icon={Flag} onSelect={() => { setOnboarding.mutate({ userId: menu.user.id, active: true }); setMenu(null); }}>Başlangıç listesini başlat</MenuItem>)}
           <MenuDivider />
           {menu.user.active ? (
             <MenuItem icon={Prohibit} tone="danger" disabled={menu.user.id === me.id} onSelect={() => { setConfirm({ kind: 'deactivate', user: menu.user }); setMenu(null); }}>
@@ -275,14 +293,15 @@ function UsersPage() {
       </Modal>
 
       <TempPasswordModal value={tempPassword} onClose={() => setTempPassword(null)} />
+      <OnboardingStepsModal open={stepsOpen} onClose={() => setStepsOpen(false)} />
       <DeleteUserModal user={deleting} onClose={() => setDeleting(null)} />
     </>
   );
 }
 
 // ---------------- Kullanıcı formu ----------------
-interface FormState { fullName: string; email: string; role: Role; jobTitle: string; hireDate: string; currentProject: string; password: string }
-const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', hireDate: '', currentProject: '', password: '' };
+interface FormState { fullName: string; email: string; role: Role; jobTitle: string; hireDate: string; currentProject: string; password: string; onboarding: boolean }
+const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', hireDate: '', currentProject: '', password: '', onboarding: true };
 
 /**
  * Okunması ve söylenmesi kolay başlangıç şifresi, ör. "Zeytin-4821". Herkese aynı sabit şifre (1111 gibi) verilmez:
@@ -313,7 +332,7 @@ function UserFormModal({ target, onClose, onCreated }: {
     setErrors({});
     setForm(target === 'new' ? { ...EMPTY, hireDate: toIsoDay(new Date()), password: makePassword() } : {
       fullName: target.fullName, email: target.email, role: target.role, jobTitle: target.jobTitle ?? '',
-      hireDate: target.hireDate ?? '', currentProject: target.currentProject ?? '', password: '',
+      hireDate: target.hireDate ?? '', currentProject: target.currentProject ?? '', password: '', onboarding: false,
     });
   }, [target]);
 
@@ -337,7 +356,7 @@ function UserFormModal({ target, onClose, onCreated }: {
       hireDate: form.hireDate || undefined,
     };
     if (isNew) {
-      create.mutate({ ...body, currentProject: form.currentProject || undefined, password: form.password }, {
+      create.mutate({ ...body, currentProject: form.currentProject || undefined, password: form.password, onboarding: form.onboarding }, {
         onSuccess: ({ user, temporaryPassword }) => onCreated(user, temporaryPassword),
       });
     } else if (target) {
@@ -430,6 +449,15 @@ function UserFormModal({ target, onClose, onCreated }: {
             </p>
           </Field>
         )}
+        {isNew && (
+          <label className="flex items-start gap-3 p-3.5 rounded-2xl bg-theme-cream border border-theme-light/60 cursor-pointer">
+            <input type="checkbox" className="mt-0.5 w-4 h-4 accent-[rgb(var(--accent))]" checked={form.onboarding} onChange={e => set('onboarding', e.target.checked)} />
+            <span className="text-sm">
+              <span className="font-semibold flex items-center gap-1.5"><Flag size={15} weight="bold" className="text-theme-deep" /> İşe başlangıç listesini göster</span>
+              <span className="block text-xs text-theme-muted mt-0.5 leading-relaxed">Kişi Genel Bakış'ta ilk günlerinde yapacağı adımları görür (şifre, el kitabı, geliştirme ortamı…). İlerlemesini bu sayfada takip edebilirsiniz.</span>
+            </span>
+          </label>
+        )}
       </div>
     </Modal>
   );
@@ -438,9 +466,9 @@ function UserFormModal({ target, onClose, onCreated }: {
 function Field({ id, label, required, error, children }: { id: string; label: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label htmlFor={id} className="label">{label}{required && <span className="text-[#9A3B1B]" aria-hidden="true"> *</span>}</label>
+      <label htmlFor={id} className="label">{label}{required && <span className="text-danger" aria-hidden="true"> *</span>}</label>
       {children}
-      {error && <p role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{error}</p>}
+      {error && <p role="alert" className="text-xs font-semibold text-danger mt-1.5 ml-1">{error}</p>}
     </div>
   );
 }
@@ -481,7 +509,7 @@ function TempPasswordModal({ value, onClose }: { value: { user: Pick<User, 'full
               </AnimatePresence>
             </button>
           </div>
-          <p className="text-sm text-[#7A3E1F] bg-[#FBEDE5] rounded-2xl p-3.5 flex gap-2">
+          <p className="text-sm text-danger-ink bg-danger-soft rounded-2xl p-3.5 flex gap-2">
             <Warning size={18} weight="bold" className="shrink-0 mt-px" />
             Bu şifre yalnızca şimdi gösteriliyor. Kişiye güvenli bir yoldan iletin; ilk girişte değiştirmesi istenecek.
           </p>
@@ -512,7 +540,7 @@ function DeleteUserModal({ user, onClose }: { user: User | null; onClose: () => 
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
         <button type="button" disabled={!ok || remove.isPending} onClick={() => user && remove.mutate(user.id, { onSuccess: onClose })}
-          className="btn bg-[#9A3B1B] text-white hover:bg-[#7E2F15] disabled:opacity-40">
+          className="btn bg-danger-solid text-white hover:bg-danger-solid-hover disabled:opacity-40">
           <Trash size={16} weight="bold" /> {remove.isPending ? 'Siliniyor…' : 'Kalıcı olarak sil'}
         </button>
       </>}
@@ -521,7 +549,7 @@ function DeleteUserModal({ user, onClose }: { user: User | null; onClose: () => 
         <div className="space-y-4 text-sm leading-relaxed">
           <p><strong>{user.fullName}</strong> ({user.email}) hesabı tamamen silinecek. <strong>Bu işlem geri alınamaz.</strong></p>
           {isLoading ? <Skeleton className="h-16" /> : (
-            <div className="rounded-2xl bg-[#FBEDE5] border border-[#E8C3AE] p-3.5 text-[#7A3E1F]">
+            <div className="rounded-2xl bg-danger-soft border border-danger-line p-3.5 text-danger-ink">
               {rows.length > 0
                 ? <><p className="font-bold mb-1">Birlikte silinecekler:</p><ul className="list-disc pl-5 space-y-0.5">{rows.map(r => <li key={r}>{r}</li>)}</ul></>
                 : <p className="font-semibold">Bu hesaba bağlı görev, izin veya kişisel kart yok.</p>}
@@ -540,5 +568,20 @@ function DeleteUserModal({ user, onClose }: { user: User | null; onClose: () => 
         </div>
       )}
     </Modal>
+  );
+}
+
+/** Satırdaki "Başlangıç 3/8" etiketi; üzerine gelince hangi adımların bittiği görünür. */
+function OnboardingPill({ progress, active }: { progress?: OnboardingProgress; active: boolean }) {
+  const { data: steps } = useOnboardingSteps(!!progress);
+  if (!progress || !active || progress.completedAt) return null;
+  const done = new Set(progress.doneStepIds);
+  const title = (steps ?? []).map(s => `${done.has(s.id) ? '✓' : '○'} ${s.title}`).join('\n');
+  return (
+    <span title={title ? `İşe başlangıç\n${title}` : undefined} className="hidden sm:inline-flex">
+      <Pill className="bg-theme-lightest text-theme-deep border border-theme-light/70">
+        <Flag size={11} weight="bold" /> Başlangıç {progress.done}/{progress.total}
+      </Pill>
+    </span>
   );
 }

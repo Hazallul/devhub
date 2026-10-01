@@ -54,7 +54,7 @@ export default function TasksPane({ items, onSelect }: Props) {
             const project = projects.find(p => p.id === t.projectId)?.name;
             const card = linked(t.id);
             return (
-              <li key={t.id} className="flex items-center gap-3 rounded-3xl border border-theme-light/50 bg-white pl-4 pr-2 py-3 shadow-soft hover:border-theme-light hover:shadow-diffusion transition-[border-color,box-shadow]">
+              <li key={t.id} className="flex items-center gap-3 rounded-3xl border border-theme-light/50 bg-surface pl-4 pr-2 py-3 shadow-soft hover:border-theme-light hover:shadow-diffusion transition-[border-color,box-shadow]">
                 <status.icon size={20} weight="bold" className={`shrink-0 ${status.className}`} aria-hidden="true" />
                 <button type="button" onClick={() => openTask(t.id)} className="min-w-0 flex-1 text-left rounded-xl py-0.5">
                   <span className="block text-[15px] font-semibold leading-snug break-words text-theme-text">{t.content}</span>
@@ -63,7 +63,7 @@ export default function TasksPane({ items, onSelect }: Props) {
                     <span className={`px-1.5 py-0.5 rounded-md ${priority.className}`}>{priority.label}</span>
                     {project && <span>{project}</span>}
                     {due && (
-                      <span className={`inline-flex items-center gap-1 ${due.tone === 'danger' ? 'text-[#9A3B1B]' : due.tone === 'warn' ? 'text-theme-deep' : ''}`}>
+                      <span className={`inline-flex items-center gap-1 ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : ''}`}>
                         <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}
                       </span>
                     )}

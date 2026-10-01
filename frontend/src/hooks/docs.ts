@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
+import { livePoll } from '../lib/realtime';
 import { useToast } from '../components/ui/Toast';
 import type { DocDetail, DocNode, DocRevision, DocSummary } from '../types';
 
@@ -20,13 +21,13 @@ export const useDocHistory = (slug: string | undefined, enabled: boolean) =>
 
 /** pending: onay bekleyenler (yönetici). mine: kişinin kendi önerileri. */
 export const useDocRevisions = (scope: 'pending' | 'mine', enabled = true) =>
-  useQuery({ queryKey: ['docs', 'revisions', scope], queryFn: get<DocRevision[]>(`/docs/revisions?scope=${scope}`), enabled, refetchInterval: 30_000 });
+  useQuery({ queryKey: ['docs', 'revisions', scope], queryFn: get<DocRevision[]>(`/docs/revisions?scope=${scope}`), enabled, refetchInterval: livePoll(30_000) });
 
 export const useDocRevision = (id: number | null) =>
   useQuery({ queryKey: ['docs', 'revision', id], queryFn: get<DocRevision>(`/docs/revisions/${id}`), enabled: id !== null, retry: false });
 
 export const useDocPendingCount = (enabled: boolean) =>
-  useQuery({ queryKey: ['docs', 'count'], queryFn: get<{ count: number }>('/docs/revisions/pending-count'), enabled, refetchInterval: 30_000 });
+  useQuery({ queryKey: ['docs', 'count'], queryFn: get<{ count: number }>('/docs/revisions/pending-count'), enabled, refetchInterval: livePoll(30_000) });
 
 export interface DocDraft {
   title: string;

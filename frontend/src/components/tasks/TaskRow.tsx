@@ -48,7 +48,7 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, x: -12, transition: { duration: 0.14 } }}
-      className="group flex items-center gap-3 p-3 rounded-2xl bg-white border border-theme-light/40 hover:border-theme-light transition-colors"
+      className="group flex items-center gap-3 p-3 rounded-2xl bg-surface border border-theme-light/40 hover:border-theme-light transition-colors"
       onClick={e => e.stopPropagation()}
     >
       <button
@@ -58,7 +58,7 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
         aria-label={done ? 'Görevi yeniden aç' : 'Görevi tamamlandı olarak işaretle'}
         aria-pressed={done}
         className={`w-6 h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-colors ${
-          done ? 'bg-theme-deep border-theme-deep text-white' : 'border-theme-medium hover:border-theme-deep bg-white'
+          done ? 'bg-accent border-theme-deep text-white' : 'border-theme-medium hover:border-theme-deep bg-surface'
         } ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
       >
         <AnimatePresence>
@@ -99,7 +99,7 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
             {showOwner}
             {task.priority && !done && <PriorityBadge priority={task.priority} />}
             {due && (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${due.tone === 'danger' ? 'text-[#9A3B1B]' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
+              <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
                 <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}
               </span>
             )}
@@ -128,7 +128,7 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
             <button
               type="button"
               onClick={() => remove.mutate(task.id)}
-              className="h-9 px-3 rounded-xl text-xs font-bold bg-[#FBEDE5] text-[#9A3B1B] hover:bg-[#F6DCCD] transition-colors"
+              className="h-9 px-3 rounded-xl text-xs font-bold bg-danger-soft text-danger hover:bg-clay-soft transition-colors"
             >
               Silinsin mi?
             </button>
@@ -137,7 +137,7 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
               <button type="button" onClick={() => { setDraft(task.content); setEditing(true); }} className="icon-btn w-9 h-9" aria-label="Düzenle" title="Düzenle">
                 <PencilSimple size={17} weight="bold" />
               </button>
-              <button type="button" onClick={() => setConfirmDelete(true)} className="icon-btn w-9 h-9 hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Sil" title="Sil">
+              <button type="button" onClick={() => setConfirmDelete(true)} className="icon-btn w-9 h-9 hover:text-danger hover:bg-danger-soft" aria-label="Sil" title="Sil">
                 <Trash size={17} weight="bold" />
               </button>
             </>

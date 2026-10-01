@@ -44,15 +44,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 exit={{ opacity: 0, x: 24, transition: { duration: 0.15 } }}
                 role={t.tone === 'error' ? 'alert' : 'status'}
                 className={`pointer-events-auto flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-2xl shadow-float border max-w-sm ${
-                  t.tone === 'error' ? 'bg-white border-[#E8C3AE] text-[#7A3E1F]' : 'bg-theme-text border-theme-text text-white'
+                  t.tone === 'error' ? 'bg-surface border-danger-line text-danger-ink' : 'bg-ink border-ink text-white'
                 }`}
               >
                 {t.tone === 'error'
                   ? <Warning size={20} weight="fill" className="shrink-0" />
-                  : <CheckCircle size={20} weight="fill" className="shrink-0 text-theme-light" />}
+                  : <CheckCircle size={20} weight="fill" className="shrink-0 text-[#C5D89D]" />}
                 <span className="text-sm font-medium">{t.message}</span>
                 {t.action && (
-                  <button onClick={() => { t.action!.onClick(); dismiss(t.id); }} className="px-2.5 py-1.5 rounded-lg text-sm font-bold text-theme-light hover:bg-white/10 underline underline-offset-4">
+                  <button onClick={() => { t.action!.onClick(); dismiss(t.id); }} className="px-2.5 py-1.5 rounded-lg text-sm font-bold text-[#C5D89D] hover:bg-white/10 underline underline-offset-4">
                     {t.action.label}
                   </button>
                 )}

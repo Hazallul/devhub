@@ -118,7 +118,7 @@ export default function MyDay() {
                         </button>
                         {list && list.members.length > 1 && <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-theme-muted shrink-0"><Users size={12} weight="bold" aria-hidden="true" /> {list.name}</span>}
                         {i.dueTime && !i.done && <span className="inline-flex items-center gap-1 text-xs font-bold text-theme-muted tabular shrink-0"><Bell size={12} weight="bold" aria-hidden="true" /> {i.dueTime}</span>}
-                        {late && <span className="inline-flex items-center gap-1 text-xs font-bold text-[#9A3B1B] shrink-0"><CalendarBlank size={12} weight="bold" aria-hidden="true" /> {late.text}</span>}
+                        {late && <span className="inline-flex items-center gap-1 text-xs font-bold text-danger shrink-0"><CalendarBlank size={12} weight="bold" aria-hidden="true" /> {late.text}</span>}
                       </motion.li>
                     );
                   })}
@@ -127,7 +127,7 @@ export default function MyDay() {
               {todays.length > shown.length && (
                 <button type="button" onClick={e => openTodo(e)} className="mt-2 text-xs font-bold text-theme-deep hover:underline underline-offset-4">+{todays.length - shown.length} kart daha</button>
               )}
-              <form onSubmit={add} className="flex items-center gap-2.5 mt-3 px-3 py-1.5 rounded-2xl border border-theme-light/60 bg-white focus-within:border-theme-medium focus-within:ring-2 focus-within:ring-theme-light/60">
+              <form onSubmit={add} className="flex items-center gap-2.5 mt-3 px-3 py-1.5 rounded-2xl border border-theme-light/60 bg-surface focus-within:border-theme-medium focus-within:ring-2 focus-within:ring-theme-light/60">
                 <Plus size={16} weight="bold" className="text-theme-deep shrink-0" aria-hidden="true" />
                 <input value={draft} maxLength={300} onChange={e => setDraft(e.target.value)} placeholder="Bugün ne yapacaksın?" aria-label="Bugüne kart ekle"
                   className="flex-1 min-w-0 bg-transparent py-1.5 text-sm font-medium text-theme-text placeholder:text-theme-muted focus:outline-none" />
@@ -140,12 +140,12 @@ export default function MyDay() {
           {facts.map(f => (
             <li key={f.label}>
               <button type="button" onClick={() => (f.onSelect ? f.onSelect() : navigate(f.to!))} className="w-full flex items-center gap-3 p-3 rounded-2xl text-left hover:bg-theme-cream transition-colors">
-                <span className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${f.tone === 'danger' ? 'bg-[#FBEDE5] text-[#9A3B1B]' : 'bg-theme-lightest text-theme-deep'}`}>
+                <span className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${f.tone === 'danger' ? 'bg-danger-soft text-danger' : 'bg-theme-lightest text-theme-deep'}`}>
                   <f.icon size={19} weight="duotone" aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block eyebrow">{f.label}</span>
-                  <span className={`block text-sm font-bold truncate ${f.tone === 'danger' ? 'text-[#9A3B1B]' : f.tone === 'accent' ? 'text-theme-deep' : 'text-theme-text'}`}>{f.value}</span>
+                  <span className={`block text-sm font-bold truncate ${f.tone === 'danger' ? 'text-danger' : f.tone === 'accent' ? 'text-theme-deep' : 'text-theme-text'}`}>{f.value}</span>
                 </span>
                 <ArrowRight size={15} weight="bold" className="text-theme-muted shrink-0" aria-hidden="true" />
               </button>

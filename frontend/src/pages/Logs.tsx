@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  MagnifyingGlass, DownloadSimple, CaretDown, ListDashes, Pulse, WarningOctagon, ShieldWarning, UserCircle, Funnel, X, Copy, ArrowSquareOut, User as UserIcon,
+  MagnifyingGlass, MicrosoftExcelLogo, FileCsv, CaretDown, ListDashes, Pulse, WarningOctagon, ShieldWarning, UserCircle, Funnel, X, Copy, ArrowSquareOut, User as UserIcon,
 } from '@phosphor-icons/react';
 import { PageHeader, StatCard, Skeleton, EmptyState, Avatar, Segmented } from '../components/ui/primitives';
 import { useContextMenu, usePageMenu } from '../components/layout/ContextMenu';
@@ -97,11 +97,11 @@ function LogsPage() {
   const items = useMemo(() => result.data?.pages.flatMap(p => p.items) ?? [], [result.data]);
   const total = result.data?.pages[0]?.total ?? 0;
 
-  const exportCsv = async () => {
+  const exportLogs = async (format: 'xlsx' | 'csv') => {
     setExporting(true);
     try {
-      await downloadLogs(filters);
-      toast.success('Loglar CSV olarak indirildi');
+      await downloadLogs(filters, format);
+      toast.success(format === 'xlsx' ? `${total} kayıt Excel dosyası olarak indirildi` : `${total} kayıt CSV olarak indirildi`);
     } catch {
       toast.error('Loglar indirilemedi.');
     } finally {
@@ -110,7 +110,8 @@ function LogsPage() {
   };
 
   usePageMenu([
-    { label: 'CSV olarak indir', icon: DownloadSimple, onSelect: exportCsv },
+    { label: 'Excel olarak indir', icon: MicrosoftExcelLogo, onSelect: () => exportLogs('xlsx') },
+    { label: 'CSV olarak indir', icon: FileCsv, onSelect: () => exportLogs('csv') },
     active && { label: 'Filtreleri temizle', icon: X, onSelect: clear },
   ]);
 
@@ -146,7 +147,7 @@ function LogsPage() {
   ], []);
   const personOptions: ComboOption[] = useMemo(() => [
     { value: '', label: 'Herkes', leading: <span className="w-7 h-7 rounded-lg bg-theme-cream flex items-center justify-center text-theme-deep"><UserCircle size={15} weight="bold" aria-hidden="true" /></span> },
-    { value: '0', label: 'Sistem / bilinmeyen', hint: 'Zamanlanmış işler, başarısız girişler', leading: <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-theme-muted"><Pulse size={15} weight="bold" aria-hidden="true" /></span> },
+    { value: '0', label: 'Sistem / bilinmeyen', hint: 'Zamanlanmış işler, başarısız girişler', leading: <span className="w-7 h-7 rounded-lg bg-theme-lightest flex items-center justify-center text-theme-muted"><Pulse size={15} weight="bold" aria-hidden="true" /></span> },
     ...(users ?? []).slice().sort((a: User, b: User) => a.fullName.localeCompare(b.fullName, 'tr')).map(u => ({
       value: String(u.id),
       label: u.fullName,
@@ -184,8 +185,18 @@ function LogsPage() {
       <PageHeader
         eyebrow="Sistem"
         title="Sistem Logları"
-        description="Uygulamada yapılan her işlem; kimin yaptığı, ne zaman, hangi adresten ve neyi değiştirdiğiyle birlikte kayıt altında. Kişisel yapılacaklar kişiye özel olduğu için kayda geçmez."
-        actions={<button type="button" onClick={exportCsv} disabled={exporting} className="btn-secondary"><DownloadSimple size={18} weight="bold" /> {exporting ? 'Hazırlanıyor…' : 'CSV indir'}</button>}
+        description="Uygulamada yapılan her işlem; kimin yaptığı, ne zaman, hangi adresten ve neyi değiştirdiğiyle birlikte kayıt altında. Excel indir, listede gördüğünüz kayıtları indirir. Kişisel yapılacaklar kişiye özel olduğu için kayda geçmez."
+        actions={
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => exportLogs('xlsx')} disabled={exporting} className="btn-secondary"
+              title={active ? 'Şu an listelenen (süzülmüş) kayıtları indirir' : 'Tüm kayıtları indirir (en fazla 5000)'}>
+              <MicrosoftExcelLogo size={18} weight="bold" /> {exporting ? 'Hazırlanıyor…' : 'Excel indir'}
+            </button>
+            <button type="button" onClick={() => exportLogs('csv')} disabled={exporting} className="btn-secondary px-3" title="Başka araçlar için virgülle ayrılmış CSV" aria-label="CSV olarak indir">
+              <FileCsv size={18} weight="bold" /> <span className="hidden sm:inline">CSV</span>
+            </button>
+          </div>
+        }
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -195,12 +206,12 @@ function LogsPage() {
         />
         <StatCard
           label="Başarısız giriş" icon={WarningOctagon} value={stats ? stats.failedLogins24h : '–'}
-          hint={stats && stats.failedLogins24h > 0 ? <span className="text-[#8A5A12] font-bold">Son 24 saat · göster</span> : 'Son 24 saat · göster'}
+          hint={stats && stats.failedLogins24h > 0 ? <span className="text-warn-ink font-bold">Son 24 saat · göster</span> : 'Son 24 saat · göster'}
           onClick={() => togglePreset(presets.failed)} active={isPreset(presets.failed)}
         />
         <StatCard
           label="Kritik işlem" icon={ShieldWarning} value={stats ? stats.critical7d : '–'}
-          hint={stats && stats.critical7d > 0 ? <span className="text-[#9A3B1B] font-bold">Son 7 gün · göster</span> : 'Son 7 gün · yetki, hesap, şifre'}
+          hint={stats && stats.critical7d > 0 ? <span className="text-danger font-bold">Son 7 gün · göster</span> : 'Son 7 gün · yetki, hesap, şifre'}
           onClick={() => togglePreset(presets.critical)} active={isPreset(presets.critical)}
         />
         <StatCard
@@ -354,7 +365,7 @@ function DayBars({ days, selected, onSelect }: { days: { date: string; count: nu
             <span className="text-[10px] font-bold tabular text-theme-muted opacity-0 group-hover:opacity-100 transition-opacity">{d.count}</span>
             <motion.span
               initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className={`w-full max-w-[34px] rounded-t-lg rounded-b-sm origin-bottom ${isToday || on ? 'bg-theme-deep' : 'bg-theme-medium group-hover:bg-theme-dark'} transition-colors`}
+              className={`w-full max-w-[34px] rounded-t-lg rounded-b-sm origin-bottom ${isToday || on ? 'bg-accent' : 'bg-theme-medium group-hover:bg-theme-dark'} transition-colors`}
               style={{ height: `${Math.max((d.count / max) * 100, d.count ? 4 : 1.5)}%` }}
             />
             <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-theme-deep' : 'text-theme-muted'}`}>{dayShort.format(date)}</span>
@@ -456,7 +467,7 @@ function DetailLine({ text }: { text: string }) {
   return (
     <li className="text-sm leading-relaxed flex flex-wrap items-center gap-1.5">
       <span className="font-bold text-theme-text">{m[1]}:</span>
-      <span className="px-1.5 py-0.5 rounded-md bg-[#FBEDE5] text-[#9A3B1B] line-through decoration-[#9A3B1B]/40">{m[2]}</span>
+      <span className="px-1.5 py-0.5 rounded-md bg-danger-soft text-danger line-through decoration-danger/40">{m[2]}</span>
       <span className="text-theme-muted" aria-label="yerine">→</span>
       <span className="px-1.5 py-0.5 rounded-md bg-theme-lightest text-theme-deep font-semibold">{m[3]}</span>
     </li>

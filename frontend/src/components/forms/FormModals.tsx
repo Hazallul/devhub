@@ -14,11 +14,11 @@ import type { ProjectStatus, LeaveType, User } from '../../types';
 
 export function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null;
-  return <p id={id} role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{message}</p>;
+  return <p id={id} role="alert" className="text-xs font-semibold text-danger mt-1.5 ml-1">{message}</p>;
 }
 
 export function Required() {
-  return <span className="text-[#9A3B1B]" aria-hidden="true"> *</span>;
+  return <span className="text-danger" aria-hidden="true"> *</span>;
 }
 
 // ---------------- Proje ----------------
@@ -201,7 +201,7 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
           <p className="text-sm font-semibold text-theme-deep -mt-1 ml-1">{dayLabel}</p>
         )}
         {type === 'YILLIK' && balance && (
-          <div className={`rounded-2xl p-3.5 text-sm border ${overBalance ? 'bg-[#FBEDE5] border-[#E8C3AE] text-[#7A3E1F]' : 'bg-theme-cream border-theme-light/60 text-theme-text'}`} role={overBalance ? 'alert' : undefined}>
+          <div className={`rounded-2xl p-3.5 text-sm border ${overBalance ? 'bg-danger-soft border-danger-line text-danger-ink' : 'bg-theme-cream border-theme-light/60 text-theme-text'}`} role={overBalance ? 'alert' : undefined}>
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <span className="font-semibold">{forUser ? `${forUser.fullName.split(' ')[0]} için` : 'Bu yıl'} kullanılabilir yıllık izin</span>
               <span className="font-bold tabular">{Math.max(available ?? 0, 0)} / {balance.entitlement} iş günü</span>

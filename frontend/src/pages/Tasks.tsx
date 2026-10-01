@@ -169,14 +169,14 @@ export default function Tasks() {
                     if (t) move(t, col);
                     setDragId(null); setOverCol(null);
                   }}
-                  className={`rounded-4xl p-4 border-2 transition-colors min-h-[240px] ${isOver ? 'border-theme-deep bg-theme-lightest/70' : 'border-transparent bg-white/60'}`}
+                  className={`rounded-4xl p-4 border-2 transition-colors min-h-[240px] ${isOver ? 'border-theme-deep bg-theme-lightest/70' : 'border-transparent bg-surface/60'}`}
                 >
                   <header className="flex items-center justify-between px-2 pt-1 pb-4">
                     <h2 className={`flex items-center gap-2 text-sm font-bold ${meta.className}`}>
                       <meta.icon size={18} weight="bold" aria-hidden="true" />
                       <span className="text-theme-text">{meta.label}</span>
                     </h2>
-                    <span className="text-xs font-bold tabular bg-white border border-theme-light/60 text-theme-deep px-2 py-0.5 rounded-lg">{list.length}</span>
+                    <span className="text-xs font-bold tabular bg-surface border border-theme-light/60 text-theme-deep px-2 py-0.5 rounded-lg">{list.length}</span>
                   </header>
                   <div className="flex flex-col gap-3">
                     <AnimatePresence initial={false}>
@@ -231,7 +231,7 @@ function DueText({ task }: { task: Task }) {
   const due = task.dueDate && task.status !== 'TAMAMLANDI' ? dueLabel(task.dueDate) : null;
   if (!due) return null;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-bold whitespace-nowrap ${due.tone === 'danger' ? 'text-[#9A3B1B]' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
+    <span className={`inline-flex items-center gap-1 text-[11px] font-bold whitespace-nowrap ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
       <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}
     </span>
   );
@@ -281,12 +281,12 @@ function TaskCard({ task, owner, project, editable, dragging, onDragStart, onDra
         onDragEnd={onDragEnd}
         onContextMenu={openMenu}
         onClick={e => { if (!(e.target as HTMLElement).closest('button')) onOpen(); }}
-        className={`group bg-white rounded-3xl p-4 border border-theme-light/50 shadow-soft hover:shadow-diffusion hover:border-theme-light transition-[box-shadow,border-color] ${editable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
+        className={`group bg-surface rounded-3xl p-4 border border-theme-light/50 shadow-soft hover:shadow-diffusion hover:border-theme-light transition-[box-shadow,border-color] ${editable ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'}`}
       >
         <div className="flex items-start justify-between gap-2 mb-2.5">
           {task.priority && !done ? <PriorityBadge priority={task.priority} /> : <span />}
           {editable && (
-            <button onClick={() => remove.mutate(task.id)} className="opacity-0 group-hover:opacity-100 focus:opacity-100 icon-btn w-8 h-8 -mt-1 -mr-1 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] transition-opacity" aria-label="Görevi sil">
+            <button onClick={() => remove.mutate(task.id)} className="opacity-0 group-hover:opacity-100 focus:opacity-100 icon-btn w-8 h-8 -mt-1 -mr-1 hover:text-danger hover:bg-danger-soft transition-opacity" aria-label="Görevi sil">
               <Trash size={15} weight="bold" />
             </button>
           )}
@@ -404,13 +404,13 @@ function GroupCard({ group: g, groupBy, userById, projectById, onOpen, onNew }: 
       <div className="flex items-center gap-3 p-4 sm:px-5">
         <button type="button" onClick={() => setCollapsed(c => !c)} aria-expanded={!collapsed} className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-2xl">
           {g.user ? <Avatar user={g.user} size="sm" /> : (
-            <span className="w-9 h-9 rounded-xl shrink-0" style={{ backgroundColor: g.project ? projectColor(g.project.name) : '#EDE8D5' }} aria-hidden="true" />
+            <span className="w-9 h-9 rounded-xl shrink-0" style={{ backgroundColor: g.project ? projectColor(g.project.name) : 'rgb(var(--lightest))' }} aria-hidden="true" />
           )}
           <span className="min-w-0 flex-1">
             <span className="block text-base font-bold text-theme-text truncate">{g.label}</span>
             <span className="block text-xs text-theme-muted font-semibold tabular">
               {g.open.length} açık · {g.done.length}/{total} tamamlandı
-              {overdue > 0 && <span className="text-[#9A3B1B]"> · {overdue} gecikmiş</span>}
+              {overdue > 0 && <span className="text-danger"> · {overdue} gecikmiş</span>}
             </span>
           </span>
           <ProgressBar value={total ? g.done.length / total : 0} className="hidden sm:block w-32 shrink-0" />
@@ -470,7 +470,7 @@ function ListRow({ task, groupBy, userById, projectById, onOpen }: {
               owner ? <span className="flex items-center gap-1.5 min-w-0"><Avatar user={owner} size="xs" /><span className="truncate">{owner.fullName}</span></span> : <span>Pasif kullanıcı</span>
             ) : (
               <span className="flex items-center gap-1.5 min-w-0 truncate">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project ? projectColor(project.name) : '#D8D2BE' }} aria-hidden="true" />
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: project ? projectColor(project.name) : 'rgb(var(--light))' }} aria-hidden="true" />
                 {project?.name ?? 'Projesiz'}
               </span>
             )}

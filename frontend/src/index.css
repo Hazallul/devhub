@@ -3,13 +3,41 @@
 @tailwind utilities;
 
 @layer base {
+  /* Renk değişkenleri ("R G B"): tailwind.config.js bunları theme.*, surface, ink, accent, danger/warn/clay/good olarak kullanır.
+     Koyu tema html.dark ile açılır (Ayarlar > Görünüm; tercih localStorage "devhub.theme", ilk boyamadan önce index.html'deki betikle uygulanır). */
+  :root {
+    color-scheme: light;
+    --lightest: 246 240 215; --light: 197 216 157; --medium: 156 171 132; --dark: 137 152 109; --deep: 90 102 71;
+    --cream: 251 248 236; --text: 44 38 56; --muted: 107 101 119;
+    --surface: 255 255 255; --ink: 44 38 56; --accent: 90 102 71; --shadow: 44 38 56;
+    --danger: 154 59 27; --danger-soft: 251 237 229; --danger-line: 239 201 181; --danger-ink: 122 62 31; --danger-solid: 154 59 27; --danger-solid-hover: 126 47 21;
+    --warn: 184 134 27; --warn-soft: 247 236 208; --warn-line: 232 211 156; --warn-ink: 110 82 16;
+    --clay: 201 116 79; --clay-soft: 243 225 214; --clay-line: 233 201 184; --clay-ink: 138 75 42; --clay-mid: 217 168 138;
+    --good: 126 154 75; --good-soft: 241 245 230; --good-ink: 63 90 26;
+    /* grafikler: ızgara çizgisi ve sıralı tek renk rampası (açık → koyu = az → çok) */
+    --grid: 237 232 213; --ramp-1: 156 171 132; --ramp-2: 111 127 82; --ramp-3: 70 82 51;
+  }
+  /* Koyu tema: aynı zeytin tonlarının koyu karşılıkları. Metin/vurgu renkleri açılır, zeminler koyulaşır;
+     "accent" ve "danger-solid" beyaz yazıyla 4.5:1'i korur, "ink" koyu kalır. */
+  html.dark {
+    color-scheme: dark;
+    --lightest: 42 48 33; --light: 66 77 51; --medium: 125 140 99; --dark: 168 183 138; --deep: 197 214 156;
+    --cream: 21 23 15; --text: 236 232 218; --muted: 167 162 174;
+    --surface: 31 34 26; --ink: 10 11 7; --accent: 95 110 71; --shadow: 0 0 0;
+    --danger: 240 165 133; --danger-soft: 59 35 26; --danger-line: 107 59 40; --danger-ink: 245 189 162; --danger-solid: 169 73 42; --danger-solid-hover: 142 59 32;
+    --warn: 222 176 72; --warn-soft: 52 42 18; --warn-line: 98 79 34; --warn-ink: 236 205 130;
+    --clay: 222 146 110; --clay-soft: 60 42 32; --clay-line: 96 66 50; --clay-ink: 236 186 156; --clay-mid: 150 98 72;
+    --good: 152 180 100; --good-soft: 38 48 28; --good-ink: 190 215 145;
+    --grid: 50 56 42; --ramp-1: 84 97 62; --ramp-2: 135 155 98; --ramp-3: 196 213 152;
+  }
+
   body {
     @apply bg-theme-cream text-theme-text font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-theme-deep ring-offset-2 ring-offset-white;
+    @apply outline-none ring-2 ring-theme-deep ring-offset-2 ring-offset-surface;
   }
 
   ::selection {
@@ -19,7 +47,7 @@
 
 @layer components {
   .input {
-    @apply w-full px-4 py-3 rounded-2xl bg-white border border-theme-light/70 text-theme-text font-medium
+    @apply w-full px-4 py-3 rounded-2xl bg-surface border border-theme-light/70 text-theme-text font-medium
       placeholder:text-theme-muted/60 transition-shadow
       focus:outline-none focus:ring-2 focus:ring-theme-medium focus:border-transparent;
   }
@@ -34,7 +62,7 @@
   }
 
   .btn-primary {
-    @apply btn bg-theme-deep text-white hover:bg-theme-text;
+    @apply btn bg-accent text-white hover:bg-ink;
   }
 
   .btn-secondary {
@@ -47,7 +75,7 @@
 
   /* Ayrıntı panellerindeki kompakt özellik seçicileri (select / date) */
   .prop-select {
-    @apply w-full px-3 py-2 rounded-xl bg-white border border-theme-light/70 text-sm font-semibold text-theme-text
+    @apply w-full px-3 py-2 rounded-xl bg-surface border border-theme-light/70 text-sm font-semibold text-theme-text
       hover:border-theme-medium transition-colors focus:outline-none focus:ring-2 focus:ring-theme-medium;
   }
 
@@ -57,7 +85,7 @@
   }
 
   .card {
-    @apply bg-white rounded-3xl border border-theme-light/40 shadow-soft;
+    @apply bg-surface rounded-3xl border border-theme-light/40 shadow-soft;
   }
 
   .eyebrow {
@@ -68,7 +96,7 @@
 @layer utilities {
   .scrollbar-thin {
     scrollbar-width: thin;
-    scrollbar-color: #C5D89D transparent;
+    scrollbar-color: rgb(var(--light)) transparent;
   }
   /* Kenar çubukları: kaydırma çubuğu yalnızca üzerine gelince görünür (boşken yeşil şerit dikkat dağıtmasın) */
   .scrollbar-hover {
@@ -78,11 +106,16 @@
   }
   .scrollbar-hover:hover,
   .scrollbar-hover:focus-within {
-    scrollbar-color: #C5D89D transparent;
+    scrollbar-color: rgb(var(--light)) transparent;
   }
   .tabular {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Tema değişirken renkler kısa bir geçişle değişir (yalnızca o an; normalde hiçbir şeyin renk geçişini uzatmaz). */
+html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease, fill 0.3s ease !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -115,7 +148,7 @@
 .doc-prose .selectedCell::after { content: ''; @apply absolute inset-0 bg-theme-light/40 pointer-events-none; }
 .doc-prose img.doc-image, .doc-prose [data-resize-wrapper] img { @apply max-w-full h-auto rounded-2xl border border-theme-light/50; }
 .doc-prose .ProseMirror-selectednode img, .doc-prose img.ProseMirror-selectednode { @apply ring-2 ring-theme-medium ring-offset-2; }
-.doc-prose [data-resize-handle] { @apply w-3 h-3 rounded-full bg-white border-2 border-theme-deep; }
+.doc-prose [data-resize-handle] { @apply w-3 h-3 rounded-full bg-surface border-2 border-theme-deep; }
 .doc-prose p.is-empty::before,
 .doc-prose h2.is-empty::before,
 .doc-prose h3.is-empty::before {

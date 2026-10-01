@@ -146,7 +146,7 @@ function ReportsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Aktif çalışan" icon={UsersIcon} value={users?.length ?? '–'} hint={`${workload.idle.length} kişinin açık görevi yok`} />
-        <StatCard label="Açık görev" icon={CheckSquare} value={openTasks.length} hint={overdue.length ? <span className="text-[#9A3B1B] font-bold">{overdue.length} gecikmiş</span> : 'Gecikmiş görev yok'} />
+        <StatCard label="Açık görev" icon={CheckSquare} value={openTasks.length} hint={overdue.length ? <span className="text-danger font-bold">{overdue.length} gecikmiş</span> : 'Gecikmiş görev yok'} />
         <StatCard label="Son 30 günde tamamlanan" icon={CheckCircle} value={completed30} hint="Görev" />
         <StatCard label={`${year} yıllık izin kullanımı`} icon={CalendarBlank} value={<>{usedAnnual}<span className="text-lg text-theme-muted font-semibold">/{entitlementTotal}</span></>} hint="İş günü (onaylı / toplam hak)" />
       </div>
@@ -253,7 +253,7 @@ function ReportsPage() {
                       <td className="py-2.5 pr-4 text-right tabular">{b.entitlement}</td>
                       <td className="py-2.5 pr-4 text-right tabular">{b.used}</td>
                       <td className="py-2.5 pr-4 text-right tabular text-theme-muted">{b.pending || '–'}</td>
-                      <td className={`py-2.5 text-right tabular font-bold ${b.remaining <= 2 ? 'text-[#9A3B1B]' : ''}`}>{b.remaining}</td>
+                      <td className={`py-2.5 text-right tabular font-bold ${b.remaining <= 2 ? 'text-danger' : ''}`}>{b.remaining}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -266,7 +266,7 @@ function ReportsPage() {
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
               <div>
                 <h2 id="r-overdue" className="text-lg font-bold tracking-tight flex items-center gap-2">
-                  <Warning size={20} weight="duotone" className="text-[#9A3B1B]" /> Gecikmiş görevler
+                  <Warning size={20} weight="duotone" className="text-danger" /> Gecikmiş görevler
                 </h2>
                 <p className="text-sm text-theme-muted">Son tarihi geçmiş, tamamlanmamış görevler</p>
               </div>
@@ -298,7 +298,7 @@ function ReportsPage() {
                           <span className="block text-xs text-theme-muted">{u?.fullName}{t.projectId ? ` · ${projectById.get(t.projectId)?.name}` : ''} · son tarih {formatDate(t.dueDate!)}</span>
                         </span>
                         {t.priority && <PriorityBadge priority={t.priority} />}
-                        <span className="text-xs font-bold text-[#9A3B1B] tabular whitespace-nowrap">{late} gün gecikti</span>
+                        <span className="text-xs font-bold text-danger tabular whitespace-nowrap">{late} gün gecikti</span>
                       </button>
                     </li>
                   );

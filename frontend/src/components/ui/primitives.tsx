@@ -14,16 +14,16 @@ export function Avatar({ user, size = 'md', ring }: { user: Pick<User, 'fullName
   }[size];
   const dot = size === 'xs' ? null : user.status ? USER_STATUS[user.status].dot : null;
   return (
-    <div className={`relative shrink-0 ${ring ? 'ring-2 ring-white' : ''} ${cls}`}>
+    <div className={`relative shrink-0 ${ring ? 'ring-2 ring-surface' : ''} ${cls}`}>
       <div
-        className={`w-full h-full flex items-center justify-center font-bold text-theme-text ${cls}`}
+        className={`w-full h-full flex items-center justify-center font-bold text-[#2C2638] ${cls}`}
         style={{ backgroundColor: user.avatarColor || '#C5D89D' }}
         aria-hidden="true"
       >
         {initials(user.fullName)}
       </div>
       {dot && (
-        <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ${dot}`} aria-hidden="true" />
+        <span className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-surface ${dot}`} aria-hidden="true" />
       )}
     </div>
   );
@@ -37,7 +37,7 @@ export function AvatarStack({ users, max = 4 }: { users: User[]; max?: number })
         <div key={u.id} title={u.fullName}><Avatar user={u} size="xs" ring /></div>
       ))}
       {extra > 0 && (
-        <div className="w-7 h-7 rounded-lg ring-2 ring-white bg-theme-lightest text-theme-deep text-[10px] font-bold flex items-center justify-center">
+        <div className="w-7 h-7 rounded-lg ring-2 ring-surface bg-theme-lightest text-theme-deep text-[10px] font-bold flex items-center justify-center">
           +{extra}
         </div>
       )}
@@ -134,7 +134,7 @@ export function EmptyState({ icon: IconCmp, title, description, action }: { icon
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="text-center py-14 px-6 bg-white/60 rounded-3xl border border-theme-light/60 border-dashed"
+      className="text-center py-14 px-6 bg-surface/60 rounded-3xl border border-theme-light/60 border-dashed"
     >
       <div className="w-14 h-14 bg-theme-lightest rounded-2xl flex items-center justify-center mx-auto mb-4 text-theme-deep">
         <IconCmp size={28} weight="duotone" aria-hidden="true" />
@@ -161,7 +161,7 @@ interface SegmentedProps<T extends string> {
 /** Seçili arka plan, seçenekler arasında kayarak geçer. */
 export function Segmented<T extends string>({ value, onChange, options, layoutId, label }: SegmentedProps<T>) {
   return (
-    <div role="tablist" aria-label={label} className="inline-flex flex-wrap gap-1 p-1 bg-white rounded-2xl border border-theme-light/60 shadow-soft">
+    <div role="tablist" aria-label={label} className="inline-flex flex-wrap gap-1 p-1 bg-surface rounded-2xl border border-theme-light/60 shadow-soft">
       {options.map(o => {
         const selected = o.value === value;
         return (
@@ -179,7 +179,7 @@ export function Segmented<T extends string>({ value, onChange, options, layoutId
             <span className="relative flex items-center gap-1.5">
               {o.label}
               {o.count !== undefined && (
-                <span className={`text-[11px] tabular px-1.5 rounded-md ${selected ? 'bg-white text-theme-deep' : 'bg-theme-lightest/70'}`}>{o.count}</span>
+                <span className={`text-[11px] tabular px-1.5 rounded-md ${selected ? 'bg-surface text-theme-deep' : 'bg-theme-lightest/70'}`}>{o.count}</span>
               )}
             </span>
           </button>

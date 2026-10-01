@@ -65,7 +65,7 @@ export default function Monitoring() {
             type="button"
             onClick={() => setLive(l => !l)}
             aria-pressed={live}
-            className={`btn min-h-[44px] px-4 border ${live ? 'bg-white border-theme-light/70 text-theme-deep' : 'bg-theme-lightest border-theme-light text-theme-muted'}`}
+            className={`btn min-h-[44px] px-4 border ${live ? 'bg-surface border-theme-light/70 text-theme-deep' : 'bg-theme-lightest border-theme-light text-theme-muted'}`}
             title={live ? 'Otomatik yenilemeyi duraklat' : 'Otomatik yenilemeyi başlat'}
           >
             {live ? (
@@ -93,7 +93,7 @@ export default function Monitoring() {
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)}
         </div>
       ) : isError || !data ? (
-        <div role="alert" className="card p-6 flex items-center gap-3 text-[#9A3B1B]">
+        <div role="alert" className="card p-6 flex items-center gap-3 text-danger">
           <WarningCircle size={22} weight="bold" /> İzleme verisi alınamadı. Backend çalışıyor mu?
         </div>
       ) : (
@@ -105,7 +105,7 @@ export default function Monitoring() {
           </p>
 
           {!data.host.dockerAvailable && (
-            <div role="status" className="mb-6 flex items-start gap-3 p-4 rounded-3xl bg-[#F7ECD0] border border-[#E8D39C] text-[#6E5210]">
+            <div role="status" className="mb-6 flex items-start gap-3 p-4 rounded-3xl bg-warn-soft border border-warn-line text-warn-ink">
               <Info size={22} weight="duotone" className="shrink-0 mt-0.5" aria-hidden="true" />
               <div className="text-sm">
                 <p className="font-bold">Docker bilgisine ulaşılamıyor</p>
@@ -368,7 +368,7 @@ function ChartCard({ title, current, values, format, note, children }: {
   const avg = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null;
   const max = nums.length ? Math.max(...nums) : null;
   return (
-    <section className="bg-white rounded-3xl border border-theme-light/50 p-4" aria-label={title}>
+    <section className="bg-surface rounded-3xl border border-theme-light/50 p-4" aria-label={title}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-theme-text">{title}</h3>
@@ -388,7 +388,7 @@ function ChartCard({ title, current, values, format, note, children }: {
 
 function Fact({ label, value, hint, icon }: { label: string; value: string; hint?: string; icon?: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-2xl border border-theme-light/40 p-3 min-w-0">
+    <div className="bg-surface rounded-2xl border border-theme-light/40 p-3 min-w-0">
       <dt className="eyebrow flex items-center gap-1">{icon}{label}</dt>
       <dd className="text-sm font-bold text-theme-text mt-1 truncate tabular" title={value}>{value}</dd>
       {hint && <dd className="text-[11px] text-theme-muted font-medium truncate" title={hint}>{hint}</dd>}

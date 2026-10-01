@@ -175,7 +175,7 @@ export interface LeaveBalance {
 
 export type NotificationType =
     | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'TODO_COMMENT' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
-    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED';
+    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED' | 'ONBOARDING_DONE';
 
 export interface AppNotification {
     id: number;
@@ -392,4 +392,45 @@ export interface DocRevision {
   decidedAt: string | null;
   /** listelerde null */
   content: DocNode | null;
+}
+
+// ---------- İşe başlangıç listesi ----------
+/** Adımın kendiliğinden tamamlanma kuralı; null = kişi işaretler */
+export type OnboardingRule = 'SIFRE' | 'ILETISIM' | 'DOKUMAN';
+
+export interface OnboardingStep {
+  id: number;
+  title: string;
+  description: string | null;
+  /** uygulama içi adres (/docs/...) ya da https bağlantısı */
+  link: string | null;
+  autoRule: OnboardingRule | null;
+  position: number;
+}
+
+export interface OnboardingMyStep extends Omit<OnboardingStep, 'position'> {
+  done: boolean;
+  doneAt: string | null;
+}
+
+export interface OnboardingStatus {
+  /** false: kişi için liste açılmamış */
+  active: boolean;
+  startedAt: string | null;
+  completedAt: string | null;
+  /** tamamlanan kart Genel Bakış'tan kaldırıldı */
+  closed: boolean;
+  done: number;
+  total: number;
+  steps: OnboardingMyStep[];
+}
+
+export interface OnboardingProgress {
+  userId: number;
+  fullName: string;
+  startedAt: string;
+  completedAt: string | null;
+  done: number;
+  total: number;
+  doneStepIds: number[];
 }

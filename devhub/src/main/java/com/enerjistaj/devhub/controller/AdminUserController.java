@@ -43,6 +43,8 @@ public class AdminUserController {
     private final ProjectRepository projectRepository;
     private final PasswordEncoder passwordEncoder;
     private final CurrentUser currentUser;
+    private final com.enerjistaj.devhub.realtime.RealtimeService realtime;
+    private final com.enerjistaj.devhub.onboarding.OnboardingService onboarding;
 
     /** Pasifler dahil tüm kullanıcılar. */
     @GetMapping
@@ -83,6 +85,9 @@ public class AdminUserController {
                 .mustChangePassword(true)
                 .build();
         User saved = userRepository.save(user);
+        // İşe başlangıç listesi varsayılan olarak açılır; yönetici formda kapatabilir.
+        boolean withOnboarding = !Boolean.FALSE.equals(payload.get("onboarding"));
+        if (withOnboarding) onboarding.start(saved, me);
         actionLogService.record(LogCategory.KULLANICI, LogAction.OLUSTURMA, "Yeni kullanıcı oluşturuldu: " + saved.getFullName()).by(me)
                 .target("KULLANICI", saved.getId(), saved.getFullName())
                 .detail("E-posta: " + saved.getEmail())
@@ -93,6 +98,7 @@ public class AdminUserController {
                 .detail("Yıllık izin hakkı: " + LeavePolicy.entitlement(saved.getHireDate(), LocalDate.now(ActionLogService.ZONE)) + " gün (kıdeme göre otomatik)")
                 .detail(chosen != null ? "Başlangıç şifresini yönetici belirledi; ilk girişte değiştirilmesi zorunlu"
                         : "Başlangıç şifresi otomatik oluşturuldu; ilk girişte değiştirilmesi zorunlu")
+                .detail(withOnboarding ? "İşe başlangıç listesi açıldı" : null)
                 .level(saved.getRole() == Role.ADMIN ? LogLevel.KRITIK : LogLevel.BILGI).save();
         return ResponseEntity.ok(Map.of("user", UserDto.from(saved), "temporaryPassword", temporaryPassword));
     }
@@ -156,7 +162,10 @@ public class AdminUserController {
         boolean wasActive = user.isActive();
         user.setActive(active);
         User saved = userRepository.save(user);
-        if (!active) todoMembershipService.onUserDeactivated(saved);
+        if (!active) {
+            todoMembershipService.onUserDeactivated(saved);
+            realtime.disconnect(saved.getId());
+        }
         if (wasActive != active) {
             actionLogService.record(LogCategory.KULLANICI, active ? LogAction.AKTIFLESTIRME : LogAction.PASIFLESTIRME,
                     (active ? "Hesap yeniden etkinleştirildi: " : "Hesap pasifleştirildi: ") + saved.getFullName()).by(me)

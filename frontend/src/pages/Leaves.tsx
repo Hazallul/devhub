@@ -93,7 +93,7 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
             style={{ transformOrigin: `${arrowLeft}px ${placement === 'top' ? '100%' : '0%'}` }}
             className="relative"
           >
-            <div className="bg-theme-text text-white rounded-2xl shadow-float p-3.5">
+            <div className="bg-ink text-white rounded-2xl shadow-float p-3.5">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-bold">{tip.user.fullName}</p>
                 <span className="text-[10px] font-bold uppercase tracking-wide bg-white/15 px-1.5 py-0.5 rounded-md">
@@ -103,7 +103,7 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
               <p className="text-xs text-white/80 font-medium mt-1">{leaveTypeMeta(tip.leave.type).label} · {rangeLabel(tip.leave, holidays)}</p>
               {tip.leave.note && (
                 <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 flex gap-1.5 leading-relaxed">
-                  <ChatText size={14} weight="bold" className="shrink-0 mt-px text-theme-light" aria-hidden="true" />
+                  <ChatText size={14} weight="bold" className="shrink-0 mt-px text-[#C5D89D]" aria-hidden="true" />
                   <span>“{tip.leave.note}”</span>
                 </p>
               )}
@@ -117,7 +117,7 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
             {/* Ok: çubuktaki noktayı gösterir */}
             <span
               aria-hidden="true"
-              className={`absolute w-3 h-3 bg-theme-text rotate-45 -translate-x-1/2 ${placement === 'top' ? '-bottom-1.5' : '-top-1.5'}`}
+              className={`absolute w-3 h-3 bg-ink rotate-45 -translate-x-1/2 ${placement === 'top' ? '-bottom-1.5' : '-top-1.5'}`}
               style={{ left: arrowLeft }}
             />
           </motion.div>
@@ -337,7 +337,7 @@ export default function Leaves() {
               >
                 {windowLabel(days[0], days[WINDOW - 1])}
                 {days.some(d => holidays.set.has(toIsoDay(d))) && (
-                  <span className="text-[#8A4B2A]"> · {days.filter(d => holidays.set.has(toIsoDay(d))).map(d => `${dayMonth.format(d)} ${holidays.names.get(toIsoDay(d))}`).join(', ')}</span>
+                  <span className="text-clay-ink"> · {days.filter(d => holidays.set.has(toIsoDay(d))).map(d => `${dayMonth.format(d)} ${holidays.names.get(toIsoDay(d))}`).join(', ')}</span>
                 )}
               </motion.p>
             </AnimatePresence>
@@ -364,7 +364,7 @@ export default function Leaves() {
               ))
               : <span className="flex items-center gap-1.5"><span className={`w-3 h-3 rounded ${LEAVE_GENERIC.className}`} />İzinli</span>}
             <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded border-2 border-dashed border-theme-dark" />{isAdmin ? 'Onay bekliyor' : 'Talebim onay bekliyor'}</span>
-            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-[#F3E1D6]" />Resmi tatil</span>
+            <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-clay-soft" />Resmi tatil</span>
           </div>
         </div>
         {isLoading ? <Skeleton className="h-48" /> : (
@@ -395,7 +395,7 @@ export default function Leaves() {
                           </p>
                           <div
                             title={holidayName ? `Resmi tatil: ${holidayName}` : undefined}
-                            className={`py-1.5 rounded-lg ${isToday ? 'bg-theme-deep text-white' : holidayName ? 'bg-[#F3E1D6] text-[#8A4B2A]' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i !== BUFFER ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
+                            className={`py-1.5 rounded-lg ${isToday ? 'bg-accent text-white' : holidayName ? 'bg-clay-soft text-clay-ink' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i !== BUFFER ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
                           >
                             <p className="text-[10px] font-bold uppercase">{weekday.format(d)}</p>
                             <p className="text-sm font-bold tabular">{d.getDate()}</p>
@@ -432,7 +432,7 @@ export default function Leaves() {
                               return (
                                 <span
                                   key={i}
-                                  className={`absolute inset-y-0 ${holiday ? 'bg-[#F3E1D6]/70' : 'bg-theme-lightest/80'}`}
+                                  className={`absolute inset-y-0 ${holiday ? 'bg-clay-soft/70' : 'bg-theme-lightest/80'}`}
                                   style={{ left: `${(i / TOTAL) * 100}%`, width: `${100 / TOTAL}%` }}
                                 />
                               );
@@ -457,7 +457,7 @@ export default function Leaves() {
                                   onFocus={e => showTip(e.currentTarget, l, user)}
                                   onBlur={() => setTip(null)}
                                   className={`absolute top-1.5 bottom-1.5 rounded-lg origin-left flex items-center gap-1 px-2 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-theme-deep focus-visible:ring-offset-1 ${
-                                    pendingBar ? 'border-2 border-dashed border-theme-dark bg-white/70' : (isAdmin ? leaveTypeMeta(l.type) : LEAVE_GENERIC).className
+                                    pendingBar ? 'border-2 border-dashed border-theme-dark bg-surface/70' : (isAdmin ? leaveTypeMeta(l.type) : LEAVE_GENERIC).className
                                   }`}
                                   style={{ left: `calc(${(startIdx / TOTAL) * 100}% + 2px)`, width: `calc(${((endIdx - startIdx + 1) / TOTAL) * 100}% - 4px)` }}
                                 >
@@ -502,7 +502,7 @@ export default function Leaves() {
         {isAdmin && (
           <section aria-labelledby="pending-title">
             <h2 id="pending-title" className="text-lg font-bold tracking-tight mb-4 flex items-center gap-2">
-              Onay Bekleyenler <Pill className="bg-theme-deep text-white">{pending.length}</Pill>
+              Onay Bekleyenler <Pill className="bg-accent text-white">{pending.length}</Pill>
             </h2>
             {pending.length === 0 ? (
               <EmptyState icon={CalendarCheck} title="Bekleyen talep yok" description="Yeni talepler geldiğinde burada görünecek." />
@@ -524,7 +524,7 @@ export default function Leaves() {
                           </button>
                         </div>
                         <div className="flex gap-2 shrink-0">
-                          <button onClick={() => setDeciding({ leave: l, decision: 'REDDEDILDI' })} disabled={decide.isPending} className="icon-btn border border-theme-light/70 hover:text-[#9A3B1B] hover:bg-[#FBEDE5] hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
+                          <button onClick={() => setDeciding({ leave: l, decision: 'REDDEDILDI' })} disabled={decide.isPending} className="icon-btn border border-theme-light/70 hover:text-danger hover:bg-danger-soft hover:border-transparent" aria-label={`${u?.fullName} talebini reddet`} title="Reddet">
                             <X size={18} weight="bold" />
                           </button>
                           <button onClick={() => setDeciding({ leave: l, decision: 'ONAYLANDI' })} disabled={decide.isPending} className="btn-primary h-10 min-h-0 px-4 text-sm" aria-label={`${u?.fullName} talebini onayla`}>
@@ -543,7 +543,7 @@ export default function Leaves() {
             </h2>
             <p className="text-sm text-theme-muted mb-4">Yanlış karar verdiyseniz geri alın; emin olduğunuzda kesinleştirin. Kesinleşen karar değiştirilemez.</p>
             {openDecisions.length === 0 ? (
-              <p className="text-sm text-theme-muted font-medium py-6 text-center bg-white/60 rounded-3xl border border-dashed border-theme-light/60">Kesinleştirilecek karar yok.</p>
+              <p className="text-sm text-theme-muted font-medium py-6 text-center bg-surface/60 rounded-3xl border border-dashed border-theme-light/60">Kesinleştirilecek karar yok.</p>
             ) : (
               <ul className="space-y-3" aria-labelledby="open-decisions-title">
                 <AnimatePresence initial={false}>
@@ -662,7 +662,7 @@ export default function Leaves() {
               <strong>{userById.get(confirming.userId)?.fullName}</strong> için <strong>{leaveTypeMeta(confirming.type).label}</strong> talebi
               ({rangeLabel(confirming, holidays.set)}) <strong>{confirming.state === 'ONAYLANDI' ? 'onaylandı' : 'reddedildi'}</strong> olarak kesinleşecek.
             </p>
-            <p className="text-sm font-semibold text-[#7A3E1F] bg-[#FBEDE5] rounded-2xl p-3.5 flex gap-2">
+            <p className="text-sm font-semibold text-danger-ink bg-danger-soft rounded-2xl p-3.5 flex gap-2">
               <LockSimple size={18} weight="bold" className="shrink-0 mt-px" />
               Kesinleştirdikten sonra bu kararı geri alamaz ya da değiştiremezsiniz.
             </p>
@@ -678,7 +678,7 @@ function DecisionNote({ leave }: { leave: LeaveRequest }) {
   if (!leave.decisionNote) return null;
   const rejected = leave.state === 'REDDEDILDI';
   return (
-    <p className={`text-xs mt-2 rounded-xl px-3 py-2 leading-relaxed whitespace-pre-wrap break-words ${rejected ? 'bg-[#FBEDE5] text-[#7A3E1F]' : 'bg-theme-lightest/70 text-theme-text'}`}>
+    <p className={`text-xs mt-2 rounded-xl px-3 py-2 leading-relaxed whitespace-pre-wrap break-words ${rejected ? 'bg-danger-soft text-danger-ink' : 'bg-theme-lightest/70 text-theme-text'}`}>
       <span className="font-bold">{leave.decidedByName ?? 'Yönetici'}:</span> {leave.decisionNote}
     </p>
   );

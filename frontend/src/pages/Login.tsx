@@ -65,7 +65,7 @@ export default function Login() {
   return (
     <div className="min-h-[100dvh] grid lg:grid-cols-[1.1fr_1fr] bg-theme-cream">
       {/* Marka paneli */}
-      <div className="hidden lg:flex relative overflow-hidden bg-theme-deep text-white p-14 flex-col justify-between">
+      <div className="hidden lg:flex relative overflow-hidden bg-accent text-white p-14 flex-col justify-between">
         <motion.div
           aria-hidden="true"
           className="absolute -top-32 -right-24 w-[420px] h-[420px] rounded-full bg-theme-medium/40 blur-3xl"
@@ -105,7 +105,7 @@ export default function Login() {
           className="w-full max-w-md"
         >
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-10 h-10 bg-theme-deep text-white rounded-2xl flex items-center justify-center font-bold text-xl">D</div>
+            <div className="w-10 h-10 bg-accent text-white rounded-2xl flex items-center justify-center font-bold text-xl">D</div>
             <span className="text-2xl font-bold tracking-tight">DevHub</span>
           </div>
 
@@ -125,7 +125,7 @@ export default function Login() {
                 className="input"
                 {...register('email')}
               />
-              {errors.email && <p id="email-err" role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{errors.email.message}</p>}
+              {errors.email && <p id="email-err" role="alert" className="text-xs font-semibold text-danger mt-1.5 ml-1">{errors.email.message}</p>}
             </div>
 
             <div>
@@ -150,11 +150,11 @@ export default function Login() {
                   {showPassword ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
                 </button>
               </div>
-              {errors.password && <p id="password-err" role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{errors.password.message}</p>}
+              {errors.password && <p id="password-err" role="alert" className="text-xs font-semibold text-danger mt-1.5 ml-1">{errors.password.message}</p>}
             </div>
 
             {errorMsg && (
-              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} role="alert" className="flex items-start gap-2.5 bg-[#FBEDE5] text-[#7A3E1F] p-3.5 rounded-2xl text-sm font-medium">
+              <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} role="alert" className="flex items-start gap-2.5 bg-danger-soft text-danger-ink p-3.5 rounded-2xl text-sm font-medium">
                 <Warning size={18} weight="fill" className="shrink-0 mt-0.5" /> {errorMsg}
               </motion.div>
             )}
@@ -180,7 +180,7 @@ export default function Login() {
                     whileTap={{ scale: 0.98 }}
                     disabled={!!demoLoading}
                     onClick={() => demoLogin(a.email)}
-                    className="flex items-center gap-3 p-4 rounded-3xl bg-white border border-theme-light/60 shadow-soft hover:shadow-diffusion hover:border-theme-medium text-left transition-[box-shadow,border-color] disabled:opacity-60"
+                    className="flex items-center gap-3 p-4 rounded-3xl bg-surface border border-theme-light/60 shadow-soft hover:shadow-diffusion hover:border-theme-medium text-left transition-[box-shadow,border-color] disabled:opacity-60"
                   >
                     <span className="w-10 h-10 rounded-xl bg-theme-lightest text-theme-deep flex items-center justify-center shrink-0">
                       {demoLoading === a.email ? <span className="w-4 h-4 border-2 border-theme-deep/30 border-t-theme-deep rounded-full animate-spin" /> : <a.icon size={20} weight="duotone" />}

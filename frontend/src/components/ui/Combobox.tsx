@@ -139,7 +139,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
               animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.18, ease: [0.16, 1, 0.3, 1] } }}
               exit={{ opacity: 0, y: pos.up ? 4 : -4, scale: 0.98, transition: { duration: 0.12 } }}
               style={{ left: pos.left, top: pos.top, bottom: pos.bottom, width, transformOrigin: pos.up ? 'bottom' : 'top' }}
-              className="fixed z-[150] bg-white rounded-2xl shadow-float border border-theme-light/70 overflow-hidden flex flex-col"
+              className="fixed z-[150] bg-surface rounded-2xl shadow-float border border-theme-light/70 overflow-hidden flex flex-col"
               onKeyDown={onKey}
             >
               <div className="p-2 border-b border-theme-light/50">
@@ -155,7 +155,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
                     aria-controls={listId}
                     aria-activedescendant={filtered[active] ? `${listId}-${active}` : undefined}
                     aria-label={`${label} ara`}
-                    className="w-full pl-9 pr-8 py-2 rounded-xl bg-theme-cream/70 border border-transparent text-sm font-medium text-theme-text placeholder:text-theme-muted focus:outline-none focus:bg-white focus:border-theme-light"
+                    className="w-full pl-9 pr-8 py-2 rounded-xl bg-theme-cream/70 border border-transparent text-sm font-medium text-theme-text placeholder:text-theme-muted focus:outline-none focus:bg-surface focus:border-theme-light"
                   />
                   {query && (
                     <button type="button" onClick={() => { setQuery(''); inputRef.current?.focus(); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-theme-muted hover:text-theme-text" aria-label="Aramayı temizle">

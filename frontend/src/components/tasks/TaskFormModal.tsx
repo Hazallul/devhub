@@ -241,7 +241,7 @@ function AssigneePicker({ value, onChange, projectName, error }: {
         )}
       </AnimatePresence>
 
-      <div className={`rounded-3xl border bg-theme-cream/60 ${error ? 'border-[#C9744F]' : 'border-theme-light/60'}`}>
+      <div className={`rounded-3xl border bg-theme-cream/60 ${error ? 'border-clay' : 'border-theme-light/60'}`}>
         <div className="flex items-center gap-2 p-2 border-b border-theme-light/50">
           <div className="relative flex-1">
             <MagnifyingGlass size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-theme-muted" aria-hidden="true" />
@@ -251,7 +251,7 @@ function AssigneePicker({ value, onChange, projectName, error }: {
               onChange={e => setQuery(e.target.value)}
               placeholder={scoped ? `${projectName} ekibinde ara…` : 'Kişi, unvan veya proje ara…'}
               aria-label="Kişi ara"
-              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-white border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
+              className="w-full pl-9 pr-3 py-2 rounded-2xl bg-surface border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
             />
           </div>
           <button type="button" onClick={toggleVisible} disabled={visible.length === 0} className="btn-ghost min-h-[38px] px-3 text-xs disabled:opacity-40">
@@ -293,9 +293,9 @@ function PickerRow({ user, checked, open, showProject, onToggle }: { user: User;
       role="checkbox"
       aria-checked={checked}
       onClick={onToggle}
-      className={`w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-colors ${checked ? 'bg-white shadow-soft' : 'hover:bg-white/70'}`}
+      className={`w-full flex items-center gap-3 p-2 rounded-2xl text-left transition-colors ${checked ? 'bg-surface shadow-soft' : 'hover:bg-surface/70'}`}
     >
-      <span className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? 'bg-theme-deep border-theme-deep text-white' : 'border-theme-medium bg-white'}`} aria-hidden="true">
+      <span className={`w-5 h-5 rounded-md border-2 shrink-0 flex items-center justify-center transition-colors ${checked ? 'bg-accent border-theme-deep text-white' : 'border-theme-medium bg-surface'}`} aria-hidden="true">
         {checked && <Check size={12} weight="bold" />}
       </span>
       <Avatar user={user} size="xs" />
@@ -306,7 +306,7 @@ function PickerRow({ user, checked, open, showProject, onToggle }: { user: User;
           {showProject && ` · ${user.currentProject ?? 'Boşta'}`}
         </span>
       </span>
-      {onLeave && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#F3E1D6] text-[#8A4B2A] shrink-0">İzinli</span>}
+      {onLeave && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-clay-soft text-clay-ink shrink-0">İzinli</span>}
       <span className="text-xs font-semibold text-theme-muted tabular shrink-0 w-14 text-right" title="Açık görev sayısı">{open} açık</span>
     </button>
   );

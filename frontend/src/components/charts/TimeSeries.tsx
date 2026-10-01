@@ -111,7 +111,7 @@ export function LineChart({ points, from, to, format, label, height = 150, minMa
         <svg width={width} height={height} className="block" onPointerMove={e => setHover(nearest(e.clientX, e.currentTarget.getBoundingClientRect()))} onPointerLeave={() => setHover(null)} aria-hidden="true">
           {yTicks.map(v => (
             <g key={v}>
-              <line x1={pad.l} x2={pad.l + w} y1={y(v)} y2={y(v)} stroke="#EDE8D5" strokeWidth={1} />
+              <line x1={pad.l} x2={pad.l + w} y1={y(v)} y2={y(v)} stroke="rgb(var(--grid))" strokeWidth={1} />
               <text x={pad.l - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" className="fill-theme-muted text-[10px] font-semibold tabular">{format(v)}</text>
             </g>
           ))}
@@ -131,7 +131,7 @@ export function LineChart({ points, from, to, format, label, height = 150, minMa
           })}
           {hp && (
             <g>
-              <line x1={x(hp.t)} x2={x(hp.t)} y1={pad.t} y2={pad.t + h} stroke="#2C2638" strokeOpacity={0.35} strokeWidth={1} />
+              <line x1={x(hp.t)} x2={x(hp.t)} y1={pad.t} y2={pad.t + h} stroke="rgb(var(--text))" strokeOpacity={0.35} strokeWidth={1} />
               <circle cx={x(hp.t)} cy={y(hp.v)} r={4.5} fill={color} stroke="#fff" strokeWidth={2} />
             </g>
           )}
@@ -142,7 +142,7 @@ export function LineChart({ points, from, to, format, label, height = 150, minMa
       {hp && (
         <div
           role="tooltip"
-          className="absolute pointer-events-none bg-theme-text text-white rounded-xl shadow-float px-3 py-2 whitespace-nowrap z-10"
+          className="absolute pointer-events-none bg-ink text-white rounded-xl shadow-float px-3 py-2 whitespace-nowrap z-10"
           style={{
             left: Math.min(Math.max(x(hp.t) + 12, 0), Math.max(0, width - 130)),
             top: Math.max(0, y(hp.v) - 52),

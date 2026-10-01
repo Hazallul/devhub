@@ -100,9 +100,9 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <button type="button" onClick={() => setOffset(o => o - 1)} className="icon-btn bg-white border border-theme-light/60" aria-label="Önceki hafta"><CaretLeft size={16} weight="bold" /></button>
-          <button type="button" onClick={() => setOffset(0)} disabled={offset === 0} className="h-10 px-4 rounded-xl bg-white border border-theme-light/60 text-sm font-bold text-theme-deep hover:bg-theme-lightest disabled:text-theme-muted disabled:hover:bg-white transition-colors">Bu hafta</button>
-          <button type="button" onClick={() => setOffset(o => o + 1)} className="icon-btn bg-white border border-theme-light/60" aria-label="Sonraki hafta"><CaretRight size={16} weight="bold" /></button>
+          <button type="button" onClick={() => setOffset(o => o - 1)} className="icon-btn bg-surface border border-theme-light/60" aria-label="Önceki hafta"><CaretLeft size={16} weight="bold" /></button>
+          <button type="button" onClick={() => setOffset(0)} disabled={offset === 0} className="h-10 px-4 rounded-xl bg-surface border border-theme-light/60 text-sm font-bold text-theme-deep hover:bg-theme-lightest disabled:text-theme-muted disabled:hover:bg-surface transition-colors">Bu hafta</button>
+          <button type="button" onClick={() => setOffset(o => o + 1)} className="icon-btn bg-surface border border-theme-light/60" aria-label="Sonraki hafta"><CaretRight size={16} weight="bold" /></button>
         </div>
       </header>
 
@@ -122,11 +122,11 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
                 aria-label={`${DAY_LONG[idx]} ${formatDate(day)}`}
                 {...dropProps(day)}
                 className={`flex flex-col min-h-[340px] rounded-3xl border p-2 transition-colors ${
-                  over === day ? 'border-theme-deep bg-theme-lightest' : isToday ? 'border-theme-medium bg-white' : weekend || holiday || leave ? 'border-theme-light/40 bg-theme-lightest/40' : 'border-theme-light/50 bg-white/70'
+                  over === day ? 'border-theme-deep bg-theme-lightest' : isToday ? 'border-theme-medium bg-surface' : weekend || holiday || leave ? 'border-theme-light/40 bg-theme-lightest/40' : 'border-theme-light/50 bg-surface/70'
                 }`}
               >
                 <div className="flex items-center gap-2 px-1.5 pt-1 pb-2">
-                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold tabular ${isToday ? 'bg-theme-deep text-white' : 'text-theme-text'}`}>{date.getDate()}</span>
+                  <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold tabular ${isToday ? 'bg-accent text-white' : 'text-theme-text'}`}>{date.getDate()}</span>
                   <span className={`text-xs font-bold uppercase tracking-wider ${isToday ? 'text-theme-deep' : 'text-theme-muted'}`}>{DAY_NAMES[idx]}</span>
                   {isToday && <span className="sr-only">(bugün)</span>}
                 </div>
@@ -162,13 +162,13 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
 
       <div className="grid gap-3 mt-4 lg:grid-cols-2">
         {overdue.length > 0 && (
-          <section aria-label="Geciken kartlar" className="rounded-3xl border border-[#E9C9B8] bg-[#FBEDE5]/60 p-3">
-            <h2 className="eyebrow text-[#9A3B1B] flex items-center gap-1.5 px-1 mb-2"><WarningCircle size={13} weight="bold" aria-hidden="true" /> Gecikenler <span className="tabular">({overdue.length})</span></h2>
+          <section aria-label="Geciken kartlar" className="rounded-3xl border border-clay-line bg-danger-soft/60 p-3">
+            <h2 className="eyebrow text-danger flex items-center gap-1.5 px-1 mb-2"><WarningCircle size={13} weight="bold" aria-hidden="true" /> Gecikenler <span className="tabular">({overdue.length})</span></h2>
             <ul className="grid gap-1.5 sm:grid-cols-2 max-h-52 overflow-y-auto scrollbar-thin">{overdue.map(i => <li key={i.id}>{chip(i)}</li>)}</ul>
           </section>
         )}
         <section aria-label="Tarihsiz kartlar" {...dropProps(NO_DATE)}
-          className={`rounded-3xl border p-3 transition-colors ${overdue.length === 0 ? 'lg:col-span-2' : ''} ${over === NO_DATE ? 'border-theme-deep bg-theme-lightest' : 'border-theme-light/50 bg-white/70'}`}>
+          className={`rounded-3xl border p-3 transition-colors ${overdue.length === 0 ? 'lg:col-span-2' : ''} ${over === NO_DATE ? 'border-theme-deep bg-theme-lightest' : 'border-theme-light/50 bg-surface/70'}`}>
           <h2 className="eyebrow flex items-center gap-1.5 px-1 mb-2"><CalendarX size={13} weight="bold" aria-hidden="true" /> Tarihsiz <span className="tabular">({undated.length})</span></h2>
           {undated.length === 0
             ? <p className="text-xs font-medium text-theme-muted px-1 pb-1">Tarihsiz kart yok. Aşağıdan ekleyin ya da bir kartın tarihini kaldırmak için buraya bırakın.</p>
@@ -195,7 +195,7 @@ function PlanCard({ item, selected, dragging, onSelect, onSend, onDragStart, onD
       onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(item.id)); onDragStart(); }}
       onDragEnd={onDragEnd}
       onContextMenu={e => menu(e, item, { onOpen: onSelect, onSend })}
-      className={`flex items-start gap-2 rounded-2xl border bg-white px-2 py-2 shadow-soft cursor-grab active:cursor-grabbing transition-[border-color,opacity] ${
+      className={`flex items-start gap-2 rounded-2xl border bg-surface px-2 py-2 shadow-soft cursor-grab active:cursor-grabbing transition-[border-color,opacity] ${
         selected ? 'border-theme-deep' : 'border-theme-light/60 hover:border-theme-medium'
       } ${dragging ? 'opacity-40' : ''}`}
     >
@@ -207,7 +207,7 @@ function PlanCard({ item, selected, dragging, onSelect, onSend, onDragStart, onD
             {item.dueTime && <span className="inline-flex items-center gap-0.5 tabular"><Bell size={11} weight="bold" aria-hidden="true" /> {item.dueTime}</span>}
             {item.repeatRule && <Repeat size={11} weight="bold" aria-label="Tekrarlanır" />}
             {item.taskId !== null && <CheckSquare size={11} weight="bold" aria-label="Bir göreve bağlı" />}
-            {item.important && <Star size={11} weight="fill" className="text-[#B8861B]" aria-label="Önemli" />}
+            {item.important && <Star size={11} weight="fill" className="text-warn" aria-label="Önemli" />}
           </span>
         )}
       </button>

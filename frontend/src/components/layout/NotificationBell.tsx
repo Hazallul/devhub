@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
 import {
-  Bell, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree, BookOpenText,
+  Bell, Flag, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree, BookOpenText,
 } from '@phosphor-icons/react';
 import { Menu } from '../ui/Menu';
 import { Skeleton } from '../ui/primitives';
@@ -11,7 +11,7 @@ import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllNo
 import { timeAgo } from '../../lib/format';
 import type { AppNotification, NotificationType } from '../../types';
 
-const TYPE_ICON: Record<NotificationType, Icon> = {
+export const TYPE_ICON: Record<NotificationType, Icon> = {
   TASK_ASSIGNED: CheckSquare,
   TASK_DUE: Clock,
   TASK_COMPLETED: CheckCircle,
@@ -30,10 +30,11 @@ const TYPE_ICON: Record<NotificationType, Icon> = {
   PROJECT_ASSIGNED: Briefcase,
   STATUS_CHANGED: Lightning,
   ANNOUNCEMENT: Megaphone,
+  ONBOARDING_DONE: Flag,
 };
 
 
-/** Üst bardaki bildirim zili: okunmamış sayısı 30 sn'de bir tazelenir, panel açılınca liste çekilir. */
+/** Üst bardaki bildirim zili: okunmamış sayısı anlık güncellenir (bağlantı yoksa 30 sn'de bir), panel açılınca liste çekilir. */
 export default function NotificationBell() {
   const navigate = useNavigate();
   const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
@@ -73,7 +74,7 @@ export default function NotificationBell() {
           {count > 0 && (
             <motion.span
               initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#9A3B1B] text-white text-[10px] font-bold tabular flex items-center justify-center ring-2 ring-theme-cream"
+              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-danger-solid text-white text-[10px] font-bold tabular flex items-center justify-center ring-2 ring-theme-cream"
             >
               {count > 9 ? '9+' : count}
             </motion.span>
@@ -124,7 +125,7 @@ export default function NotificationBell() {
                       {n.actorName ? `${n.actorName} · ` : ''}{timeAgo(n.createdAt)}
                     </span>
                   </span>
-                  {!n.read && <span className="w-2 h-2 rounded-full bg-theme-deep mt-1.5 shrink-0" aria-label="Okunmadı" />}
+                  {!n.read && <span className="w-2 h-2 rounded-full bg-accent mt-1.5 shrink-0" aria-label="Okunmadı" />}
                 </button>
               );
             })

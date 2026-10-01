@@ -55,7 +55,7 @@ export function Block({ node: n, headingId }: { node: DocNode; headingId?: strin
       return <Callout kind={(n.attrs?.kind as CalloutKind) in CALLOUT ? (n.attrs!.kind as CalloutKind) : 'NOT'} nodes={n.content} />;
     case 'table':
       return (
-        <div className="overflow-x-auto scrollbar-thin rounded-2xl border border-theme-light/60 bg-white">
+        <div className="overflow-x-auto scrollbar-thin rounded-2xl border border-theme-light/60 bg-surface">
           <table className="w-full text-sm border-collapse">
             <tbody>
               {n.content?.map((row, ri) => (
@@ -87,7 +87,7 @@ export function Block({ node: n, headingId }: { node: DocNode; headingId?: strin
       const alt = typeof n.attrs?.alt === 'string' ? n.attrs.alt : '';
       return (
         <figure className="my-2">
-          <a href={imageSrc(src)} target="_blank" rel="noopener noreferrer" className="inline-block max-w-full rounded-2xl overflow-hidden border border-theme-light/50 bg-white" title="Görseli tam boyutta aç">
+          <a href={imageSrc(src)} target="_blank" rel="noopener noreferrer" className="inline-block max-w-full rounded-2xl overflow-hidden border border-theme-light/50 bg-surface" title="Görseli tam boyutta aç">
             <img src={imageSrc(src)} alt={alt} loading="lazy" style={width ? { width } : undefined} className="max-w-full h-auto block" />
           </a>
           {alt && <figcaption className="text-xs text-theme-muted font-semibold mt-1.5">{alt}</figcaption>}
@@ -159,7 +159,7 @@ function CodeBlock({ lang, code }: { lang: unknown; code: string }) {
     navigator.clipboard?.writeText(code).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(() => {});
   };
   return (
-    <div className="rounded-2xl overflow-hidden bg-theme-text shadow-soft">
+    <div className="rounded-2xl overflow-hidden bg-ink shadow-soft">
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
         <span className="text-[11px] font-bold uppercase tracking-wider text-white/60">{langLabel(lang)}</span>
         <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/70 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="Kodu kopyala">

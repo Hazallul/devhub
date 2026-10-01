@@ -75,7 +75,7 @@ function CalloutView({ node, updateAttributes, editor, getPos }: ReactNodeViewPr
             {CALLOUT_KINDS.map(k => <option key={k} value={k}>{CALLOUT[k].label}</option>)}
           </select>
           <span className="text-[11px] text-theme-muted font-semibold hidden sm:inline">{c.hint}</span>
-          <button type="button" onClick={unwrap} className="ml-auto p-1 rounded-lg text-theme-muted hover:text-theme-text hover:bg-white/70" title="Kutuyu kaldır (yazı kalır)" aria-label="Kutuyu kaldır">
+          <button type="button" onClick={unwrap} className="ml-auto p-1 rounded-lg text-theme-muted hover:text-theme-text hover:bg-surface/70" title="Kutuyu kaldır (yazı kalır)" aria-label="Kutuyu kaldır">
             <X size={13} weight="bold" />
           </button>
         </div>
@@ -93,7 +93,7 @@ const DocCodeBlock = CodeBlock.extend({
 function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
   const lang = (node.attrs.language as string | null) ?? 'text';
   return (
-    <NodeViewWrapper className="rounded-2xl overflow-hidden bg-theme-text my-4">
+    <NodeViewWrapper className="rounded-2xl overflow-hidden bg-ink my-4">
       <div contentEditable={false} className="flex items-center gap-2 px-4 py-2 border-b border-white/10 select-none">
         <select
           value={CODE_LANGS.some(l => l.id === lang) ? lang : 'text'}

@@ -45,6 +45,8 @@ public class SecurityConfig {
                 response.getWriter().write("{\"message\":\"Oturum süresi doldu, tekrar giriş yapın.\"}");
             }))
             .authorizeHttpRequests(auth -> auth
+                // Anlık akışın (SSE) kapanışı ayrı bir "async" dağıtımla gelir; yetki asıl istekte zaten denetlendi.
+                .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.ASYNC, jakarta.servlet.DispatcherType.ERROR).permitAll()
                 .requestMatchers("/api/auth/**", "/api/health", "/error").permitAll()
                 // Doküman görselleri: <img> istekleri token taşımaz; adresler tahmin edilemeyen UUID'lerdir.
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/docs/images/*").permitAll()
@@ -78,7 +80,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of("http://localhost:5173"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Client-Id"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

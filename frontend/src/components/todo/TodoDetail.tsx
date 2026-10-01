@@ -86,7 +86,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="p-5 pb-4 border-b border-theme-light/40 bg-white">
+      <div className="p-5 pb-4 border-b border-theme-light/40 bg-surface">
         <div className="flex items-start gap-3">
           <span className="mt-1.5">
             <DoneToggle done={item.done} onToggle={() => update.mutate({ id: item.id, done: !item.done })} label={item.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'} />
@@ -106,7 +106,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
             onClick={() => update.mutate({ id: item.id, important: !item.important })}
             aria-pressed={item.important}
             aria-label={item.important ? 'Önemli işaretini kaldır' : 'Önemli olarak işaretle'}
-            className={`icon-btn w-9 h-9 shrink-0 ${item.important ? 'text-[#B8861B] hover:text-[#B8861B]' : ''}`}
+            className={`icon-btn w-9 h-9 shrink-0 ${item.important ? 'text-warn hover:text-warn' : ''}`}
           >
             <Star size={18} weight={item.important ? 'fill' : 'bold'} />
           </button>
@@ -136,14 +136,14 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
         <Steps item={item} />
 
         <section aria-label="Zamanlama" className="space-y-2">
-          <div className="px-3.5 py-3 rounded-2xl border bg-white border-theme-light/50">
+          <div className="px-3.5 py-3 rounded-2xl border bg-surface border-theme-light/50">
             <div className="flex items-center gap-3 text-sm font-semibold">
               <CalendarBlank size={18} weight="bold" className={item.dueDate ? 'text-theme-deep' : 'text-theme-muted'} aria-hidden="true" />
               <label htmlFor={`due-${item.id}`} className={item.dueDate ? 'text-theme-text' : 'text-theme-muted'}>
-                {item.dueDate ? <>Tarih: <span className={due?.tone === 'danger' ? 'text-[#9A3B1B]' : ''}>{due ? due.text : formatDate(item.dueDate)}</span></> : 'Tarih ekle'}
+                {item.dueDate ? <>Tarih: <span className={due?.tone === 'danger' ? 'text-danger' : ''}>{due ? due.text : formatDate(item.dueDate)}</span></> : 'Tarih ekle'}
               </label>
               {item.dueDate && (
-                <button type="button" onClick={() => setDue(null)} className="ml-auto text-xs font-bold text-theme-muted hover:text-[#9A3B1B] rounded" aria-label="Tarihi kaldır">Kaldır</button>
+                <button type="button" onClick={() => setDue(null)} className="ml-auto text-xs font-bold text-theme-muted hover:text-danger rounded" aria-label="Tarihi kaldır">Kaldır</button>
               )}
             </div>
             <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
@@ -153,7 +153,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
                   type="button"
                   onClick={() => setDue(q.value)}
                   aria-pressed={item.dueDate === q.value}
-                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors ${item.dueDate === q.value ? 'bg-theme-deep text-white' : 'bg-theme-cream text-theme-deep hover:bg-theme-lightest'}`}
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-colors ${item.dueDate === q.value ? 'bg-accent text-white' : 'bg-theme-cream text-theme-deep hover:bg-theme-lightest'}`}
                 >
                   {q.label}
                 </button>
@@ -199,7 +199,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
             )}
           </div>
 
-          <div className="flex items-center gap-3 px-3.5 py-2 rounded-2xl border bg-white border-theme-light/50 text-sm font-semibold">
+          <div className="flex items-center gap-3 px-3.5 py-2 rounded-2xl border bg-surface border-theme-light/50 text-sm font-semibold">
             <ListBullets size={18} weight="bold" className="text-theme-muted" aria-hidden="true" />
             <label htmlFor={`list-${item.id}`} className="text-theme-muted">Liste</label>
             <select
@@ -223,14 +223,14 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
             placeholder="Ayrıntı, bağlantı veya hatırlatma yazın…"
             onChange={e => noteField.change(e.target.value)}
             onBlur={noteField.flush}
-            className="w-full min-h-[120px] resize-y rounded-2xl bg-white border border-theme-light/50 px-3.5 py-3 text-sm leading-relaxed text-theme-text placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-medium [field-sizing:content]"
+            className="w-full min-h-[120px] resize-y rounded-2xl bg-surface border border-theme-light/50 px-3.5 py-3 text-sm leading-relaxed text-theme-text placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-medium [field-sizing:content]"
           />
         </section>
 
         {(shared || item.commentCount > 0) && <Comments item={item} />}
       </div>
 
-      <div className="p-4 border-t border-theme-light/40 bg-white flex items-center gap-2">
+      <div className="p-4 border-t border-theme-light/40 bg-surface flex items-center gap-2">
         <p className="text-xs font-semibold text-theme-muted flex-1 min-w-0 truncate">
           {item.done && item.doneAt ? `${item.doneById !== null && item.doneById !== me.id && item.doneByName ? `${firstName(item.doneByName)} tamamladı` : 'Tamamlandı'} · ${timeAgo(item.doneAt)}` : `Oluşturuldu · ${formatDate(toIsoDay(parseServerDate(item.createdAt)))}`}
         </p>
@@ -239,9 +239,9 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
           <FloppyDisk size={16} weight="bold" /> Kaydet
         </button>
         {!canDeleteCard(item, lists, me.id) ? null : confirmDelete ? (
-          <button type="button" onClick={() => remove.mutate(item.id, { onSuccess: onClose })} className="h-10 px-3 rounded-xl text-xs font-bold bg-[#FBEDE5] text-[#9A3B1B] hover:bg-[#F6DCCD] transition-colors">Silinsin mi?</button>
+          <button type="button" onClick={() => remove.mutate(item.id, { onSuccess: onClose })} className="h-10 px-3 rounded-xl text-xs font-bold bg-danger-soft text-danger hover:bg-clay-soft transition-colors">Silinsin mi?</button>
         ) : (
-          <button type="button" onClick={() => setConfirmDelete(true)} className="icon-btn hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Kartı sil" title="Kartı sil"><Trash size={18} weight="bold" /></button>
+          <button type="button" onClick={() => setConfirmDelete(true)} className="icon-btn hover:text-danger hover:bg-danger-soft" aria-label="Kartı sil" title="Kartı sil"><Trash size={18} weight="bold" /></button>
         )}
       </div>
     </div>
@@ -270,12 +270,12 @@ function Comments({ item }: { item: TodoItem }) {
       {comments && comments.length > 0 && (
         <ul className="space-y-2 mb-2">
           {comments.map(c => (
-            <li key={c.id} className="group rounded-2xl bg-white border border-theme-light/50 px-3.5 py-2.5">
+            <li key={c.id} className="group rounded-2xl bg-surface border border-theme-light/50 px-3.5 py-2.5">
               <p className="flex items-center gap-2 text-xs font-bold text-theme-deep">
                 <span className="truncate">{c.userId === me.id ? 'Siz' : c.userName}</span>
                 <span className="font-medium text-theme-muted whitespace-nowrap">· {timeAgo(c.createdAt)}</span>
                 {c.userId === me.id && (
-                  <button type="button" onClick={() => remove.mutate({ itemId: item.id, id: c.id })} className="ml-auto text-theme-muted hover:text-[#9A3B1B] opacity-0 group-hover:opacity-100 focus:opacity-100 rounded" aria-label="Yorumu sil" title="Yorumu sil">
+                  <button type="button" onClick={() => remove.mutate({ itemId: item.id, id: c.id })} className="ml-auto text-theme-muted hover:text-danger opacity-0 group-hover:opacity-100 focus:opacity-100 rounded" aria-label="Yorumu sil" title="Yorumu sil">
                     <Trash size={13} weight="bold" />
                   </button>
                 )}
@@ -285,7 +285,7 @@ function Comments({ item }: { item: TodoItem }) {
           ))}
         </ul>
       )}
-      <form onSubmit={submit} className="flex items-center gap-2 rounded-2xl bg-white border border-theme-light/50 pl-3.5 pr-1.5 py-1.5 focus-within:ring-2 focus-within:ring-theme-medium">
+      <form onSubmit={submit} className="flex items-center gap-2 rounded-2xl bg-surface border border-theme-light/50 pl-3.5 pr-1.5 py-1.5 focus-within:ring-2 focus-within:ring-theme-medium">
         <input value={draft} maxLength={1000} onChange={e => setDraft(e.target.value)} placeholder="Yorum yaz…" aria-label="Yorum yaz"
           className="flex-1 min-w-0 bg-transparent py-1.5 text-sm text-theme-text placeholder:text-theme-muted/70 focus:outline-none" />
         <button type="submit" disabled={!draft.trim() || add.isPending} className="icon-btn w-9 h-9 text-theme-deep disabled:opacity-30" aria-label="Yorumu gönder"><PaperPlaneTilt size={16} weight="bold" /></button>
@@ -314,7 +314,7 @@ function Steps({ item }: { item: TodoItem }) {
       </div>
       {item.steps.length > 0 && (
         <div className="h-1.5 rounded-full bg-theme-lightest overflow-hidden mb-3" aria-hidden="true">
-          <motion.div className="h-full rounded-full bg-theme-deep" animate={{ width: `${(done / item.steps.length) * 100}%` }} transition={{ type: 'spring', stiffness: 260, damping: 30 }} />
+          <motion.div className="h-full rounded-full bg-accent" animate={{ width: `${(done / item.steps.length) * 100}%` }} transition={{ type: 'spring', stiffness: 260, damping: 30 }} />
         </div>
       )}
       <ul className="space-y-1">
@@ -326,7 +326,7 @@ function Steps({ item }: { item: TodoItem }) {
           ))}
         </AnimatePresence>
       </ul>
-      <form onSubmit={e => { e.preventDefault(); submit(); }} className="flex items-center gap-2.5 mt-1 px-2 py-1.5 rounded-xl focus-within:bg-white border border-transparent focus-within:border-theme-light/60">
+      <form onSubmit={e => { e.preventDefault(); submit(); }} className="flex items-center gap-2.5 mt-1 px-2 py-1.5 rounded-xl focus-within:bg-surface border border-transparent focus-within:border-theme-light/60">
         <Plus size={16} weight="bold" className="text-theme-deep shrink-0" aria-hidden="true" />
         <input
           value={draft}
@@ -358,7 +358,7 @@ function StepRow({ itemId, step }: { itemId: number; step: TodoStep }) {
   };
 
   return (
-    <div className="group flex items-center gap-2.5 px-2 py-1 rounded-xl hover:bg-white">
+    <div className="group flex items-center gap-2.5 px-2 py-1 rounded-xl hover:bg-surface">
       <DoneToggle size="sm" done={step.done} onToggle={() => update.mutate({ itemId, id: step.id, done: !step.done })} label={step.done ? 'Adımı geri al' : 'Adımı tamamla'} />
       <input
         value={title}
@@ -369,7 +369,7 @@ function StepRow({ itemId, step }: { itemId: number; step: TodoStep }) {
         onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); }}
         className={`flex-1 min-w-0 bg-transparent text-sm font-medium focus:outline-none ${step.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}
       />
-      <button type="button" onClick={() => remove.mutate({ itemId, id: step.id })} className="icon-btn w-7 h-7 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label="Adımı sil">
+      <button type="button" onClick={() => remove.mutate({ itemId, id: step.id })} className="icon-btn w-7 h-7 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-danger hover:bg-danger-soft" aria-label="Adımı sil">
         <X size={13} weight="bold" />
       </button>
     </div>

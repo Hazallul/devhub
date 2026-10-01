@@ -148,7 +148,7 @@ function Space({ onHome }: { onHome: () => void }) {
     <div className="h-full flex">
       {/* Sol: görünümler ve listeler */}
       {/* Başlık satırı uygulamanın kenar çubuğundaki logo satırıyla aynı ölçülerde: ev karosu iki ekranda da aynı yerde durur. */}
-      <aside className="hidden lg:flex flex-col w-72 shrink-0 bg-white border-r border-theme-light/50 p-5">
+      <aside className="hidden lg:flex flex-col w-72 shrink-0 bg-surface border-r border-theme-light/50 p-5">
         <div className="flex items-center gap-3 px-3 mb-8 mt-2 h-10">
           <HomeButton onHome={onHome} />
           <div className="min-w-0">
@@ -176,7 +176,7 @@ function Space({ onHome }: { onHome: () => void }) {
           <div className="relative hidden sm:block flex-1 max-w-sm lg:ml-0">
             <MagnifyingGlass size={17} className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted" aria-hidden="true" />
             <input type="search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Tüm kartlarda ara…" aria-label="Kartlarda ara"
-              className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-white border border-theme-light/60 text-sm font-medium shadow-soft focus:outline-none focus:ring-2 focus:ring-theme-medium" />
+              className="w-full pl-11 pr-4 py-2.5 rounded-2xl bg-surface border border-theme-light/60 text-sm font-medium shadow-soft focus:outline-none focus:ring-2 focus:ring-theme-medium" />
           </div>
           <SaveStatus saving={saving} />
         </div>
@@ -211,7 +211,7 @@ function Space({ onHome }: { onHome: () => void }) {
       <AnimatePresence>
         {selected && (
           <>
-            <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedId(null)} className={`${overlayDetail ? '' : 'xl:hidden'} fixed inset-0 z-[101] bg-theme-text/25 backdrop-blur-sm`} />
+            <motion.div key="backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setSelectedId(null)} className={`${overlayDetail ? '' : 'xl:hidden'} fixed inset-0 z-[101] bg-ink/25 backdrop-blur-sm`} />
             <motion.aside
               key="detail"
               aria-label="Kart ayrıntısı"
@@ -233,7 +233,7 @@ function Space({ onHome }: { onHome: () => void }) {
 
 function HomeButton({ onHome }: { onHome: () => void }) {
   return (
-    <button type="button" onClick={onHome} className="w-10 h-10 shrink-0 rounded-2xl bg-theme-deep text-white flex items-center justify-center shadow-soft hover:bg-theme-text transition-colors" aria-label="DevHub'a dön" title="DevHub'a dön">
+    <button type="button" onClick={onHome} className="w-10 h-10 shrink-0 rounded-2xl bg-accent text-white flex items-center justify-center shadow-soft hover:bg-ink transition-colors" aria-label="DevHub'a dön" title="DevHub'a dön">
       <House size={20} weight="fill" />
     </button>
   );
@@ -288,7 +288,7 @@ function Rail({ smart, own, view, counts, unseen, onPick }: {
             {v.list && v.list.members.length > 1 && <Users size={14} weight="bold" className="shrink-0 text-theme-medium" aria-label="Ortak liste" />}
           </span>
           {v.id === 'inbox' && unseen > 0
-            ? <span className="relative text-[11px] font-bold tabular min-w-[20px] h-5 px-1.5 rounded-full bg-[#9A3B1B] text-white flex items-center justify-center" aria-label={`${unseen} yeni`}>{unseen}</span>
+            ? <span className="relative text-[11px] font-bold tabular min-w-[20px] h-5 px-1.5 rounded-full bg-danger-solid text-white flex items-center justify-center" aria-label={`${unseen} yeni`}>{unseen}</span>
             : count > 0 && <span className="relative text-xs font-bold tabular text-theme-muted">{count}</span>}
         </button>
       </li>
@@ -378,7 +378,7 @@ function ItemsPane({ view, items, lists, search, now, selectedId, onSelect, onSe
         clearCount={clearable.length} onClear={() => clear.mutate(clearable.map(d => d.id))} onDeleted={onViewGone} />
 
       {!searching && (
-        <form onSubmit={add} className="flex items-center gap-3 rounded-3xl bg-white border border-theme-light/60 shadow-soft pl-4 pr-2 py-2 mb-5 focus-within:border-theme-medium focus-within:ring-2 focus-within:ring-theme-light/60 transition-shadow">
+        <form onSubmit={add} className="flex items-center gap-3 rounded-3xl bg-surface border border-theme-light/60 shadow-soft pl-4 pr-2 py-2 mb-5 focus-within:border-theme-medium focus-within:ring-2 focus-within:ring-theme-light/60 transition-shadow">
           <Plus size={20} weight="bold" className="text-theme-deep shrink-0" aria-hidden="true" />
           <input
             ref={inputRef}
@@ -403,7 +403,7 @@ function ItemsPane({ view, items, lists, search, now, selectedId, onSelect, onSe
         <div className="space-y-6">
           {groupByDue(open, now).map(g => (
             <section key={g.label} aria-label={g.label}>
-              <h3 className={`eyebrow mb-2 ${g.tone === 'danger' ? 'text-[#9A3B1B]' : ''}`}>{g.label} <span className="tabular">({g.items.length})</span></h3>
+              <h3 className={`eyebrow mb-2 ${g.tone === 'danger' ? 'text-danger' : ''}`}>{g.label} <span className="tabular">({g.items.length})</span></h3>
               <ul className="space-y-2.5">{g.items.map(i => <li key={i.id}>{card(i)}</li>)}</ul>
             </section>
           ))}
@@ -509,7 +509,7 @@ function Header({ view, searching, search, openCount, doneCount, clearCount, now
         )}
         {!searching && list && (shared || listAdmin) && (
           <button type="button" onClick={() => setMembersOpen(true)}
-            className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-white border border-theme-light/60 text-sm font-bold text-theme-deep hover:bg-theme-lightest transition-colors"
+            className="shrink-0 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-xl bg-surface border border-theme-light/60 text-sm font-bold text-theme-deep hover:bg-theme-lightest transition-colors"
             aria-label={shared ? `Üyeler (${list.members.length})` : 'Listeyi paylaş'}>
             {shared ? <><Users size={17} weight="bold" aria-hidden="true" /> <span className="tabular">{list.members.length}</span></> : <><UserPlus size={17} weight="bold" aria-hidden="true" /> Paylaş</>}
           </button>
@@ -553,8 +553,8 @@ function Header({ view, searching, search, openCount, doneCount, clearCount, now
             : <>{openCount} açık{doneCount ? ` · ${doneCount} tamamlandı` : ''}{shared ? ` · ortak liste, ${list.members.length} üye` : ''}</>}
       </p>
       {!searching && total > 0 && (
-        <div className="h-1.5 rounded-full bg-white border border-theme-light/40 overflow-hidden mt-3" role="progressbar" aria-valuenow={Math.round((doneCount / total) * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Tamamlanma oranı">
-          <motion.div className="h-full rounded-full bg-theme-deep" animate={{ width: `${(doneCount / total) * 100}%` }} transition={{ type: 'spring', stiffness: 220, damping: 30 }} />
+        <div className="h-1.5 rounded-full bg-surface border border-theme-light/40 overflow-hidden mt-3" role="progressbar" aria-valuenow={Math.round((doneCount / total) * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Tamamlanma oranı">
+          <motion.div className="h-full rounded-full bg-accent" animate={{ width: `${(doneCount / total) * 100}%` }} transition={{ type: 'spring', stiffness: 220, damping: 30 }} />
         </div>
       )}
       <ListMembersModal list={membersOpen && list ? list : null} onClose={() => setMembersOpen(false)} onLeft={onDeleted} />

@@ -34,7 +34,7 @@ export default function ProjectDrawer({ project, members, tasks, onClose }: Prop
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-theme-text/25 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/25 backdrop-blur-sm"
           />
           <motion.aside
             role="dialog"
@@ -90,7 +90,7 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
 
   return (
     <>
-      <div className="p-6 sm:p-8 pb-6 bg-white border-b border-theme-light/40">
+      <div className="p-6 sm:p-8 pb-6 bg-surface border-b border-theme-light/40">
         <div className="flex items-start gap-4">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: projectColor(project.name) }}>
             <Briefcase size={26} weight="duotone" className="text-theme-text" />
@@ -120,7 +120,7 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
             </div>
             <div className="bg-theme-cream rounded-2xl p-3">
               <dt className="eyebrow flex items-center gap-1"><CalendarBlank size={12} weight="bold" /> Teslim</dt>
-              <dd className={`text-sm font-bold mt-1.5 ${due?.tone === 'danger' ? 'text-[#9A3B1B]' : 'text-theme-text'}`}>
+              <dd className={`text-sm font-bold mt-1.5 ${due?.tone === 'danger' ? 'text-danger' : 'text-theme-text'}`}>
                 {project.deadline ? (due ? due.text : formatDate(project.deadline)) : '—'}
               </dd>
             </div>
@@ -166,7 +166,7 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
                       const open = memberTasks.filter(t => t.userId === m.id && t.status !== 'TAMAMLANDI').length;
                       return (
                         <motion.li key={m.id} layout initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12, transition: { duration: 0.12 } }}
-                          className="group flex items-center gap-3 p-2.5 pr-3 rounded-2xl bg-white border border-theme-light/40">
+                          className="group flex items-center gap-3 p-2.5 pr-3 rounded-2xl bg-surface border border-theme-light/40">
                           <button onClick={() => goToMember(m.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left rounded-xl">
                             <Avatar user={m} size="sm" />
                             <span className="min-w-0">
@@ -176,7 +176,7 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
                           </button>
                           <StatusBadge status={m.status} size="sm" />
                           {isAdmin && (
-                            <button onClick={() => assign.mutate({ userId: m.id, project: null })} className="icon-btn w-9 h-9 hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label={`${m.fullName} projeden çıkar`} title="Projeden çıkar">
+                            <button onClick={() => assign.mutate({ userId: m.id, project: null })} className="icon-btn w-9 h-9 hover:text-danger hover:bg-danger-soft" aria-label={`${m.fullName} projeden çıkar`} title="Projeden çıkar">
                               <UserMinus size={17} weight="bold" />
                             </button>
                           )}
@@ -251,14 +251,14 @@ function ProjectTasks({ projectId, tasks, users, canAssign }: { projectId: numbe
             const status = TASK_STATUS[t.status ?? 'YAPILACAK'];
             return (
               <li key={t.id}>
-                <button onClick={() => actions.openTask(t.id)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-white border border-theme-light/40 hover:border-theme-light hover:shadow-soft transition-[border-color,box-shadow] text-left">
+                <button onClick={() => actions.openTask(t.id)} className="w-full flex items-center gap-3 p-3 rounded-2xl bg-surface border border-theme-light/40 hover:border-theme-light hover:shadow-soft transition-[border-color,box-shadow] text-left">
                   <status.icon size={18} weight={t.status === 'TAMAMLANDI' ? 'fill' : 'bold'} className={`shrink-0 ${status.className}`} aria-label={status.label} />
                   <span className="min-w-0 flex-1">
                     <span className={`block text-sm font-medium ${t.status === 'TAMAMLANDI' ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{t.content}</span>
                     <span className="flex flex-wrap items-center gap-2 mt-1.5">
                       {owner && <span className="flex items-center gap-1.5 text-[11px] font-bold text-theme-muted"><Avatar user={owner} size="xs" /> {firstName(owner.fullName)}</span>}
                       {t.priority && t.status !== 'TAMAMLANDI' && <PriorityBadge priority={t.priority} />}
-                      {d && <span className={`text-[11px] font-bold ${d.tone === 'danger' ? 'text-[#9A3B1B]' : 'text-theme-muted'}`}>{d.text}</span>}
+                      {d && <span className={`text-[11px] font-bold ${d.tone === 'danger' ? 'text-danger' : 'text-theme-muted'}`}>{d.text}</span>}
                       {!!t.commentCount && (
                         <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-theme-muted tabular" aria-label={`${t.commentCount} yorum`}>
                           <ChatCircleText size={13} weight="bold" aria-hidden="true" /> {t.commentCount}

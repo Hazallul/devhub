@@ -63,7 +63,7 @@ export default function DocHistoryModal({ doc, open, onClose, isAdmin }: { doc: 
         <ol className="space-y-2">
           {history?.map((h, i) => (
             <li key={h.id} className="flex items-start gap-3 p-3 rounded-2xl border border-theme-light/50">
-              <span className={`shrink-0 w-12 text-center text-xs font-bold rounded-lg py-1 ${i === 0 ? 'bg-theme-deep text-white' : 'bg-theme-lightest text-theme-deep'}`}>
+              <span className={`shrink-0 w-12 text-center text-xs font-bold rounded-lg py-1 ${i === 0 ? 'bg-accent text-white' : 'bg-theme-lightest text-theme-deep'}`}>
                 v{history.length - i}
               </span>
               <div className="min-w-0 flex-1">

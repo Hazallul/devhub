@@ -36,6 +36,7 @@ public class DocController {
     private final ActionLogService actionLogService;
     private final NotificationService notifications;
     private final ObjectMapper objectMapper;
+    private final com.enerjistaj.devhub.onboarding.OnboardingService onboarding;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -48,6 +49,7 @@ public class DocController {
     public ResponseEntity<DocDtos.DocDetail> get(@PathVariable String slug) {
         User me = currentUser.get();
         Doc d = docs.findBySlug(slug).orElseThrow(() -> ApiException.notFound("Doküman"));
+        onboarding.docOpened(me, d.getSlug()); // işe başlangıç listesindeki "dokümanı aç" adımı
         long pending = CurrentUser.isAdmin(me) ? revisions.countByDocIdAndStatus(d.getId(), DocRevisionStatus.BEKLIYOR) : 0;
         Long mine = revisions.findByDocIdAndAuthorIdAndStatus(d.getId(), me.getId(), DocRevisionStatus.BEKLIYOR).stream()
             .map(DocRevision::getId).findFirst().orElse(null);

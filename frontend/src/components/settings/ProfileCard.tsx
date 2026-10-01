@@ -75,7 +75,7 @@ export default function ProfileCard() {
               onClick={() => c !== color && update.mutate({ userId: me.id, avatarColor: c }, { onSuccess: refreshSession })}
               aria-label={`Renk ${c}`}
               aria-pressed={color === c}
-              className={`w-11 h-11 rounded-2xl border-2 flex items-center justify-center transition-transform hover:scale-105 ${color === c ? 'border-theme-deep' : 'border-white shadow-soft'}`}
+              className={`w-11 h-11 rounded-2xl border-2 flex items-center justify-center transition-transform hover:scale-105 ${color === c ? 'border-theme-deep' : 'border-surface shadow-soft'}`}
               style={{ backgroundColor: c }}
             >
               {color === c && <Check size={18} weight="bold" className="text-theme-text" />}
@@ -89,7 +89,7 @@ export default function ProfileCard() {
           <div>
             <label htmlFor="s-name" className="label">Ad soyad</label>
             <input id="s-name" value={fullName} onChange={e => setFullName(e.target.value)} aria-invalid={!!error} aria-describedby="s-name-err" className="input" autoComplete="name" />
-            {error && <p id="s-name-err" role="alert" className="text-xs font-semibold text-[#9A3B1B] mt-1.5 ml-1">{error}</p>}
+            {error && <p id="s-name-err" role="alert" className="text-xs font-semibold text-danger mt-1.5 ml-1">{error}</p>}
           </div>
           <div>
             <label htmlFor="s-title" className="label">Unvan</label>
@@ -161,12 +161,12 @@ function DecisionNotice({ request }: { request: ProfileRequest }) {
   const approved = request.state === 'ONAYLANDI';
   return (
     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-      <div role="status" className={`rounded-2xl border p-4 flex items-start gap-3 ${approved ? 'bg-theme-lightest/70 border-theme-light' : 'bg-[#FBEDE5] border-[#EFC9B5]'}`}>
+      <div role="status" className={`rounded-2xl border p-4 flex items-start gap-3 ${approved ? 'bg-theme-lightest/70 border-theme-light' : 'bg-danger-soft border-danger-line'}`}>
         {approved
           ? <CheckCircle size={20} weight="duotone" className="text-theme-deep shrink-0 mt-0.5" aria-hidden="true" />
-          : <XCircle size={20} weight="duotone" className="text-[#9A3B1B] shrink-0 mt-0.5" aria-hidden="true" />}
+          : <XCircle size={20} weight="duotone" className="text-danger shrink-0 mt-0.5" aria-hidden="true" />}
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold mb-1 ${approved ? 'text-theme-deep' : 'text-[#9A3B1B]'}`}>
+          <p className={`text-sm font-bold mb-1 ${approved ? 'text-theme-deep' : 'text-danger'}`}>
             Son talebiniz {approved ? 'onaylandı' : 'reddedildi'}
             <span className="font-medium text-theme-muted"> · {request.decidedByName ?? 'Yönetici'}{request.decidedAt ? `, ${timeAgo(request.decidedAt)}` : ''}</span>
           </p>
@@ -234,7 +234,7 @@ function LinksEditor() {
                 <input aria-label="Etiket (isteğe bağlı)" value={r.label ?? ''} maxLength={40} onChange={e => patch(r.key, { label: e.target.value })} placeholder="Etiket (ör. Kişisel)" className="input py-2.5 text-sm hidden sm:block" />
                 <input aria-label={meta.label} value={r.value} maxLength={300} onChange={e => patch(r.key, { value: e.target.value })} placeholder={meta.placeholder}
                   inputMode={r.type === 'EMAIL' ? 'email' : r.type === 'PHONE' ? 'tel' : 'url'} className="input py-2.5 text-sm col-span-1" />
-                <button type="button" onClick={() => setRows(rs => rs.filter(x => x.key !== r.key))} className="icon-btn hover:text-[#9A3B1B] hover:bg-[#FBEDE5]" aria-label={`${meta.label} satırını kaldır`} title="Kaldır">
+                <button type="button" onClick={() => setRows(rs => rs.filter(x => x.key !== r.key))} className="icon-btn hover:text-danger hover:bg-danger-soft" aria-label={`${meta.label} satırını kaldır`} title="Kaldır">
                   <Trash size={17} weight="bold" />
                 </button>
               </motion.li>

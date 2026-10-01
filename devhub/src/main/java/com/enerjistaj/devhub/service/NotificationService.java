@@ -1,9 +1,11 @@
 package com.enerjistaj.devhub.service;
 
+import com.enerjistaj.devhub.dto.NotificationDto;
 import com.enerjistaj.devhub.entity.Notification;
 import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.Role;
 import com.enerjistaj.devhub.entity.User;
+import com.enerjistaj.devhub.realtime.RealtimeService;
 import com.enerjistaj.devhub.repository.NotificationRepository;
 import com.enerjistaj.devhub.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final RealtimeService realtime;
 
     public void notify(User recipient, User actor, NotificationType type, String title, String body, String link) {
         if (recipient == null || !recipient.isActive()) return;
@@ -47,6 +50,8 @@ public class NotificationService {
         n.setBody(body != null && body.length() > 500 ? body.substring(0, 497) + "..." : body);
         n.setLink(link);
         n.setRefKey(refKey);
-        notificationRepository.save(n);
+        Notification saved = notificationRepository.save(n);
+        // Açık sekmelere anında düşer (kayıt veritabanına yazıldıktan sonra).
+        realtime.notification(recipient.getId(), NotificationDto.from(saved));
     }
 }

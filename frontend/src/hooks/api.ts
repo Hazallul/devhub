@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
+import { livePoll } from '../lib/realtime';
 import { getStoredUser } from '../lib/session';
 import { useToast } from '../components/ui/Toast';
 import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete';
@@ -14,7 +15,7 @@ const get = <T,>(url: string) => async () => (await api.get<T>(url)).data;
 
 // ---------- Queries ----------
 // Durumlar başka ekranlarda değişebilir: ekip listesi 30 sn'de bir tazelenir.
-export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: get<User[]>('/users'), refetchInterval: 30_000 });
+export const useUsers = () => useQuery({ queryKey: ['users'], queryFn: get<User[]>('/users'), refetchInterval: livePoll(30_000) });
 export const useProjects = () => useQuery({ queryKey: ['projects'], queryFn: get<Project[]>('/projects') });
 /** Silinmek üzere bekleyen ("Geri al" süresi dolmamış) görevler listelerde görünmez. */
 function useVisibleTasks() {
@@ -60,20 +61,22 @@ export const useLogSearch = (f: LogFilters) =>
     getNextPageParam: last => ((last.page + 1) * last.size < last.total ? last.page + 1 : undefined),
     // Filtre değişince eski sonuçlar yenisi gelene kadar kalır: liste bir anlığına boşalıp sayfa zıplamaz.
     placeholderData: keepPreviousData,
-    refetchInterval: 30_000,
+    refetchInterval: livePoll(30_000),
   });
 
-export const useLogStats = () => useQuery({ queryKey: ['logs', 'stats'], queryFn: get<LogStats>('/logs/stats?days=14'), refetchInterval: 30_000 });
+export const useLogStats = () => useQuery({ queryKey: ['logs', 'stats'], queryFn: get<LogStats>('/logs/stats?days=14'), refetchInterval: livePoll(30_000) });
 
-/** Süzülmüş logları sunucunun hazırladığı CSV olarak indirir. */
-export async function downloadLogs(f: LogFilters) {
-  const res = await api.get<Blob>(`/logs/export?${logParams(f)}`, { responseType: 'blob' });
+/** Süzülmüş logları indirir: xlsx = biçimlendirilmiş Excel dosyası, csv = başka araçlar için standart (virgüllü) CSV. */
+export async function downloadLogs(f: LogFilters, format: 'xlsx' | 'csv' = 'xlsx') {
+  const p = logParams(f);
+  p.set('format', format);
+  const res = await api.get<Blob>(`/logs/export?${p}`, { responseType: 'blob' });
   // Not: köşeli parantezli bir düzenli ifade Tailwind'in sınıf taramasına takılıp derlemeyi bozuyordu.
   const stamp = new Date().toISOString().slice(0, 16).split('-').join('').split(':').join('').replace('T', '-');
   const url = URL.createObjectURL(res.data);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `devhub-loglar-${stamp}.csv`;
+  a.download = `devhub-loglar-${stamp}.${format}`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -89,7 +92,7 @@ export const useAdminUsers = (enabled = true) => useQuery({ queryKey: ['admin-us
 export const useNotifications = (enabled = true) =>
   useQuery({ queryKey: ['notifications', 'list'], queryFn: get<AppNotification[]>('/notifications?limit=30'), enabled });
 export const useUnreadCount = () =>
-  useQuery({ queryKey: ['notifications', 'unread'], queryFn: get<{ count: number }>('/notifications/unread-count'), refetchInterval: 30_000 });
+  useQuery({ queryKey: ['notifications', 'unread'], queryFn: get<{ count: number }>('/notifications/unread-count'), refetchInterval: livePoll(30_000) });
 
 /** Sistem İzleme: canlıyken 5 sn'de bir tazelenir (sunucu 10 sn'de bir örnekler); önceki veri yenisi gelene kadar ekranda kalır. */
 export const useMonitoring = (minutes: number, live: boolean) =>
@@ -171,7 +174,7 @@ export const useProfileRequests = () =>
   useQuery({ queryKey: ['profile-requests', 'list'], queryFn: get<ProfileRequest[]>('/profile-requests') });
 
 export const usePendingProfileCount = (enabled: boolean) =>
-  useQuery({ queryKey: ['profile-requests', 'count'], queryFn: get<{ count: number }>('/profile-requests/pending-count'), enabled, refetchInterval: 30_000 });
+  useQuery({ queryKey: ['profile-requests', 'count'], queryFn: get<{ count: number }>('/profile-requests/pending-count'), enabled, refetchInterval: livePoll(30_000) });
 
 export const useCreateProfileRequest = () =>
   useAction(
@@ -201,12 +204,14 @@ export interface UserInput {
   fullName: string; email: string; role: Role; jobTitle?: string; hireDate?: string; currentProject?: string;
   /** Yalnızca oluştururken: başlangıç şifresi (boşsa sunucu üretir) */
   password?: string;
+  /** Yalnızca oluştururken: işe başlangıç listesi açılsın mı (varsayılan evet) */
+  onboarding?: boolean;
 }
 
 export const useCreateUser = () =>
   useAction(
     (body: UserInput) => api.post<{ user: User; temporaryPassword: string }>('/admin/users', body).then(r => r.data),
-    { invalidate: [['admin-users'], ['users'], ['leaves', 'balances']], success: ({ fullName }) => `${fullName} eklendi` },
+    { invalidate: [['admin-users'], ['users'], ['leaves', 'balances'], ['onboarding']], success: ({ fullName }) => `${fullName} eklendi` },
   );
 
 export const useUpdateUser = () =>

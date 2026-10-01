@@ -63,9 +63,19 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.PAYLOAD_TOO_LARGE, "Dosya çok büyük; en fazla 5 MB yüklenebilir.");
     }
 
+    /** Anlık akış (SSE) bağlantısı istemci tarafından kapandı ya da süresi doldu: yazılacak bir yanıt yok. */
+    @ExceptionHandler({org.springframework.web.context.request.async.AsyncRequestNotUsableException.class,
+            org.springframework.web.context.request.async.AsyncRequestTimeoutException.class})
+    public void handleClosedStream() {
+        // bilerek boş
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Map<String, String> handleGeneralException(Exception ex) {
+    public Map<String, String> handleGeneralException(Exception ex, jakarta.servlet.http.HttpServletResponse response) {
+        // Akış yanıtı (text/event-stream) başlamışsa JSON hata yazılamaz.
+        String type = response.getContentType();
+        if (type != null && type.startsWith("text/event-stream")) return null;
         Map<String, String> error = new HashMap<>();
         error.put("error", "Internal Server Error");
         error.put("message", ex.getMessage());
