@@ -29,7 +29,7 @@ export default function DocEdit() {
   const proposal = useDocRevision(proposalId);
 
   if ((slug && doc.isLoading) || (proposalId && proposal.isLoading)) {
-    return <div className="space-y-4 max-w-4xl"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-14" /><Skeleton className="h-[480px]" /></div>;
+    return <div className="space-y-4 max-w-4xl"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-14" /><Skeleton className="h-[30rem]" /></div>;
   }
   if (slug && !doc.data) {
     return <EmptyState icon={Warning} title="Doküman bulunamadı" description="Silinmiş olabilir." action={<Link to="/docs" className="btn-primary">Dokümantasyona dön</Link>} />;
@@ -203,13 +203,13 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
       {stored && (
         <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-theme-light bg-surface p-4 mb-5 text-sm shadow-soft">
           <ClockCounterClockwise size={20} weight="duotone" className="text-theme-deep shrink-0" aria-hidden="true" />
-          <span className="flex-1 min-w-[220px] font-semibold text-theme-text">Bu tarayıcıda gönderilmemiş bir taslağınız var ({timeAgo(new Date(stored.savedAt).toISOString().slice(0, 19))} kaydedildi).</span>
-          <button type="button" onClick={() => { clearDraft(); setStored(null); }} className="btn-secondary min-h-[36px] px-3 text-xs">Sil</button>
-          <button type="button" onClick={restoreDraft} className="btn-primary min-h-[36px] px-3 text-xs">Taslaktan devam et</button>
+          <span className="flex-1 min-w-[13.75rem] font-semibold text-theme-text">Bu tarayıcıda gönderilmemiş bir taslağınız var ({timeAgo(new Date(stored.savedAt).toISOString().slice(0, 19))} kaydedildi).</span>
+          <button type="button" onClick={() => { clearDraft(); setStored(null); }} className="btn-secondary min-h-[2.25rem] px-3 text-xs">Sil</button>
+          <button type="button" onClick={restoreDraft} className="btn-primary min-h-[2.25rem] px-3 text-xs">Taslaktan devam et</button>
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px] mb-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_17.5rem] mb-5">
         <div className="space-y-3">
           <div>
             <label htmlFor="doc-title" className="sr-only">Başlık</label>
@@ -272,14 +272,14 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
       <div className="sticky bottom-4 z-30 mt-6">
         <div>
           <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-surface/95 backdrop-blur border border-theme-light/70 shadow-float px-4 py-3">
-            <span className="text-xs text-theme-muted font-semibold flex-1 min-w-[160px]" aria-live="polite">
+            <span className="text-xs text-theme-muted font-semibold flex-1 min-w-[10rem]" aria-live="polite">
               {dirty ? (savedAt ? 'Taslak bu tarayıcıda saklandı' : 'Değişiklikler kaydedilmedi') : 'Değişiklik yok'}
             </span>
-            <button type="button" onClick={cancel} className="btn-secondary min-h-[40px] px-4 text-sm">Vazgeç</button>
-            <button type="button" onClick={() => setPreview(p => !p)} className="btn-secondary min-h-[40px] px-4 text-sm" aria-pressed={preview}>
+            <button type="button" onClick={cancel} className="btn-secondary min-h-[2.5rem] px-4 text-sm">Vazgeç</button>
+            <button type="button" onClick={() => setPreview(p => !p)} className="btn-secondary min-h-[2.5rem] px-4 text-sm" aria-pressed={preview}>
               {preview ? <><PencilSimple size={16} weight="bold" /> Düzenle</> : <><Eye size={16} weight="bold" /> Önizleme</>}
             </button>
-            <button type="button" onClick={openSend} className="btn-primary min-h-[40px] px-4 text-sm">
+            <button type="button" onClick={openSend} className="btn-primary min-h-[2.5rem] px-4 text-sm">
               {isAdmin ? <><RocketLaunch size={16} weight="bold" /> Yayınla</> : <><PaperPlaneTilt size={16} weight="bold" /> Onaya gönder</>}
             </button>
           </div>
@@ -369,10 +369,10 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
           onBlur={add}
           placeholder={tags.length ? '' : 'ör. git, kurulum'}
           disabled={tags.length >= 8}
-          className="flex-1 min-w-[80px] bg-transparent text-sm font-medium focus:outline-none px-1"
+          className="flex-1 min-w-[5rem] bg-transparent text-sm font-medium focus:outline-none px-1"
         />
       </div>
-      <p className="text-[11px] text-theme-muted font-semibold mt-1">Enter ile ekleyin · aramada kullanılır</p>
+      <p className="text-[0.6875rem] text-theme-muted font-semibold mt-1">Enter ile ekleyin · aramada kullanılır</p>
     </div>
   );
 }

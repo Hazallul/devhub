@@ -151,7 +151,7 @@ function PendingNotice({ request }: { request: ProfileRequest }) {
           <p className="text-sm font-bold text-theme-deep mb-1">Yönetici onayı bekleniyor <span className="font-medium text-theme-muted">· {timeAgo(request.createdAt)}</span></p>
           <ProfileDiff request={request} />
         </div>
-        <button type="button" onClick={() => withdraw.mutate(request.id)} disabled={withdraw.isPending} className="btn-ghost min-h-[36px] px-3 text-sm">Talebi geri çek</button>
+        <button type="button" onClick={() => withdraw.mutate(request.id)} disabled={withdraw.isPending} className="btn-ghost min-h-[2.25rem] px-3 text-sm">Talebi geri çek</button>
       </div>
     </motion.div>
   );
@@ -217,14 +217,14 @@ function LinksEditor() {
         <li className="flex items-center gap-3 rounded-2xl bg-theme-cream border border-theme-light/50 px-4 py-3">
           <EnvelopeSimple size={18} weight="bold" className="text-theme-deep shrink-0" aria-hidden="true" />
           <span className="text-sm font-semibold text-theme-text truncate flex-1">{me.email}</span>
-          <span className="text-[11px] font-bold uppercase tracking-wider text-theme-muted shrink-0">Giriş e-postası</span>
+          <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-theme-muted shrink-0">Giriş e-postası</span>
         </li>
         <AnimatePresence initial={false}>
           {rows.map(r => {
             const meta = LINK_TYPE[r.type];
             return (
               <motion.li key={r.key} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
-                className="grid grid-cols-[1fr_auto] sm:grid-cols-[170px_140px_1fr_auto] gap-2 items-center">
+                className="grid grid-cols-[1fr_auto] sm:grid-cols-[10.625rem_8.75rem_1fr_auto] gap-2 items-center">
                 <div className="relative">
                   <meta.icon size={16} weight="bold" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-deep pointer-events-none" aria-hidden="true" />
                   <select aria-label="Tür" value={r.type} onChange={e => patch(r.key, { type: e.target.value as UserLinkType })} className="input py-2.5 pl-10 text-sm">
@@ -245,7 +245,7 @@ function LinksEditor() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
         <button type="button" disabled={rows.length >= 12} onClick={() => setRows(rs => [...rs, { key: nextKey++, type: rs.some(x => x.type === 'LINKEDIN') ? 'EMAIL' : 'LINKEDIN', label: null, value: '' }])}
-          className="btn-secondary min-h-[40px] px-4 text-sm disabled:opacity-50">
+          className="btn-secondary min-h-[2.5rem] px-4 text-sm disabled:opacity-50">
           <Plus size={16} weight="bold" /> Bağlantı ekle
         </button>
         {dirty && (

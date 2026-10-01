@@ -9,6 +9,7 @@ import { useMe, useUsers, useAllTasks, useProjects, useLeaves, useLeaveBalances,
 import { addDays, daysBetween, formatDate, parseServerDate, toDate, toIsoDay } from '../lib/format';
 import { LEAVE_TYPE, LEAVE_TYPES } from '../lib/meta';
 import { downloadCsv } from '../lib/csv';
+import EffortReport from '../components/reports/EffortReport';
 import type { LeaveType, TaskPriority, TaskStatus } from '../types';
 
 // Sıralı veriler tek tonlu zeytin rampasıyla: düşük/başlanmamış açık, yüksek/bitmiş koyu.
@@ -188,6 +189,8 @@ function ReportsPage() {
               rows={projectRows.map(r => [r.project.name, r.values.TAMAMLANDI, r.values.DEVAM, r.values.YAPILACAK, `%${Math.round((r.values.TAMAMLANDI / r.total) * 100)}`])} />
           </section>
 
+          <EffortReport tasks={tasks ?? []} userById={userById} />
+
           {/* Haftalık tamamlanan */}
           <section className="card p-6" aria-labelledby="r-weekly">
             <h2 id="r-weekly" className="text-lg font-bold tracking-tight">Tamamlanan görevler</h2>
@@ -203,7 +206,7 @@ function ReportsPage() {
             <ColumnChart data={monthlyData} unit="iş günü" height={150} />
             <ul className="mt-5 space-y-2" aria-label="İzin türü dağılımı">
               {leaveByType.map(x => (
-                <li key={x.type} className="grid grid-cols-[110px_1fr_48px] items-center gap-3 text-sm">
+                <li key={x.type} className="grid grid-cols-[6.875rem_1fr_3rem] items-center gap-3 text-sm">
                   <span className="font-semibold">{LEAVE_TYPE[x.type].label}</span>
                   <Meter value={x.days} max={Math.max(leaveTotal, 1)} label={`${LEAVE_TYPE[x.type].label}: ${x.days} iş günü`} />
                   <span className="text-right font-bold tabular">{x.days}</span>
@@ -231,7 +234,7 @@ function ReportsPage() {
               </button>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
+              <table className="w-full text-sm min-w-[40rem]">
                 <caption className="sr-only">Yıllık izin bakiyeleri</caption>
                 <thead>
                   <tr className="text-left">

@@ -74,7 +74,7 @@ export default function NotificationBell() {
           {count > 0 && (
             <motion.span
               initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-              className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 rounded-full bg-danger-solid text-white text-[10px] font-bold tabular flex items-center justify-center ring-2 ring-theme-cream"
+              className="absolute -top-0.5 -right-0.5 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-danger-solid text-white text-[0.625rem] font-bold tabular flex items-center justify-center ring-2 ring-theme-cream"
             >
               {count > 9 ? '9+' : count}
             </motion.span>
@@ -121,7 +121,7 @@ export default function NotificationBell() {
                   <span className="flex-1 min-w-0">
                     <span className={`block text-sm leading-snug ${n.read ? 'font-medium text-theme-text/80' : 'font-bold text-theme-text'}`}>{n.title}</span>
                     {n.body && <span className="block text-xs text-theme-muted mt-0.5 line-clamp-2">{n.body}</span>}
-                    <span className="block text-[11px] font-semibold text-theme-muted/80 mt-1">
+                    <span className="block text-[0.6875rem] font-semibold text-theme-muted/80 mt-1">
                       {n.actorName ? `${n.actorName} · ` : ''}{timeAgo(n.createdAt)}
                     </span>
                   </span>

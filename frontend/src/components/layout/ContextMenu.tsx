@@ -141,7 +141,7 @@ export function ContextMenuProvider({ children, onSearch }: { children: ReactNod
           {render(page)}
           <MenuDivider />
         </>}
-        <MenuItem icon={MagnifyingGlass} onSelect={() => { close(); onSearch(); }} trailing={<kbd className="text-[10px] font-bold text-theme-muted">Ctrl K</kbd>}>Ara ve komutlar</MenuItem>
+        <MenuItem icon={MagnifyingGlass} onSelect={() => { close(); onSearch(); }} trailing={<kbd className="text-[0.625rem] font-bold text-theme-muted">Ctrl K</kbd>}>Ara ve komutlar</MenuItem>
         {section === 'todo'
           ? <MenuItem icon={House} onSelect={() => { close(); navigate('/'); }}>Genel Bakış’a git</MenuItem>
           : <MenuItem icon={ListChecks} onSelect={() => { close(); navigate('/todo', { state: { origin: state?.point } }); }}>Yapılacaklarım</MenuItem>}

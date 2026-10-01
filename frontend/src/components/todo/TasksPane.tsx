@@ -57,7 +57,7 @@ export default function TasksPane({ items, onSelect }: Props) {
               <li key={t.id} className="flex items-center gap-3 rounded-3xl border border-theme-light/50 bg-surface pl-4 pr-2 py-3 shadow-soft hover:border-theme-light hover:shadow-diffusion transition-[border-color,box-shadow]">
                 <status.icon size={20} weight="bold" className={`shrink-0 ${status.className}`} aria-hidden="true" />
                 <button type="button" onClick={() => openTask(t.id)} className="min-w-0 flex-1 text-left rounded-xl py-0.5">
-                  <span className="block text-[15px] font-semibold leading-snug break-words text-theme-text">{t.content}</span>
+                  <span className="block text-[0.9375rem] font-semibold leading-snug break-words text-theme-text">{t.content}</span>
                   <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs font-semibold text-theme-muted">
                     <span>{status.label}</span>
                     <span className={`px-1.5 py-0.5 rounded-md ${priority.className}`}>{priority.label}</span>

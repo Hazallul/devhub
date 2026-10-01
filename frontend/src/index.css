@@ -31,6 +31,16 @@
     --grid: 50 56 42; --ramp-1: 84 97 62; --ramp-2: 135 155 98; --ramp-3: 196 213 152;
   }
 
+  /* Arayüz ölçeği: tüm boyutlar rem olduğu için kök yazı boyutu her şeyi orantılı büyütür/küçültür (varsayılan %75,
+     Ayarlar > Görünüm'den değişir; lib/theme.ts). Yüzde olduğu için tarayıcının yazı boyutu ayarına da uyar. */
+  html {
+    font-size: calc(var(--ui-scale, 0.75) * 100%);
+  }
+  /* Phosphor ikonlarının boyutu piksel olarak verildiği için ölçeğe ayrıca uydurulur. */
+  svg[viewBox="0 0 256 256"] {
+    zoom: var(--ui-scale, 0.75);
+  }
+
   body {
     @apply bg-theme-cream text-theme-text font-sans antialiased;
     font-feature-settings: "cv11", "ss01";
@@ -58,7 +68,7 @@
 
   .btn {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl font-semibold whitespace-nowrap transition-colors
-      disabled:opacity-50 disabled:cursor-not-allowed min-h-[44px] px-5;
+      disabled:opacity-50 disabled:cursor-not-allowed min-h-[2.75rem] px-5;
   }
 
   .btn-primary {
@@ -89,7 +99,7 @@
   }
 
   .eyebrow {
-    @apply text-[11px] font-bold uppercase tracking-wider text-theme-muted;
+    @apply text-[0.6875rem] font-bold uppercase tracking-wider text-theme-muted;
   }
 }
 
@@ -126,7 +136,7 @@ html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
 
 /* ---------- Doküman editörü (TipTap). Okuma görünümü DocContent.tsx'te Tailwind sınıflarıyla, burası aynı görünümün editördeki karşılığı. ---------- */
 .doc-prose {
-  @apply min-h-[420px] text-[15px] leading-7 text-theme-text outline-none;
+  @apply min-h-[26.25rem] text-[0.9375rem] leading-7 text-theme-text outline-none;
 }
 .doc-prose > * + * { @apply mt-4; }
 .doc-prose h2 { @apply text-2xl font-bold tracking-tight pt-5; }
@@ -136,7 +146,7 @@ html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
 .doc-prose li > p { @apply m-0; }
 .doc-prose a { @apply font-semibold text-theme-deep underline decoration-theme-medium underline-offset-4; }
 .doc-prose code { @apply px-1.5 py-0.5 rounded-md bg-theme-lightest text-theme-deep text-[0.88em] font-mono font-semibold; }
-.doc-prose pre code { @apply p-0 bg-transparent text-[#F6F0D7] font-normal text-[13px]; }
+.doc-prose pre code { @apply p-0 bg-transparent text-[#F6F0D7] font-normal text-[0.8125rem]; }
 .doc-prose mark { @apply bg-theme-light/80 text-theme-text rounded px-0.5; }
 .doc-prose hr { @apply border-theme-light/60 my-6; }
 .doc-prose hr.ProseMirror-selectednode { @apply border-theme-deep; }

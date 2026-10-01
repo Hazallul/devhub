@@ -12,6 +12,8 @@
     <script>
       // Koyu tema ilk boyamadan önce uygulanır (src/lib/theme.ts ile aynı kural).
       try {
+        var sc = localStorage.getItem('devhub.scale');
+        if (sc === '0.875' || sc === '1') document.documentElement.style.setProperty('--ui-scale', sc);
         var t = localStorage.getItem('devhub.theme');
         if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark');

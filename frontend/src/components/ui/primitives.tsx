@@ -7,7 +7,7 @@ import { USER_STATUS, TASK_PRIORITY } from '../../lib/meta';
 
 export function Avatar({ user, size = 'md', ring }: { user: Pick<User, 'fullName' | 'avatarColor' | 'status'>; size?: 'xs' | 'sm' | 'md' | 'lg'; ring?: boolean }) {
   const cls = {
-    xs: 'w-7 h-7 text-[10px] rounded-lg',
+    xs: 'w-7 h-7 text-[0.625rem] rounded-lg',
     sm: 'w-9 h-9 text-xs rounded-xl',
     md: 'w-12 h-12 text-base rounded-2xl',
     lg: 'w-20 h-20 text-2xl rounded-3xl',
@@ -37,7 +37,7 @@ export function AvatarStack({ users, max = 4 }: { users: User[]; max?: number })
         <div key={u.id} title={u.fullName}><Avatar user={u} size="xs" ring /></div>
       ))}
       {extra > 0 && (
-        <div className="w-7 h-7 rounded-lg ring-2 ring-surface bg-theme-lightest text-theme-deep text-[10px] font-bold flex items-center justify-center">
+        <div className="w-7 h-7 rounded-lg ring-2 ring-surface bg-theme-lightest text-theme-deep text-[0.625rem] font-bold flex items-center justify-center">
           +{extra}
         </div>
       )}
@@ -51,7 +51,7 @@ export function StatusBadge({ status, interactive, size = 'md' }: { status: User
   const IconCmp = meta.icon;
   return (
     <span className={`inline-flex items-center gap-1.5 font-semibold rounded-full border whitespace-nowrap transition-shadow ${meta.className} ${
-      size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-3 py-1.5'
+      size === 'sm' ? 'text-[0.6875rem] px-2 py-0.5' : 'text-xs px-3 py-1.5'
     } ${interactive ? 'hover:shadow-sm' : ''}`}>
       <IconCmp size={size === 'sm' ? 12 : 14} weight="bold" aria-hidden="true" />
       {meta.label}
@@ -62,7 +62,7 @@ export function StatusBadge({ status, interactive, size = 'md' }: { status: User
 export function PriorityBadge({ priority }: { priority: TaskPriority }) {
   const meta = TASK_PRIORITY[priority];
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-full ${meta.className}`}>
+    <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-bold px-2 py-0.5 rounded-full ${meta.className}`}>
       <meta.icon size={11} weight="fill" aria-hidden="true" />
       {meta.label}
     </span>
@@ -70,7 +70,7 @@ export function PriorityBadge({ priority }: { priority: TaskPriority }) {
 }
 
 export function Pill({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${className}`}>{children}</span>;
+  return <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-bold px-2.5 py-1 rounded-full whitespace-nowrap ${className}`}>{children}</span>;
 }
 
 export function ProgressBar({ value, className = '' }: { value: number; className?: string }) {
@@ -171,7 +171,7 @@ export function Segmented<T extends string>({ value, onChange, options, layoutId
             role="tab"
             aria-selected={selected}
             onClick={() => onChange(o.value)}
-            className={`relative px-3.5 py-2 text-sm font-semibold rounded-xl transition-colors min-h-[36px] ${selected ? 'text-theme-text' : 'text-theme-muted hover:text-theme-deep'}`}
+            className={`relative px-3.5 py-2 text-sm font-semibold rounded-xl transition-colors min-h-[2.25rem] ${selected ? 'text-theme-text' : 'text-theme-muted hover:text-theme-deep'}`}
           >
             {selected && (
               <motion.span layoutId={layoutId} className="absolute inset-0 bg-theme-lightest rounded-xl border border-theme-light/70" transition={{ type: 'spring', stiffness: 420, damping: 34 }} />
@@ -179,7 +179,7 @@ export function Segmented<T extends string>({ value, onChange, options, layoutId
             <span className="relative flex items-center gap-1.5">
               {o.label}
               {o.count !== undefined && (
-                <span className={`text-[11px] tabular px-1.5 rounded-md ${selected ? 'bg-surface text-theme-deep' : 'bg-theme-lightest/70'}`}>{o.count}</span>
+                <span className={`text-[0.6875rem] tabular px-1.5 rounded-md ${selected ? 'bg-surface text-theme-deep' : 'bg-theme-lightest/70'}`}>{o.count}</span>
               )}
             </span>
           </button>

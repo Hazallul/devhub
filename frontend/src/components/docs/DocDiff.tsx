@@ -52,7 +52,7 @@ export default function DocDiff({ before, after }: { before: DocNode; after: Doc
           </>
         ) : 'İçerikte değişiklik yok (yalnızca başlık, özet, kategori veya etiketler değişmiş olabilir).'}
       </p>
-      <div className="space-y-3 text-[15px] leading-7 text-theme-text">
+      <div className="space-y-3 text-[0.9375rem] leading-7 text-theme-text">
         {groups.map(g => {
           if (g.type === 'row') return <DiffRow key={g.idx} row={g.row} />;
           if (g.rows.length === 1 || open.has(g.start)) return g.rows.map(r => <DiffRow key={r.idx} row={r.row} />);
@@ -77,7 +77,7 @@ function DiffRow({ row }: { row: Row }) {
   const add = row.kind === 'add';
   return (
     <div className={`relative rounded-r-2xl pl-4 pr-3 py-2 border-l-4 ${add ? 'border-good bg-good-soft' : 'border-clay bg-danger-soft'}`}>
-      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider mb-1 ${add ? 'text-good-ink' : 'text-danger'}`}>
+      <span className={`inline-flex items-center gap-1 text-[0.625rem] font-bold uppercase tracking-wider mb-1 ${add ? 'text-good-ink' : 'text-danger'}`}>
         {add ? <Plus size={11} weight="bold" /> : <Minus size={11} weight="bold" />} {add ? 'Eklendi' : 'Kaldırıldı'}
       </span>
       <div className={add ? '' : 'line-through decoration-clay/60 opacity-80'}><Block node={row.node} /></div>

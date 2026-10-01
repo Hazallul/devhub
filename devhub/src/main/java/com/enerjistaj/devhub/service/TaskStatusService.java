@@ -25,6 +25,7 @@ public class TaskStatusService {
     private final TaskActivityRepository activityRepository;
     private final NotificationService notificationService;
     private final TodoItemRepository todoItems;
+    private final TaskTimeService taskTime;
 
     /** Durum aynıysa hiçbir şey yapmaz. Çağıran, görevi kaydetmekten sorumludur. */
     public void change(Task t, TaskStatus status, User actor) {
@@ -35,6 +36,7 @@ public class TaskStatusService {
         a.setKind(TaskActivityKind.EVENT);
         a.setMessage("durumu değiştirdi: " + STATUS_LABEL.get(t.getStatus()) + " → " + STATUS_LABEL.get(status));
         activityRepository.save(a);
+        taskTime.onStatusChange(t, t.getStatus(), status); // süre: Devam'a girince başlar, çıkınca durur
         t.changeStatus(status);
         if (status != TaskStatus.TAMAMLANDI) return;
 

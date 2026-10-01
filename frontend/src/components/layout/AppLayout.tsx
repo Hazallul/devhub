@@ -114,7 +114,7 @@ function Shell() {
                   aria-hidden="true"
                 />
               )}
-              <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8 lg:py-10">
+              <div className="max-w-[1760px] mx-auto px-4 sm:px-8 2xl:px-12 py-8 lg:py-10">
                                 {shownOutlet}
               </div>
             </motion.div>
@@ -174,7 +174,7 @@ function SidebarContent() {
           <span className="block text-xs text-theme-muted font-medium truncate">{todoUnseen ? `${todoUnseen} yeni kart geldi` : 'Kişisel alan'}</span>
         </span>
         {todoUnseen > 0
-          ? <span className="text-[11px] font-bold tabular min-w-[22px] h-[22px] px-1.5 rounded-full bg-danger-solid text-white flex items-center justify-center" aria-hidden="true">{todoUnseen}</span>
+          ? <span className="text-[0.6875rem] font-bold tabular min-w-[1.375rem] h-[1.375rem] px-1.5 rounded-full bg-danger-solid text-white flex items-center justify-center" aria-hidden="true">{todoUnseen}</span>
           : <ArrowUpRight size={16} weight="bold" className="text-theme-muted group-hover:text-theme-deep group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" aria-hidden="true" />}
       </button>
 
@@ -190,7 +190,7 @@ function SidebarContent() {
                 <item.icon size={22} weight={isActive ? 'fill' : 'duotone'} className="relative" aria-hidden="true" />
                 <span className="relative flex-1">{item.label}</span>
                 {badges[item.to] > 0 && (
-                  <span className="relative text-[11px] font-bold tabular min-w-[22px] h-[22px] px-1.5 rounded-full bg-accent text-white flex items-center justify-center" aria-label={`${badges[item.to]} bekleyen`}>
+                  <span className="relative text-[0.6875rem] font-bold tabular min-w-[1.375rem] h-[1.375rem] px-1.5 rounded-full bg-accent text-white flex items-center justify-center" aria-label={`${badges[item.to]} bekleyen`}>
                     {badges[item.to]}
                   </span>
                 )}
@@ -217,7 +217,7 @@ function SidebarContent() {
                 <item.icon size={22} weight={isActive ? 'fill' : 'duotone'} className="relative" aria-hidden="true" />
                 <span className="relative flex-1">{item.label}</span>
                 {badges[item.to] > 0 && (
-                  <span className="relative text-[11px] font-bold tabular min-w-[22px] h-[22px] px-1.5 rounded-full bg-accent text-white flex items-center justify-center" aria-label={`${badges[item.to]} bekleyen`}>
+                  <span className="relative text-[0.6875rem] font-bold tabular min-w-[1.375rem] h-[1.375rem] px-1.5 rounded-full bg-accent text-white flex items-center justify-center" aria-label={`${badges[item.to]} bekleyen`}>
                     {badges[item.to]}
                   </span>
                 )}
@@ -271,7 +271,7 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
   const run = (fn: () => void) => () => { setMenuOpen(false); fn(); };
 
   return (
-    <header className="h-[72px] shrink-0 flex items-center gap-3 px-4 sm:px-8 border-b border-theme-light/40 bg-theme-cream/80 backdrop-blur-md relative z-10">
+    <header className="h-[4.5rem] shrink-0 flex items-center gap-3 px-4 sm:px-8 border-b border-theme-light/40 bg-theme-cream/80 backdrop-blur-md relative z-10">
       <button onClick={onOpenDrawer} className="icon-btn lg:hidden" aria-label="Menüyü aç"><List size={22} weight="bold" /></button>
 
       <button

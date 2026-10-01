@@ -45,6 +45,7 @@ public class AdminUserController {
     private final CurrentUser currentUser;
     private final com.enerjistaj.devhub.realtime.RealtimeService realtime;
     private final com.enerjistaj.devhub.onboarding.OnboardingService onboarding;
+    private final com.enerjistaj.devhub.service.TaskTimeService taskTime;
 
     /** Pasifler dahil tüm kullanıcılar. */
     @GetMapping
@@ -165,6 +166,7 @@ public class AdminUserController {
         if (!active) {
             todoMembershipService.onUserDeactivated(saved);
             realtime.disconnect(saved.getId());
+            taskTime.closeAllFor(saved);
         }
         if (wasActive != active) {
             actionLogService.record(LogCategory.KULLANICI, active ? LogAction.AKTIFLESTIRME : LogAction.PASIFLESTIRME,

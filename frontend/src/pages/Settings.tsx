@@ -1,7 +1,7 @@
 import { ShieldCheck, Palette, Sun, Moon, Desktop } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
-import { setThemePref, useTheme } from '../lib/theme';
-import type { ThemePref } from '../lib/theme';
+import { setThemePref, setUiScale, useTheme, useUiScale } from '../lib/theme';
+import type { ThemePref, UiScale } from '../lib/theme';
 import { PageHeader } from '../components/ui/primitives';
 import ProfileCard from '../components/settings/ProfileCard';
 import { useMe } from '../hooks/api';
@@ -53,9 +53,16 @@ const THEMES: { value: ThemePref; label: string; hint: string; icon: Icon }[] = 
   { value: 'system', label: 'Sistem', hint: 'Cihaza uyar', icon: Desktop },
 ];
 
-/** Tema tercihi: bu cihaza kaydedilir. Üst bardaki güneş/ay düğmesi de aynı ayarı değiştirir. */
+const SCALES: { value: UiScale; label: string; hint: string }[] = [
+  { value: '0.75', label: 'Kompakt', hint: 'Daha çok içerik' },
+  { value: '0.875', label: 'Orta', hint: '%87' },
+  { value: '1', label: 'Rahat', hint: 'Büyük yazı' },
+];
+
+/** Tema ve ölçek tercihi: bu cihaza kaydedilir. Üst bardaki güneş/ay düğmesi de temayı değiştirir. */
 function AppearanceCard() {
   const [pref] = useTheme();
+  const scale = useUiScale();
   return (
     <section className="card p-6" aria-labelledby="theme-title">
       <h2 id="theme-title" className="text-lg font-bold tracking-tight flex items-center gap-2 mb-1"><Palette size={20} weight="duotone" className="text-theme-deep" /> Görünüm</h2>
@@ -69,7 +76,23 @@ function AppearanceCard() {
                 on ? 'bg-theme-lightest border-theme-medium text-theme-deep' : 'border-theme-light/60 text-theme-muted hover:border-theme-medium hover:text-theme-deep'}`}>
               <t.icon size={22} weight={on ? 'fill' : 'duotone'} />
               {t.label}
-              <span className="text-[11px] font-medium text-theme-muted">{t.hint}</span>
+              <span className="text-[0.6875rem] font-medium text-theme-muted">{t.hint}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <p className="text-sm font-semibold mt-5 mb-2">Arayüz boyutu</p>
+      <div role="radiogroup" aria-label="Arayüz boyutu" className="grid grid-cols-3 gap-2">
+        {SCALES.map(s => {
+          const on = scale === s.value;
+          return (
+            <button key={s.value} type="button" role="radio" aria-checked={on} onClick={() => setUiScale(s.value)}
+              className={`flex flex-col items-center gap-0.5 px-2 py-2.5 rounded-2xl border text-sm font-semibold transition-colors ${
+                on ? 'bg-theme-lightest border-theme-medium text-theme-deep' : 'border-theme-light/60 text-theme-muted hover:border-theme-medium hover:text-theme-deep'}`}>
+              <span style={{ fontSize: `${Number(s.value) * 1.1}rem` }} className="font-bold leading-none" aria-hidden="true">Aa</span>
+              {s.label}
+              <span className="text-[0.6875rem] font-medium text-theme-muted">{s.hint}</span>
             </button>
           );
         })}

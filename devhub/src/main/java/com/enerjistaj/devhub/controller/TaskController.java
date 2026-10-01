@@ -51,19 +51,17 @@ public class TaskController {
     private final ProjectRepository projectRepository;
     private final NotificationService notificationService;
     private final TaskStatusService taskStatusService;
+    private final com.enerjistaj.devhub.service.TaskTimeService taskTime;
+    private final com.enerjistaj.devhub.service.WorkTimeService workTime;
 
     @GetMapping
     public ResponseEntity<List<TaskDto>> getAllTasks() {
-        Map<Long, Long> comments = commentCounts();
-        return ResponseEntity.ok(taskRepository.findAllByOrderByCreatedAtDesc().stream()
-            .map(t -> TaskDto.from(t, comments.getOrDefault(t.getId(), 0L))).toList());
+        return ResponseEntity.ok(dtos(taskRepository.findAllByOrderByCreatedAtDesc()));
     }
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<TaskDto>> getUserTasks(@PathVariable Long userId) {
-        Map<Long, Long> comments = commentCounts();
-        return ResponseEntity.ok(taskRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
-            .map(t -> TaskDto.from(t, comments.getOrDefault(t.getId(), 0L))).toList());
+        return ResponseEntity.ok(dtos(taskRepository.findByUserIdOrderByCreatedAtDesc(userId)));
     }
 
     /** Eski uç: tek kişiye görev. */
@@ -99,6 +97,8 @@ public class TaskController {
         String description = Payloads.optionalText(payload, "description", 4000, "Açıklama");
         TaskPriority priority = Payloads.enumValue(payload, "priority", TaskPriority.class, "öncelik");
         LocalDate dueDate = Payloads.date(payload, "dueDate", "Son tarih");
+        Integer estimate = estimateMinutes(payload);
+        if (estimate == null) throw ApiException.badRequest("Görevin tahmini süresini (iş gücü) girin.");
         boolean explicitProject = admin && payload.containsKey("projectId");
         Project chosenProject = explicitProject ? projectOrNull(payload.get("projectId")) : null;
 
@@ -115,6 +115,7 @@ public class TaskController {
             t.setDescription(description);
             if (priority != null) t.setPriority(priority);
             t.setDueDate(dueDate);
+            t.setEstimatedMinutes(estimate);
             t.setCreatedBy(me);
             // Görev seçilen projeye, seçilmediyse kişinin o anki projesine bağlanır; kişi sonra proje değiştirse de görev projesinde kalır.
             if (explicitProject) t.setProject(chosenProject);
@@ -133,6 +134,7 @@ public class TaskController {
                 .detail("Atanan: " + String.join(", ", names))
                 .detail("Öncelik: " + PRIORITY_LABEL.get(priority != null ? priority : TaskPriority.ORTA))
                 .detail(dueDate != null ? "Son tarih: " + dueDate.format(DAY) : null)
+                .detail("Tahmini süre: " + hours(estimate))
                 .detail(explicitProject ? "Proje: " + (chosenProject != null ? chosenProject.getName() : "Projesiz") : null)
                 .detail(description != null ? "Açıklama eklendi" : null)
                 .detail(ids.size() > 1 ? "Görev kayıtları: #" + ids.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", #")) : null).save();
@@ -153,6 +155,7 @@ public class TaskController {
         LocalDate oDue = t.getDueDate();
         String oProject = t.getProject() != null ? t.getProject().getName() : null;
         String oUser = t.getUser().getFullName();
+        Integer oEstimate = t.getEstimatedMinutes();
 
         if (payload.containsKey("content")) {
             String content = Payloads.requiredText(payload, "content", "Görev içeriği boş olamaz.", 1000, "Görev");
@@ -188,6 +191,17 @@ public class TaskController {
                 t.setDueDate(due);
             }
         }
+        if (payload.containsKey("estimatedMinutes")) {
+            // Tahmini süreyi yönetici ya da görevi kendine açan kişi değiştirir; atanan görevin tahminini çalışan değiştiremez.
+            boolean selfCreated = t.getCreatedBy() != null && t.getCreatedBy().getId().equals(me.getId());
+            if (!admin && !selfCreated) throw ApiException.forbidden("Atanan görevin tahmini süresini yalnızca yöneticiler değiştirebilir.");
+            Integer estimate = estimateMinutes(payload);
+            if (estimate == null) throw ApiException.badRequest("Tahmini süre boş olamaz.");
+            if (!estimate.equals(t.getEstimatedMinutes())) {
+                event(t, me, "tahmini süreyi " + (t.getEstimatedMinutes() != null ? hours(t.getEstimatedMinutes()) + " → " : "") + hours(estimate) + " olarak belirledi");
+                t.setEstimatedMinutes(estimate);
+            }
+        }
         if (payload.containsKey("projectId")) {
             if (!admin) throw ApiException.forbidden("Görevin projesini yalnızca yöneticiler değiştirebilir.");
             Project project = projectOrNull(payload.get("projectId"));
@@ -207,13 +221,14 @@ public class TaskController {
                 User user = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("Kullanıcı"));
                 if (!user.isActive()) throw ApiException.badRequest(user.getFullName() + " pasif bir hesap; görev aktarılamaz.");
                 event(t, me, "görevi aktardı: " + t.getUser().getFullName() + " → " + user.getFullName());
+                taskTime.onReassign(t, user);
                 t.setUser(user);
                 notificationService.notify(user, me, NotificationType.TASK_ASSIGNED, "Size bir görev aktarıldı", t.getContent(), link(t));
             }
         }
         Task saved = taskRepository.save(t);
-        logTaskChanges(saved, me, oContent, oDescription, oStatus, oPriority, oDue, oProject, oUser);
-        return ResponseEntity.ok(TaskDto.from(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
+        logTaskChanges(saved, me, oContent, oDescription, oStatus, oPriority, oDue, oProject, oUser, oEstimate);
+        return ResponseEntity.ok(dto(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
     }
 
     @DeleteMapping("/{taskId}")
@@ -228,6 +243,71 @@ public class TaskController {
                 .level(LogLevel.UYARI).save();
         taskRepository.delete(t);
         return ResponseEntity.noContent().build();
+    }
+
+    // ------------------------------------------------------------- iş gücü
+
+    /** Görevin çalışma oturumları (Devam Ediyor'da geçen aralıklar ve mesaiye düşen süreleri). */
+    @GetMapping("/{taskId}/sessions")
+    public ResponseEntity<List<com.enerjistaj.devhub.service.TaskTimeService.SessionDto>> sessions(@PathVariable Long taskId) {
+        if (!taskRepository.existsById(taskId)) throw ApiException.notFound("Görev");
+        return ResponseEntity.ok(taskTime.sessionsOf(taskId));
+    }
+
+    /**
+     * Harcanan süreyi düzeltir (ör. görevi Devam'a almayı unuttu). Gövde: spentMinutes = olması gereken toplam.
+     * Oturumlar değişmez; aradaki fark düzeltme olarak saklanır ve geçmişe/loga yazılır. Sahibi ya da yönetici yapabilir.
+     */
+    @PutMapping("/{taskId}/time")
+    @Transactional
+    public ResponseEntity<TaskDto> correctTime(@PathVariable Long taskId, @RequestBody Map<String, Object> payload) {
+        Task t = findOwnTask(taskId);
+        User me = currentUser.get();
+        int target;
+        try {
+            target = (int) Math.round(Double.parseDouble(String.valueOf(payload.get("spentMinutes"))));
+        } catch (NumberFormatException e) {
+            throw ApiException.badRequest("Harcanan süre sayı olmalı.");
+        }
+        if (target < 0 || target > 100_000) throw ApiException.badRequest("Harcanan süre 0 ile 100.000 dakika arasında olmalı.");
+        long before = taskTime.summary(t).spentSeconds();
+        long raw = taskTime.rawSeconds(t);
+        t.setSpentAdjustMinutes((int) Math.round((target * 60.0 - raw) / 60.0));
+        Task saved = taskRepository.save(t);
+        String from = hours((int) (before / 60)), to = hours(target);
+        if (!from.equals(to)) {
+            event(saved, me, "harcanan süreyi düzeltti: " + from + " → " + to);
+            actionLogService.record(LogCategory.GOREV, LogAction.GUNCELLEME, "Görevin harcanan süresi düzeltildi: " + t.getContent()).by(me)
+                .target("GOREV", t.getId(), t.getContent())
+                .change("Harcanan süre", from, to)
+                .detail("Görevin sahibi: " + t.getUser().getFullName())
+                .level(LogLevel.UYARI).save();
+        }
+        return ResponseEntity.ok(dto(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
+    }
+
+    /** Kişi başına bu haftaki çalışma: çalışılan süre, kapasite (tatil ve izin günleri düşülmüş), bugün çalışılan. */
+    @GetMapping("/workload")
+    public ResponseEntity<List<Map<String, Object>>> workload() {
+        java.time.ZonedDateTime now = java.time.ZonedDateTime.now(ActionLogService.ZONE);
+        LocalDate monday = now.toLocalDate().with(java.time.DayOfWeek.MONDAY);
+        LocalDate sunday = monday.plusDays(6);
+        java.time.LocalDateTime weekStart = monday.atStartOfDay(ActionLogService.ZONE).withZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+        java.time.LocalDateTime dayStart = now.toLocalDate().atStartOfDay(ActionLogService.ZONE).withZoneSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+        Map<Long, Long> week = taskTime.workedByUser(weekStart, weekStart.plusDays(7));
+        Map<Long, Long> today = taskTime.workedByUser(dayStart, dayStart.plusDays(1));
+        com.enerjistaj.devhub.service.WorkTimeService.Calendar cal = workTime.calendar(monday, sunday);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (User u : userRepository.findByActiveTrue()) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("userId", u.getId());
+            m.put("weekWorkedSeconds", week.getOrDefault(u.getId(), 0L));
+            m.put("todayWorkedSeconds", today.getOrDefault(u.getId(), 0L));
+            m.put("weekCapacitySeconds", cal.capacitySeconds(u.getId(), monday, sunday));
+            m.put("weekStart", monday.toString());
+            out.add(m);
+        }
+        return ResponseEntity.ok(out);
     }
 
     /** Görevin geçmişi ve yorumları (eskiden yeniye). Görevleri herkes görebildiği için geçmişi de herkes görebilir. */
@@ -276,7 +356,7 @@ public class TaskController {
 
     /** Görev güncellemesinin özeti: ne değiştiyse "Alan: eski → yeni" satırları; değişiklik yoksa kayıt düşmez. */
     private void logTaskChanges(Task t, User me, String oContent, String oDescription, TaskStatus oStatus, TaskPriority oPriority,
-                                LocalDate oDue, String oProject, String oUser) {
+                                LocalDate oDue, String oProject, String oUser, Integer oEstimate) {
         String project = t.getProject() != null ? t.getProject().getName() : null;
         List<String> changes = java.util.stream.Stream.of(
                 ActionLogService.diff("Başlık", oContent, t.getContent()),
@@ -285,7 +365,8 @@ public class TaskController {
                 ActionLogService.diff("Öncelik", PRIORITY_LABEL.get(oPriority), PRIORITY_LABEL.get(t.getPriority())),
                 ActionLogService.diff("Son tarih", oDue != null ? oDue.format(DAY) : null, t.getDueDate() != null ? t.getDueDate().format(DAY) : null),
                 ActionLogService.diff("Proje", oProject != null ? oProject : "Projesiz", project != null ? project : "Projesiz"),
-                ActionLogService.diff("Atanan", oUser, t.getUser().getFullName())).filter(Objects::nonNull).toList();
+                ActionLogService.diff("Atanan", oUser, t.getUser().getFullName()),
+                ActionLogService.diff("Tahmini süre", oEstimate != null ? hours(oEstimate) : null, t.getEstimatedMinutes() != null ? hours(t.getEstimatedMinutes()) : null)).filter(Objects::nonNull).toList();
         if (changes.isEmpty()) return;
         boolean completed = oStatus != TaskStatus.TAMAMLANDI && t.getStatus() == TaskStatus.TAMAMLANDI;
         boolean moved = !oUser.equals(t.getUser().getFullName());
@@ -308,6 +389,48 @@ public class TaskController {
         a.setKind(TaskActivityKind.EVENT);
         a.setMessage(message);
         activityRepository.save(a);
+    }
+
+    private List<TaskDto> dtos(List<Task> tasks) {
+        Map<Long, Long> comments = commentCounts();
+        Map<Long, com.enerjistaj.devhub.service.TaskTimeService.Summary> time = taskTime.summaries(tasks);
+        return tasks.stream().map(t -> withTime(TaskDto.from(t, comments.getOrDefault(t.getId(), 0L)), time.get(t.getId()))).toList();
+    }
+
+    private TaskDto dto(Task t, long comments) {
+        return withTime(TaskDto.from(t, comments), taskTime.summary(t));
+    }
+
+    private static TaskDto withTime(TaskDto d, com.enerjistaj.devhub.service.TaskTimeService.Summary s) {
+        if (s != null) {
+            d.setSpentSeconds(s.spentSeconds());
+            d.setRunning(s.running());
+            d.setTicking(s.ticking());
+            d.setStartedAt(s.firstStartedAt());
+        }
+        return d;
+    }
+
+    /** Gövdedeki tahmini süre (dakika); yoksa null. 15 dakika ile 400 saat arası, 15 dakikanın katına yuvarlanır. */
+    private static Integer estimateMinutes(Map<String, Object> payload) {
+        Object raw = payload.get("estimatedMinutes");
+        if (raw == null || raw.toString().isBlank()) return null;
+        double v;
+        try {
+            v = Double.parseDouble(raw.toString());
+        } catch (NumberFormatException e) {
+            throw ApiException.badRequest("Tahmini süre sayı olmalı.");
+        }
+        int m = (int) (Math.round(v / 15.0) * 15);
+        if (m < 15 || m > 400 * 60) throw ApiException.badRequest("Tahmini süre 15 dakika ile 400 saat arasında olmalı.");
+        return m;
+    }
+
+    /** 510 → "8 sa 30 dk" */
+    static String hours(int minutes) {
+        int h = minutes / 60, m = minutes % 60;
+        if (h == 0) return m + " dk";
+        return m == 0 ? h + " sa" : h + " sa " + m + " dk";
     }
 
     private Map<Long, Long> commentCounts() {

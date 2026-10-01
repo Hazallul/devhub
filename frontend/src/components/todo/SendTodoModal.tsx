@@ -65,7 +65,7 @@ export default function SendTodoModal({ item, onClose }: { item: TodoItem | null
               className="w-full pl-9 pr-3 py-2 rounded-2xl bg-surface border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
             />
           </div>
-          <ul role="group" aria-label="Alıcılar" className="max-h-[240px] overflow-y-auto scrollbar-thin p-1.5">
+          <ul role="group" aria-label="Alıcılar" className="max-h-[15rem] overflow-y-auto scrollbar-thin p-1.5">
             {people.length === 0 && <li className="text-sm text-theme-muted font-medium text-center py-6">Eşleşen kişi yok.</li>}
             {people.map(u => {
               const checked = selected.includes(u.id);

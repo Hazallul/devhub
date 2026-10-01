@@ -6,7 +6,7 @@ export interface NavItem { to: string; label: string; icon: Icon; adminOnly?: bo
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Genel Bakış', icon: House },
-  { to: '/team', label: 'Ekip', icon: Users },
+  { to: '/team', label: 'Çalışanlar', icon: Users },
   { to: '/projects', label: 'Projeler', icon: FolderOpen },
   { to: '/tasks', label: 'Görevler', icon: Kanban },
   { to: '/leaves', label: 'İzinler', icon: CalendarBlank },

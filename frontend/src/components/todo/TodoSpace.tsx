@@ -153,7 +153,7 @@ function Space({ onHome }: { onHome: () => void }) {
           <HomeButton onHome={onHome} />
           <div className="min-w-0">
             <p className="text-xl font-bold tracking-tight text-theme-text leading-none">Yapılacaklarım</p>
-            <p className="text-[11px] font-semibold text-theme-muted truncate mt-1 leading-none">{firstName(me.fullName)} · kişisel alan</p>
+            <p className="text-[0.6875rem] font-semibold text-theme-muted truncate mt-1 leading-none">{firstName(me.fullName)} · kişisel alan</p>
           </div>
         </div>
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.35, ease: [0.16, 1, 0.3, 1] }} className="flex-1 min-h-0 flex flex-col">
@@ -168,7 +168,7 @@ function Space({ onHome }: { onHome: () => void }) {
         initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 min-w-0 flex flex-col"
       >
-        <div className="flex items-center gap-3 px-4 sm:px-8 h-[72px] shrink-0">
+        <div className="flex items-center gap-3 px-4 sm:px-8 h-[4.5rem] shrink-0">
           <div className="lg:hidden"><HomeButton onHome={onHome} /></div>
           <select aria-label="Görünüm" value={current.id} onChange={e => setView(e.target.value as ViewId)} className="lg:hidden input py-2.5 flex-1 min-w-0">
             {all.map(v => <option key={v.id} value={v.id}>{v.label}{counts.get(v.id) ? ` (${counts.get(v.id)})` : ''}</option>)}
@@ -182,7 +182,7 @@ function Space({ onHome }: { onHome: () => void }) {
         </div>
 
         <div className="flex-1 overflow-y-auto overscroll-contain scrollbar-thin px-4 sm:px-8 pb-10">
-          <div className={pane === 'week' ? 'max-w-[1400px] mx-auto' : 'max-w-3xl mx-auto'}>
+          <div className={pane === 'week' ? 'max-w-[87.5rem] mx-auto' : 'max-w-3xl mx-auto'}>
             {isLoading || !data ? (
               <div className="space-y-3 pt-6"><Skeleton className="h-10 w-1/2" /><Skeleton className="h-14 rounded-3xl" /><Skeleton className="h-16 rounded-3xl" /><Skeleton className="h-16 rounded-3xl" /></div>
             ) : pane === 'week' ? (
@@ -218,7 +218,7 @@ function Space({ onHome }: { onHome: () => void }) {
               initial={{ x: 40, opacity: 0 }}
               animate={{ x: 0, opacity: 1, transition: { type: 'spring', stiffness: 320, damping: 34 } }}
               exit={{ x: 40, opacity: 0, transition: { duration: 0.15 } }}
-              className={`fixed inset-y-0 right-0 z-[102] w-full max-w-md shrink-0 bg-theme-cream border-l border-theme-light/50 shadow-2xl ${overlayDetail ? '' : 'xl:static xl:w-[400px] xl:max-w-none xl:shadow-none'}`}
+              className={`fixed inset-y-0 right-0 z-[102] w-full max-w-md shrink-0 bg-theme-cream border-l border-theme-light/50 shadow-2xl ${overlayDetail ? '' : 'xl:static xl:w-[25rem] xl:max-w-none xl:shadow-none'}`}
             >
               <TodoDetail key={selected.id} item={selected} lists={lists} onClose={() => setSelectedId(null)} onSend={() => setSending(selected)} />
             </motion.aside>
@@ -288,7 +288,7 @@ function Rail({ smart, own, view, counts, unseen, onPick }: {
             {v.list && v.list.members.length > 1 && <Users size={14} weight="bold" className="shrink-0 text-theme-medium" aria-label="Ortak liste" />}
           </span>
           {v.id === 'inbox' && unseen > 0
-            ? <span className="relative text-[11px] font-bold tabular min-w-[20px] h-5 px-1.5 rounded-full bg-danger-solid text-white flex items-center justify-center" aria-label={`${unseen} yeni`}>{unseen}</span>
+            ? <span className="relative text-[0.6875rem] font-bold tabular min-w-[1.25rem] h-5 px-1.5 rounded-full bg-danger-solid text-white flex items-center justify-center" aria-label={`${unseen} yeni`}>{unseen}</span>
             : count > 0 && <span className="relative text-xs font-bold tabular text-theme-muted">{count}</span>}
         </button>
       </li>
@@ -387,9 +387,9 @@ function ItemsPane({ view, items, lists, search, now, selectedId, onSelect, onSe
             onChange={e => setDraft(e.target.value)}
             placeholder={view.id === 'today' ? 'Bugün ne yapacaksınız?' : 'Yeni kart ekle…'}
             aria-label="Yeni kart"
-            className="flex-1 min-w-0 bg-transparent py-2 text-[15px] font-medium text-theme-text placeholder:text-theme-muted focus:outline-none"
+            className="flex-1 min-w-0 bg-transparent py-2 text-[0.9375rem] font-medium text-theme-text placeholder:text-theme-muted focus:outline-none"
           />
-          <button type="submit" disabled={!draft.trim()} className="btn-primary min-h-[40px] px-4 text-sm disabled:opacity-0 disabled:pointer-events-none transition-opacity">Ekle</button>
+          <button type="submit" disabled={!draft.trim()} className="btn-primary min-h-[2.5rem] px-4 text-sm disabled:opacity-0 disabled:pointer-events-none transition-opacity">Ekle</button>
         </form>
       )}
 

@@ -43,4 +43,8 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             + " where l.user.id = :userId and l.state = com.enerjistaj.devhub.entity.LeaveState.ONAYLANDI"
             + " and l.startDate <= :day and l.endDate >= :day")
     List<LeaveRequest> findApprovedOn(@Param("userId") Long userId, @Param("day") LocalDate day);
+
+    /** [from, to] günlerine değen onaylı izinler (iş gücü hesabında izinli günler sayılmaz). */
+    @Query("select l from LeaveRequest l join fetch l.user where l.state = com.enerjistaj.devhub.entity.LeaveState.ONAYLANDI and l.endDate >= :from and l.startDate <= :to")
+    List<LeaveRequest> findApprovedBetween(@Param("from") LocalDate from, @Param("to") LocalDate to);
 }

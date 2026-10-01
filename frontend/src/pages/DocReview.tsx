@@ -81,7 +81,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
             {rev.authorName ?? 'Silinmiş kullanıcı'} <span className="font-semibold text-theme-muted">· {dateTime.format(parseServerDate(rev.createdAt))} ({timeAgo(rev.createdAt)})</span>
           </p>
           {rev.note ? (
-            <p className="flex items-start gap-1.5 text-[15px] text-theme-text font-medium mt-1"><Quotes size={16} weight="fill" className="text-theme-medium shrink-0 mt-1" aria-hidden="true" />{rev.note}</p>
+            <p className="flex items-start gap-1.5 text-[0.9375rem] text-theme-text font-medium mt-1"><Quotes size={16} weight="fill" className="text-theme-medium shrink-0 mt-1" aria-hidden="true" />{rev.note}</p>
           ) : <p className="text-sm text-theme-muted font-medium mt-1">Açıklama eklenmemiş.</p>}
           {!rev.isNew && rev.baseVersion !== null && <p className="text-xs text-theme-muted font-semibold mt-2">Sürüm {rev.baseVersion} üzerinde hazırlandı{current ? ` · doküman şu an sürüm ${current.version}` : ''}</p>}
           {rev.decidedAt && rev.status !== 'BEKLIYOR' && (
@@ -93,12 +93,12 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
         </div>
         {pending && (isAdmin || mine) && (
           <div className="flex flex-wrap gap-2">
-            {mine && <Link to={editHref} className="btn-secondary min-h-[40px] px-3 text-sm"><PencilSimple size={16} weight="bold" /> Düzenle</Link>}
-            {mine && <button type="button" onClick={() => withdraw.mutate(rev.id, { onSuccess: () => navigate('/docs') })} disabled={withdraw.isPending} className="btn-secondary min-h-[40px] px-3 text-sm">Geri çek</button>}
+            {mine && <Link to={editHref} className="btn-secondary min-h-[2.5rem] px-3 text-sm"><PencilSimple size={16} weight="bold" /> Düzenle</Link>}
+            {mine && <button type="button" onClick={() => withdraw.mutate(rev.id, { onSuccess: () => navigate('/docs') })} disabled={withdraw.isPending} className="btn-secondary min-h-[2.5rem] px-3 text-sm">Geri çek</button>}
             {isAdmin && (
               <>
-                <button type="button" onClick={() => setDecision('REDDEDILDI')} className="btn-secondary min-h-[40px] px-3 text-sm"><XCircle size={16} weight="bold" /> Reddet</button>
-                <button type="button" onClick={() => setDecision('ONAYLANDI')} className="btn-primary min-h-[40px] px-3 text-sm"><CheckCircle size={16} weight="bold" /> Onayla ve yayınla</button>
+                <button type="button" onClick={() => setDecision('REDDEDILDI')} className="btn-secondary min-h-[2.5rem] px-3 text-sm"><XCircle size={16} weight="bold" /> Reddet</button>
+                <button type="button" onClick={() => setDecision('ONAYLANDI')} className="btn-primary min-h-[2.5rem] px-3 text-sm"><CheckCircle size={16} weight="bold" /> Onayla ve yayınla</button>
               </>
             )}
           </div>
@@ -120,7 +120,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
           <p className="eyebrow mb-3">Bilgi değişiklikleri</p>
           <dl className="space-y-2 text-sm">
             {meta.map(m => (
-              <div key={m.label} className="grid sm:grid-cols-[100px_1fr] gap-1 sm:gap-3">
+              <div key={m.label} className="grid sm:grid-cols-[6.25rem_1fr] gap-1 sm:gap-3">
                 <dt className="font-bold text-theme-muted">{m.label}</dt>
                 <dd className="flex flex-wrap items-center gap-2">
                   <span className="line-through decoration-clay/70 text-theme-muted">{m.before || '—'}</span>
@@ -160,7 +160,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
               <>
                 <h2 className="text-3xl font-bold tracking-tight text-theme-text">{rev.title}</h2>
                 {rev.summary && <p className="text-lg text-theme-muted font-medium mt-2">{rev.summary}</p>}
-                {rev.tags.length > 0 && <p className="flex flex-wrap gap-1.5 mt-3">{rev.tags.map(t => <span key={t} className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-theme-lightest text-theme-deep">#{t}</span>)}</p>}
+                {rev.tags.length > 0 && <p className="flex flex-wrap gap-1.5 mt-3">{rev.tags.map(t => <span key={t} className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-full bg-theme-lightest text-theme-deep">#{t}</span>)}</p>}
                 <hr className="my-6 border-theme-light/50" />
               </>
             )}

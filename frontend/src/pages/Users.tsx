@@ -119,7 +119,7 @@ function UsersPage() {
                     return (
                       <motion.li key={r.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 40, transition: { duration: 0.18 } }} className="card p-4 flex flex-wrap items-center gap-4">
                         {u && <Avatar user={u} size="sm" />}
-                        <div className="flex-1 min-w-[220px]">
+                        <div className="flex-1 min-w-[13.75rem]">
                           <p className="text-sm font-bold truncate">{u?.fullName ?? r.previousFullName} <span className="font-medium text-theme-muted">· {timeAgo(r.createdAt)}</span></p>
                           <div className="mt-1"><ProfileDiff request={r} /></div>
                         </div>
@@ -195,7 +195,7 @@ function UsersPage() {
                 <div className="min-w-0 flex-1 sm:flex-none sm:w-64">
                   <div className="flex items-center gap-2">
                     <p className="font-bold truncate">{u.fullName}</p>
-                    {u.id === me.id && <span className="text-[10px] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md">Sen</span>}
+                    {u.id === me.id && <span className="text-[0.625rem] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md">Sen</span>}
                   </div>
                   <p className="text-xs text-theme-muted font-medium truncate">{u.email}</p>
                 </div>
@@ -259,7 +259,7 @@ function UsersPage() {
           {/* Kalıcı silme yalnızca pasif hesaplarda: önce pasifleştir, sonra sil (yanlışlıkla silmeye karşı iki adım). */}
           {!menu.user.active
             ? <MenuItem icon={Trash} tone="danger" onSelect={() => { setDeleting(menu.user); setMenu(null); }}>Kalıcı olarak sil…</MenuItem>
-            : menu.user.id !== me.id && <p className="text-[11px] text-theme-muted font-medium px-3 pt-1 pb-1.5 leading-snug">Silmek için önce hesabı pasifleştirin.</p>}
+            : menu.user.id !== me.id && <p className="text-[0.6875rem] text-theme-muted font-medium px-3 pt-1 pb-1.5 leading-snug">Silmek için önce hesabı pasifleştirin.</p>}
         </>}
       </Menu>
 

@@ -99,13 +99,13 @@ export default function TaskRow({ task, canEdit, showOwner }: TaskRowProps) {
             {showOwner}
             {task.priority && !done && <PriorityBadge priority={task.priority} />}
             {due && (
-              <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
+              <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-bold ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
                 <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}
               </span>
             )}
             {task.description && <TextAlignLeft size={13} weight="bold" className="text-theme-muted" aria-label="Açıklaması var" />}
             {!!task.commentCount && (
-              <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-theme-muted tabular" aria-label={`${task.commentCount} yorum`}>
+              <span className="inline-flex items-center gap-0.5 text-[0.6875rem] font-bold text-theme-muted tabular" aria-label={`${task.commentCount} yorum`}>
                 <ChatCircleText size={13} weight="bold" aria-hidden="true" /> {task.commentCount}
               </span>
             )}

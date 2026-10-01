@@ -59,7 +59,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
         ) : visible.length === 0 ? (
           <EmptyState icon={ListDashes} title="Log bulunamadı" description="Arama veya filtreyi değiştirmeyi deneyin." />
         ) : (
-          <ol className="relative pl-6 space-y-3 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-theme-light">
+          <ol className="relative pl-6 space-y-3 before:absolute before:left-[0.6875rem] before:top-2 before:bottom-2 before:w-px before:bg-theme-light">
             <AnimatePresence initial={false}>
               {visible.map((log, i) => {
                 const meta = LOG_CATEGORY[log.type];

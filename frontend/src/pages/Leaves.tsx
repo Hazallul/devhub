@@ -96,7 +96,7 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
             <div className="bg-ink text-white rounded-2xl shadow-float p-3.5">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-bold">{tip.user.fullName}</p>
-                <span className="text-[10px] font-bold uppercase tracking-wide bg-white/15 px-1.5 py-0.5 rounded-md">
+                <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-white/15 px-1.5 py-0.5 rounded-md">
                   {tip.leave.state === 'BEKLIYOR' ? 'Onay bekliyor' : LEAVE_STATE[tip.leave.state].label}
                 </span>
               </div>
@@ -109,7 +109,7 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
               )}
               {tip.leave.decisionNote && (
                 <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 leading-relaxed">
-                  <span className="block text-[10px] font-bold uppercase tracking-wide text-white/60 mb-0.5">{tip.leave.decidedByName ?? 'Yönetici'} açıklaması</span>
+                  <span className="block text-[0.625rem] font-bold uppercase tracking-wide text-white/60 mb-0.5">{tip.leave.decidedByName ?? 'Yönetici'} açıklaması</span>
                   {tip.leave.decisionNote}
                 </p>
               )}
@@ -371,7 +371,7 @@ export default function Leaves() {
           <div className="overflow-x-auto scrollbar-thin -mx-2 px-2">
             {/* Takvim fareyle tutulup sağa sola sürüklenebilir: tüm şeritler aynı x değerini paylaşır, bırakınca en yakın güne oturur. */}
             <div
-              className={`min-w-[760px] select-none ${grabbing ? 'cursor-grabbing' : 'cursor-grab'}`}
+              className={`min-w-[47.5rem] select-none ${grabbing ? 'cursor-grabbing' : 'cursor-grab'}`}
               onPointerDown={onDragStart}
               onPointerMove={onDragMove}
               onPointerUp={onDragEnd}
@@ -390,14 +390,14 @@ export default function Leaves() {
                       const showMonth = i === BUFFER || d.getDate() === 1;
                       return (
                         <div key={iso} className={`text-center px-px ${past ? 'opacity-40' : ''}`} style={{ flex: `0 0 ${100 / TOTAL}%` }}>
-                          <p className={`text-[10px] font-bold uppercase tracking-wide h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
+                          <p className={`text-[0.625rem] font-bold uppercase tracking-wide h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
                             {showMonth ? monthName.format(d) : '·'}
                           </p>
                           <div
                             title={holidayName ? `Resmi tatil: ${holidayName}` : undefined}
                             className={`py-1.5 rounded-lg ${isToday ? 'bg-accent text-white' : holidayName ? 'bg-clay-soft text-clay-ink' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i !== BUFFER ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
                           >
-                            <p className="text-[10px] font-bold uppercase">{weekday.format(d)}</p>
+                            <p className="text-[0.625rem] font-bold uppercase">{weekday.format(d)}</p>
                             <p className="text-sm font-bold tabular">{d.getDate()}</p>
                           </div>
                         </div>
@@ -461,7 +461,7 @@ export default function Leaves() {
                                   }`}
                                   style={{ left: `calc(${(startIdx / TOTAL) * 100}% + 2px)`, width: `calc(${((endIdx - startIdx + 1) / TOTAL) * 100}% - 4px)` }}
                                 >
-                                  <span className="text-[11px] font-bold text-theme-text truncate">{leaveTypeMeta(l.type).label}</span>
+                                  <span className="text-[0.6875rem] font-bold text-theme-text truncate">{leaveTypeMeta(l.type).label}</span>
                                   {l.note && <ChatText size={12} weight="bold" className="shrink-0 text-theme-text/70" aria-hidden="true" />}
                                 </motion.div>
                               );

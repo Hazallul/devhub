@@ -67,7 +67,7 @@ export default function TodoCard({ item, selected, listName, ownerLabel, onSelec
       <button type="button" onClick={onSelect} aria-expanded={selected} className="min-w-0 flex-1 text-left rounded-xl py-0.5">
         <span className="flex items-center gap-2">
           {!item.seen && <span className="w-2 h-2 rounded-full bg-danger-solid shrink-0" aria-label="Yeni" />}
-          <span className={`block text-[15px] font-semibold leading-snug break-words ${item.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{item.title}</span>
+          <span className={`block text-[0.9375rem] font-semibold leading-snug break-words ${item.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{item.title}</span>
         </span>
         {hasMeta && (
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs font-semibold text-theme-muted">

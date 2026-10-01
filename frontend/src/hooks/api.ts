@@ -8,7 +8,7 @@ import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete
 import type {
   User, Project, Task, TaskActivity, ActionLog, LeaveRequest, Announcement,
   UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState,
-  Holiday, LeaveBalance, AppNotification, Role, MonitorOverview, ProfileRequest, UserLink, LogPage, LogStats, LogCategory, LogLevel, LogAction,
+  Holiday, LeaveBalance, TaskSession, Workload, AppNotification, Role, MonitorOverview, ProfileRequest, UserLink, LogPage, LogStats, LogCategory, LogLevel, LogAction,
 } from '../types';
 
 const get = <T,>(url: string) => async () => (await api.get<T>(url)).data;
@@ -24,12 +24,30 @@ function useVisibleTasks() {
 }
 export const useAllTasks = () => {
   const select = useVisibleTasks();
-  return useQuery({ queryKey: ['tasks'], queryFn: get<Task[]>('/tasks'), select });
+  return useQuery({ queryKey: ['tasks'], queryFn: getTasks('/tasks'), select });
 };
 export const useUserTasks = (userId: number, enabled = true) => {
   const select = useVisibleTasks();
-  return useQuery({ queryKey: ['tasks', 'user', userId], queryFn: get<Task[]>(`/tasks/user/${userId}`), enabled, select });
+  return useQuery({ queryKey: ['tasks', 'user', userId], queryFn: getTasks(`/tasks/user/${userId}`), enabled, select });
 };
+/** Görev listesi + yüklenme anı (devam eden görevlerin süresi istemcide canlı ilerlesin diye). */
+function getTasks(url: string) {
+  return async () => {
+    const list = (await api.get<Task[]>(url)).data;
+    const at = Date.now();
+    return list.map(t => ({ ...t, fetchedAt: at }));
+  };
+}
+export const useTaskSessions = (taskId: number | null) =>
+  useQuery({ queryKey: ['tasks', 'sessions', taskId], queryFn: get<TaskSession[]>(`/tasks/${taskId}/sessions`), enabled: taskId !== null });
+/** Kişi başına bu haftaki çalışma ve kapasite; devam eden görevler için dakikada bir tazelenir. */
+export const useWorkload = (enabled = true) =>
+  useQuery({ queryKey: ['tasks', 'workload'], queryFn: get<Workload[]>('/tasks/workload'), enabled, refetchInterval: 60_000 });
+export const useCorrectTaskTime = () =>
+  useAction(
+    ({ id, spentMinutes }: { id: number; spentMinutes: number }) => api.put<Task>(`/tasks/${id}/time`, { spentMinutes }).then(r => r.data),
+    { invalidate: [['tasks'], ['logs']], success: 'Harcanan süre düzeltildi' },
+  );
 export const useTaskActivity = (taskId: number | null) =>
   useQuery({ queryKey: ['tasks', 'activity', taskId], queryFn: get<TaskActivity[]>(`/tasks/${taskId}/activity`), enabled: taskId !== null });
 export const useLogs = (enabled = true) => useQuery({ queryKey: ['logs'], queryFn: get<ActionLog[]>('/logs'), enabled });
@@ -278,6 +296,8 @@ export const useUpdateProject = () =>
 /** Birden fazla kişi seçilirse her kişiye ayrı görev oluşur. projectId yalnızca yöneticide dikkate alınır (null = projesiz). */
 export interface TaskInput {
   userIds: number[]; content: string; description?: string; priority?: TaskPriority; dueDate?: string; projectId?: number | null;
+  /** Tahmini iş gücü (dakika, zorunlu) */
+  estimatedMinutes: number;
 }
 
 export const useCreateTask = () =>
@@ -288,7 +308,7 @@ export const useCreateTask = () =>
 
 type TaskPatch = {
   id: number; content?: string; description?: string | null; status?: TaskStatus; priority?: TaskPriority; dueDate?: string | null;
-  userId?: number; projectId?: number | null;
+  userId?: number; projectId?: number | null; estimatedMinutes?: number;
 };
 
 /** İyimser güncelleme: kart sunucu yanıtını beklemeden yeni sütununa kayar, hata olursa geri alınır. */

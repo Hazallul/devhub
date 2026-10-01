@@ -36,6 +36,8 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
   const [menuView, setMenuView] = useState<'root' | 'projects'>('root');
   const [newTask, setNewTask] = useState('');
   const [newPriority, setNewPriority] = useState<TaskPriority>('ORTA');
+  /** Hızlı eklemede tahmini iş gücü (saat); zorunlu */
+  const [newHours, setNewHours] = useState('4');
   const [statusBtn, setStatusBtn] = useState<HTMLButtonElement | null>(null);
   const [moreBtn, setMoreBtn] = useState<HTMLButtonElement | null>(null);
   const newTaskRef = useRef<HTMLInputElement>(null);
@@ -91,8 +93,8 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
     e.preventDefault();
     const content = newTask.trim();
     if (!content) return;
-    createTask.mutate({ userIds: [user.id], content, priority: newPriority }, {
-      onSuccess: () => { setNewTask(''); setNewPriority('ORTA'); },
+    createTask.mutate({ userIds: [user.id], content, priority: newPriority, estimatedMinutes: Number(newHours) * 60 }, {
+      onSuccess: () => { setNewTask(''); setNewPriority('ORTA'); setNewHours('4'); },
     });
   };
 
@@ -132,8 +134,8 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
         <div className="min-w-0 flex-1 sm:flex-none sm:w-56">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-theme-text tracking-tight truncate">{user.fullName}</h3>
-            {isSelf && <span className="hidden sm:inline text-[10px] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md shrink-0">Sen</span>}
-            {user.role === 'ADMIN' && <span className="hidden sm:inline text-[10px] font-bold uppercase bg-accent text-white px-1.5 py-0.5 rounded-md shrink-0">Yönetici</span>}
+            {isSelf && <span className="hidden sm:inline text-[0.625rem] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md shrink-0">Sen</span>}
+            {user.role === 'ADMIN' && <span className="hidden sm:inline text-[0.625rem] font-bold uppercase bg-accent text-white px-1.5 py-0.5 rounded-md shrink-0">Yönetici</span>}
           </div>
           <p className="text-xs text-theme-muted font-medium truncate">{user.jobTitle || 'Çalışan'}</p>
         </div>
@@ -157,7 +159,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
           {tasks ? (
             <div className="flex items-center gap-2 text-sm font-semibold text-theme-text tabular">
               <span title="Açık görev">{openCount} açık</span>
-              {urgent > 0 && <span className="text-[11px] font-bold text-clay-ink bg-clay-soft px-1.5 rounded-md" title="Yüksek öncelikli">{urgent}!</span>}
+              {urgent > 0 && <span className="text-[0.6875rem] font-bold text-clay-ink bg-clay-soft px-1.5 rounded-md" title="Yüksek öncelikli">{urgent}!</span>}
               {doneCount > 0 && <span className="text-theme-muted font-medium text-xs">· {doneCount} bitti</span>}
             </div>
           ) : <span className="text-sm text-theme-muted">—</span>}
@@ -205,7 +207,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
             {USER_STATUS[s].label}
           </MenuItem>
         ))}
-        {hint && <p className="text-[11px] text-theme-muted font-medium px-3 pt-2 pb-1 leading-snug">{hint}</p>}
+        {hint && <p className="text-[0.6875rem] text-theme-muted font-medium px-3 pt-2 pb-1 leading-snug">{hint}</p>}
       </Menu>
 
       {/* Sağ tık / ⋯ menüsü */}
@@ -287,7 +289,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
                       const meta = LINK_TYPE[l.type];
                       const href = linkHref(l);
                       const chip = <><meta.icon size={14} weight="bold" aria-hidden="true" /> {linkText(l)}</>;
-                      const cls = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-theme-cream border border-theme-light/50 text-xs font-semibold text-theme-deep max-w-[260px] truncate';
+                      const cls = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-theme-cream border border-theme-light/50 text-xs font-semibold text-theme-deep max-w-[16.25rem] truncate';
                       return (
                         <li key={i}>
                           {href
@@ -327,7 +329,16 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
                       >
                         {TASK_PRIORITIES.map(p => <option key={p} value={p}>{TASK_PRIORITY[p].label}</option>)}
                       </select>
-                      <button type="submit" disabled={createTask.isPending || !newTask.trim()} className="btn-primary px-4 min-h-[42px]">
+                      <select
+                        value={newHours}
+                        onChange={e => setNewHours(e.target.value)}
+                        aria-label="Tahmini iş gücü"
+                        title="Tahmini iş gücü"
+                        className="px-3 py-2.5 rounded-2xl bg-theme-cream border border-theme-light/60 text-sm font-semibold text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-medium"
+                      >
+                        {[1, 2, 4, 8, 16, 24, 40].map(h => <option key={h} value={h}>{h >= 8 && h % 8 === 0 ? `${h / 8} gün` : `${h} sa`}</option>)}
+                      </select>
+                      <button type="submit" disabled={createTask.isPending || !newTask.trim()} className="btn-primary px-4 min-h-[2.625rem]">
                         <Plus size={16} weight="bold" /> Ekle
                       </button>
                     </div>
@@ -339,7 +350,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
                 ) : !tasks || tasks.length === 0 ? (
                   <p className="text-sm text-theme-muted font-medium py-3 text-center">Henüz görev yok.</p>
                 ) : (
-                  <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto scrollbar-thin pr-1">
+                  <div className="flex flex-col gap-2 max-h-[20rem] overflow-y-auto scrollbar-thin pr-1">
                     <AnimatePresence initial={false}>
                       {[...tasks]
                         .sort((a, b) => Number(a.status === 'TAMAMLANDI') - Number(b.status === 'TAMAMLANDI'))

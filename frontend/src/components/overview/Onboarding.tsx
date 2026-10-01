@@ -49,7 +49,7 @@ export default function Onboarding() {
         <span className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${allDone ? 'bg-good-soft text-good-ink' : 'bg-theme-lightest text-theme-deep'}`}>
           {allDone ? <Confetti size={24} weight="duotone" /> : <Flag size={24} weight="duotone" />}
         </span>
-        <div className="flex-1 min-w-[220px]">
+        <div className="flex-1 min-w-[13.75rem]">
           <h2 id="onb-title" className="text-lg font-bold tracking-tight">{allDone ? 'İşe başlangıç tamamlandı' : 'İşe başlangıç'}</h2>
           <p className="text-sm text-theme-muted mt-0.5">
             {allDone
@@ -60,7 +60,7 @@ export default function Onboarding() {
         <div className="flex items-center gap-3 shrink-0">
           <div className="text-right">
             <p className="text-2xl font-bold tabular leading-none">{data.done}<span className="text-base text-theme-muted font-semibold">/{data.total}</span></p>
-            <p className="text-[11px] font-semibold text-theme-muted mt-1">adım tamam</p>
+            <p className="text-[0.6875rem] font-semibold text-theme-muted mt-1">adım tamam</p>
           </div>
           {allDone ? (
             <button type="button" onClick={() => close.mutate()} disabled={close.isPending} className="btn-primary h-10 min-h-0 px-4 text-sm">Kartı kaldır</button>
@@ -148,14 +148,14 @@ function Step({ step, index, isNext, onToggle }: { step: OnboardingMyStep; index
               )
             )}
             {step.autoRule && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-theme-muted">
+              <span className="inline-flex items-center gap-1 text-[0.6875rem] font-semibold text-theme-muted">
                 <Lightning size={12} weight="fill" className="text-theme-dark" /> {RULE_LABEL[step.autoRule]} işaretlenir
               </span>
             )}
           </div>
         )}
       </div>
-      {isNext && <span className="text-[10px] font-bold uppercase tracking-wide text-theme-deep bg-theme-lightest px-1.5 py-0.5 rounded-md shrink-0">Sıradaki</span>}
+      {isNext && <span className="text-[0.625rem] font-bold uppercase tracking-wide text-theme-deep bg-theme-lightest px-1.5 py-0.5 rounded-md shrink-0">Sıradaki</span>}
     </li>
   );
 }

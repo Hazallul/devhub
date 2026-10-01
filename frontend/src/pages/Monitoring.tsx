@@ -65,7 +65,7 @@ export default function Monitoring() {
             type="button"
             onClick={() => setLive(l => !l)}
             aria-pressed={live}
-            className={`btn min-h-[44px] px-4 border ${live ? 'bg-surface border-theme-light/70 text-theme-deep' : 'bg-theme-lightest border-theme-light text-theme-muted'}`}
+            className={`btn min-h-[2.75rem] px-4 border ${live ? 'bg-surface border-theme-light/70 text-theme-deep' : 'bg-theme-lightest border-theme-light text-theme-muted'}`}
             title={live ? 'Otomatik yenilemeyi duraklat' : 'Otomatik yenilemeyi başlat'}
           >
             {live ? (
@@ -132,7 +132,7 @@ function Legend() {
     <ul className="hidden sm:flex items-center gap-4 text-xs font-semibold text-theme-muted" aria-label="Durum renkleri">
       {(['UP', 'WARN', 'DOWN'] as HealthStatus[]).map(s => (
         <li key={s} className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-[3px]" style={{ backgroundColor: STATUS_COLOR[s] }} aria-hidden="true" /> {HEALTH_STATUS[s].label}
+          <span className="w-3 h-3 rounded-[0.1875rem]" style={{ backgroundColor: STATUS_COLOR[s] }} aria-hidden="true" /> {HEALTH_STATUS[s].label}
         </li>
       ))}
     </ul>
@@ -142,7 +142,7 @@ function Legend() {
 function HealthPill({ status, size = 'md' }: { status: HealthStatus; size?: 'sm' | 'md' }) {
   const meta = HEALTH_STATUS[status];
   return (
-    <span className={`inline-flex items-center gap-1.5 font-bold rounded-full border whitespace-nowrap ${meta.className} ${size === 'sm' ? 'text-[11px] px-2 py-0.5' : 'text-xs px-3 py-1.5'}`}>
+    <span className={`inline-flex items-center gap-1.5 font-bold rounded-full border whitespace-nowrap ${meta.className} ${size === 'sm' ? 'text-[0.6875rem] px-2 py-0.5' : 'text-xs px-3 py-1.5'}`}>
       <meta.icon size={size === 'sm' ? 12 : 14} weight="bold" aria-hidden="true" /> {meta.label}
     </span>
   );
@@ -239,7 +239,7 @@ function ServiceRow({ service: s, open, onToggle, minutes, now, warnPercent, sam
 
   return (
     <motion.section layout="position" className="card overflow-hidden" aria-label={s.name}>
-      <button type="button" onClick={onToggle} aria-expanded={open} className="w-full text-left p-4 sm:px-5 grid gap-4 items-center grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1.6fr)_120px_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_24px] hover:bg-theme-cream/40 transition-colors">
+      <button type="button" onClick={onToggle} aria-expanded={open} className="w-full text-left p-4 sm:px-5 grid gap-4 items-center grid-cols-[1fr_auto] lg:grid-cols-[minmax(0,1.6fr)_7.5rem_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_1.5rem] hover:bg-theme-cream/40 transition-colors">
         <div className="min-w-0 flex items-center gap-3">
           <span className="w-1.5 self-stretch rounded-full shrink-0" style={{ backgroundColor: STATUS_COLOR[s.status] }} aria-hidden="true" />
           <div className="min-w-0">
@@ -294,7 +294,7 @@ function Metric({ label, value, sub, spark, className = '' }: { label: string; v
         <p className="text-sm font-bold text-theme-text tabular w-16 shrink-0">{value}</p>
         {spark}
       </div>
-      {sub && <p className="text-[11px] text-theme-muted font-medium tabular truncate" title={sub}>{sub}</p>}
+      {sub && <p className="text-[0.6875rem] text-theme-muted font-medium tabular truncate" title={sub}>{sub}</p>}
     </div>
   );
 }
@@ -321,7 +321,7 @@ function ServiceDetail({ s, minutes, now, warnPercent, sampleSeconds }: { s: Mon
       <div>
         <div className="flex items-center justify-between mb-2">
           <p className="eyebrow">Durum geçmişi</p>
-          <p className="text-[11px] font-semibold text-theme-muted">son {minutes === 60 ? '1 saat' : `${minutes} dakika`}</p>
+          <p className="text-[0.6875rem] font-semibold text-theme-muted">son {minutes === 60 ? '1 saat' : `${minutes} dakika`}</p>
         </div>
         <StateTimeline samples={s.history} from={from} to={to} />
       </div>
@@ -372,12 +372,12 @@ function ChartCard({ title, current, values, format, note, children }: {
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0">
           <h3 className="text-sm font-bold text-theme-text">{title}</h3>
-          {note && <p className="text-[11px] text-theme-muted font-medium truncate">{note}</p>}
+          {note && <p className="text-[0.6875rem] text-theme-muted font-medium truncate">{note}</p>}
         </div>
         <p className="text-lg font-bold text-theme-text tabular shrink-0">{current}</p>
       </div>
       {children}
-      <p className="flex gap-4 mt-2 text-[11px] font-semibold text-theme-muted tabular">
+      <p className="flex gap-4 mt-2 text-[0.6875rem] font-semibold text-theme-muted tabular">
         <span>Ort. {avg !== null ? format(avg) : '—'}</span>
         <span>Maks. {max !== null ? format(max) : '—'}</span>
         <span>{nums.length} örnek</span>
@@ -391,7 +391,7 @@ function Fact({ label, value, hint, icon }: { label: string; value: string; hint
     <div className="bg-surface rounded-2xl border border-theme-light/40 p-3 min-w-0">
       <dt className="eyebrow flex items-center gap-1">{icon}{label}</dt>
       <dd className="text-sm font-bold text-theme-text mt-1 truncate tabular" title={value}>{value}</dd>
-      {hint && <dd className="text-[11px] text-theme-muted font-medium truncate" title={hint}>{hint}</dd>}
+      {hint && <dd className="text-[0.6875rem] text-theme-muted font-medium truncate" title={hint}>{hint}</dd>}
     </div>
   );
 }

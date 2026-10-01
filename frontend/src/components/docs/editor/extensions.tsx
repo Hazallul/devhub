@@ -74,7 +74,7 @@ function CalloutView({ node, updateAttributes, editor, getPos }: ReactNodeViewPr
           >
             {CALLOUT_KINDS.map(k => <option key={k} value={k}>{CALLOUT[k].label}</option>)}
           </select>
-          <span className="text-[11px] text-theme-muted font-semibold hidden sm:inline">{c.hint}</span>
+          <span className="text-[0.6875rem] text-theme-muted font-semibold hidden sm:inline">{c.hint}</span>
           <button type="button" onClick={unwrap} className="ml-auto p-1 rounded-lg text-theme-muted hover:text-theme-text hover:bg-surface/70" title="Kutuyu kaldır (yazı kalır)" aria-label="Kutuyu kaldır">
             <X size={13} weight="bold" />
           </button>
@@ -98,15 +98,15 @@ function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
         <select
           value={CODE_LANGS.some(l => l.id === lang) ? lang : 'text'}
           onChange={e => updateAttributes({ language: e.target.value })}
-          className="text-[11px] font-bold uppercase tracking-wider text-white/80 bg-transparent rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-theme-text"
+          className="text-[0.6875rem] font-bold uppercase tracking-wider text-white/80 bg-transparent rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-theme-text"
           aria-label="Kod dili"
           title="Kodun dilini seçin"
         >
           {CODE_LANGS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
         </select>
-        <span className="ml-auto text-[11px] text-white/45 font-semibold hidden sm:inline">Çıkmak için alta iki kez Enter</span>
+        <span className="ml-auto text-[0.6875rem] text-white/45 font-semibold hidden sm:inline">Çıkmak için alta iki kez Enter</span>
       </div>
-      <pre className="overflow-x-auto scrollbar-thin p-4 text-[13px] leading-6 text-[#F6F0D7] m-0">
+      <pre className="overflow-x-auto scrollbar-thin p-4 text-[0.8125rem] leading-6 text-[#F6F0D7] m-0">
         <NodeViewContent<'code'> as="code" className="font-mono block whitespace-pre" />
       </pre>
     </NodeViewWrapper>

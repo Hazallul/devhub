@@ -68,11 +68,11 @@ export default function Login() {
       <div className="hidden lg:flex relative overflow-hidden bg-accent text-white p-14 flex-col justify-between">
         <motion.div
           aria-hidden="true"
-          className="absolute -top-32 -right-24 w-[420px] h-[420px] rounded-full bg-theme-medium/40 blur-3xl"
+          className="absolute -top-32 -right-24 w-[26.25rem] h-[26.25rem] rounded-full bg-theme-medium/40 blur-3xl"
           animate={{ scale: [1, 1.08, 1], opacity: [0.7, 0.9, 0.7] }}
           transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
         />
-        <div aria-hidden="true" className="absolute -bottom-40 -left-24 w-[480px] h-[480px] rounded-full bg-theme-light/20 blur-3xl" />
+        <div aria-hidden="true" className="absolute -bottom-40 -left-24 w-[30rem] h-[30rem] rounded-full bg-theme-light/20 blur-3xl" />
 
         <div className="relative flex items-center gap-3">
           <div className="w-11 h-11 bg-theme-lightest text-theme-deep rounded-2xl flex items-center justify-center font-bold text-xl">D</div>
@@ -159,7 +159,7 @@ export default function Login() {
               </motion.div>
             )}
 
-            <button disabled={isSubmitting} type="submit" className="btn-primary w-full min-h-[52px] text-base active:scale-[0.99]">
+            <button disabled={isSubmitting} type="submit" className="btn-primary w-full min-h-[3.25rem] text-base active:scale-[0.99]">
               {isSubmitting && !demoLoading ? <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-label="Giriş yapılıyor" /> : 'Giriş Yap'}
             </button>
           </form>

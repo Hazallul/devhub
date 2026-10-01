@@ -42,9 +42,9 @@ export default function DocHistoryModal({ doc, open, onClose, isAdmin }: { doc: 
       {viewing ? (
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-4">
-            <button type="button" onClick={() => setViewing(null)} className="btn-secondary min-h-[38px] px-3 text-sm"><ArrowLeft size={15} weight="bold" /> Geçmişe dön</button>
+            <button type="button" onClick={() => setViewing(null)} className="btn-secondary min-h-[2.375rem] px-3 text-sm"><ArrowLeft size={15} weight="bold" /> Geçmişe dön</button>
             {isAdmin && versionOf(viewing) !== history?.length && (
-              <button type="button" onClick={restore} disabled={!rev || submit.isPending} className="btn-primary min-h-[38px] px-3 text-sm">
+              <button type="button" onClick={restore} disabled={!rev || submit.isPending} className="btn-primary min-h-[2.375rem] px-3 text-sm">
                 <ArrowCounterClockwise size={15} weight="bold" /> Bu sürümü geri yükle
               </button>
             )}
@@ -69,7 +69,7 @@ export default function DocHistoryModal({ doc, open, onClose, isAdmin }: { doc: 
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-bold text-theme-text">
                   {h.note ?? 'Değişiklik'}
-                  {i === 0 && <span className="ml-2 text-[11px] font-bold text-theme-deep">· Şu anki sürüm</span>}
+                  {i === 0 && <span className="ml-2 text-[0.6875rem] font-bold text-theme-deep">· Şu anki sürüm</span>}
                 </p>
                 <p className="text-xs text-theme-muted font-semibold mt-0.5">
                   {h.authorName ?? 'Silinmiş kullanıcı'}
@@ -77,7 +77,7 @@ export default function DocHistoryModal({ doc, open, onClose, isAdmin }: { doc: 
                   {h.decidedAt && ` · ${dateTime.format(parseServerDate(h.decidedAt))}`}
                 </p>
               </div>
-              <button type="button" onClick={() => setViewing(h.id)} className="btn-secondary min-h-[36px] px-3 text-xs shrink-0"><Eye size={14} weight="bold" /> Görüntüle</button>
+              <button type="button" onClick={() => setViewing(h.id)} className="btn-secondary min-h-[2.25rem] px-3 text-xs shrink-0"><Eye size={14} weight="bold" /> Görüntüle</button>
             </li>
           ))}
         </ol>

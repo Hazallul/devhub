@@ -128,7 +128,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
                 aria-activedescendant={items[active] ? `cmd-${items[active].id}` : undefined}
                 className="flex-1 py-4 bg-transparent outline-none focus-visible:ring-0 focus-visible:ring-offset-0 text-base font-medium text-theme-text placeholder:text-theme-muted/60"
               />
-              <kbd className="text-[11px] font-bold text-theme-muted bg-theme-lightest px-2 py-1 rounded-lg">Esc</kbd>
+              <kbd className="text-[0.6875rem] font-bold text-theme-muted bg-theme-lightest px-2 py-1 rounded-lg">Esc</kbd>
             </div>
             <div ref={listRef} id="command-list" role="listbox" className="max-h-[50vh] overflow-y-auto scrollbar-thin p-2">
               {items.length === 0 && (

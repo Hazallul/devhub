@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, MagnifyingGlass, Plus, X } from '@phosphor-icons/react';
+import { Check, MagnifyingGlass, Plus, X, Timer } from '@phosphor-icons/react';
+import { DAY_HOURS, formatDuration, liveSpent, parseHours, remainingSeconds } from '../../lib/effort';
 import Modal from '../ui/Modal';
 import { Avatar, Segmented } from '../ui/primitives';
 import { FieldError, Required } from '../forms/FormModals';
@@ -24,6 +25,8 @@ const schema = z.object({
   priority: z.enum(['DUSUK', 'ORTA', 'YUKSEK']),
   dueDate: z.string(),
   project: z.string(),
+  estimate: z.string().refine(v => { const m = parseHours(v); return m !== null && m >= 15 && m <= 400 * 60; },
+    'Tahmini süreyi saat olarak girin (en az 0,25, en fazla 400). Örn: 6 ya da 2,5'),
 });
 type Form = z.infer<typeof schema>;
 
@@ -47,6 +50,7 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
     priority: 'ORTA',
     dueDate: '',
     project: isAdmin && defaultProjectId ? String(defaultProjectId) : AUTO,
+    estimate: '',
   });
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<Form>({
@@ -74,6 +78,7 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
       description: v.description.trim() || undefined,
       priority: v.priority,
       dueDate: v.dueDate || undefined,
+      estimatedMinutes: parseHours(v.estimate)!,
     };
     if (isAdmin && v.project !== AUTO) body.projectId = v.project === NONE ? null : Number(v.project);
     await create.mutateAsync(body);
@@ -120,7 +125,7 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
                   autoFocus
                   placeholder="Kabul kriterleri, bağlantılar, notlar…"
                   aria-describedby="task-desc-err"
-                  className="input resize-y min-h-[96px]"
+                  className="input resize-y min-h-[6rem]"
                   {...register('description')}
                 />
                 <FieldError id="task-desc-err" message={errors.description?.message} />
@@ -162,6 +167,13 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
           </>
         )}
 
+        <EstimateField
+          value={watch('estimate')}
+          onChange={v => setValue('estimate', v, { shouldValidate: !!errors.estimate })}
+          error={errors.estimate?.message}
+          register={register('estimate')}
+        />
+
         <div className="grid sm:grid-cols-2 gap-5">
           <div>
             <span className="label" id="task-priority-label">Öncelik</span>
@@ -183,6 +195,45 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
   );
 }
 
+const PRESETS = [1, 2, 4, 8, 16, 24, 40];
+
+/** Tahmini iş gücü: saat olarak yazılır ya da hazır değerlerden seçilir (1 iş günü = 8 saat). */
+function EstimateField({ value, onChange, error, register }: {
+  value: string; onChange: (v: string) => void; error?: string; register: ReturnType<ReturnType<typeof useForm<Form>>['register']>;
+}) {
+  const minutes = parseHours(value);
+  const days = minutes ? minutes / 60 / DAY_HOURS : 0;
+  return (
+    <div>
+      <label htmlFor="task-estimate" className="label flex items-center gap-1.5"><Timer size={16} weight="bold" className="text-theme-deep" /> Tahmini iş gücü<Required /></label>
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+        <div className="relative sm:w-40 shrink-0">
+          <input id="task-estimate" inputMode="decimal" placeholder="Örn: 6" aria-invalid={!!error} aria-describedby="task-estimate-hint task-estimate-err"
+            className="input pr-14 tabular" autoComplete="off" {...register} />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-theme-muted pointer-events-none">saat</span>
+        </div>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Hazır süreler">
+          {PRESETS.map(h => {
+            const on = minutes === h * 60;
+            return (
+              <button key={h} type="button" onClick={() => onChange(String(h))} aria-pressed={on}
+                className={`px-2.5 py-1.5 rounded-xl text-xs font-bold tabular border transition-colors ${on ? 'bg-accent text-white border-transparent' : 'border-theme-light/70 text-theme-deep hover:bg-theme-lightest'}`}>
+                {h >= DAY_HOURS && h % DAY_HOURS === 0 ? `${h / DAY_HOURS} gün` : `${h} sa`}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <p id="task-estimate-hint" className="text-xs text-theme-muted font-medium mt-1.5 ml-1">
+        {minutes && minutes >= 15
+          ? `≈ ${days >= 1 ? `${String(Math.round(days * 10) / 10).replace('.', ',')} iş günü` : formatDuration(minutes * 60)}. Süre, görev "Devam Ediyor"a alındığında mesai saatlerinde işlemeye başlar.`
+          : 'İşin kaç saatlik olduğu. 1 iş günü = 8 saat. Gerçekleşen süre, görev "Devam Ediyor"dayken kendiliğinden ölçülür.'}
+      </p>
+      <FieldError id="task-estimate-err" message={error} />
+    </div>
+  );
+}
+
 /**
  * Çoklu kişi seçici (proje değişince key ile sıfırlanır). Proje seçiliyse yalnızca o projenin ekibi listelenir ("Tüm çalışanlar" ile genişler).
  * Her satırda kişinin açık görev sayısı görünür; iş yükü atama anında görülsün diye.
@@ -195,9 +246,15 @@ function AssigneePicker({ value, onChange, projectName, error }: {
   const [query, setQuery] = useState('');
   const [showAll, setShowAll] = useState(false);
 
+  // Kişinin açık görev sayısı ve kalan tahmini iş (saat): atarken iş yükü görünsün.
   const openCount = useMemo(() => {
-    const m = new Map<number, number>();
-    tasks?.forEach(t => { if (t.status !== 'TAMAMLANDI') m.set(t.userId, (m.get(t.userId) ?? 0) + 1); });
+    const m = new Map<number, { count: number; seconds: number }>();
+    const now = Date.now();
+    tasks?.forEach(t => {
+      if (t.status === 'TAMAMLANDI') return;
+      const cur = m.get(t.userId) ?? { count: 0, seconds: 0 };
+      m.set(t.userId, { count: cur.count + 1, seconds: cur.seconds + remainingSeconds(t, liveSpent(t, now)) });
+    });
     return m;
   }, [tasks]);
 
@@ -254,12 +311,12 @@ function AssigneePicker({ value, onChange, projectName, error }: {
               className="w-full pl-9 pr-3 py-2 rounded-2xl bg-surface border border-theme-light/60 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-theme-medium"
             />
           </div>
-          <button type="button" onClick={toggleVisible} disabled={visible.length === 0} className="btn-ghost min-h-[38px] px-3 text-xs disabled:opacity-40">
+          <button type="button" onClick={toggleVisible} disabled={visible.length === 0} className="btn-ghost min-h-[2.375rem] px-3 text-xs disabled:opacity-40">
             {allVisibleSelected ? 'Seçimi kaldır' : scoped ? 'Tüm ekibi seç' : 'Görünenleri seç'}
           </button>
         </div>
 
-        <ul role="group" aria-labelledby="assignee-label" className="max-h-[232px] overflow-y-auto scrollbar-thin p-1.5">
+        <ul role="group" aria-labelledby="assignee-label" className="max-h-[14.5rem] overflow-y-auto scrollbar-thin p-1.5">
           {visible.length === 0 && (
             <li className="text-sm text-theme-muted font-medium text-center py-6">
               {scoped ? 'Bu projede henüz kimse yok.' : 'Eşleşen kişi yok.'}
@@ -267,7 +324,7 @@ function AssigneePicker({ value, onChange, projectName, error }: {
           )}
           {visible.map(u => (
             <li key={u.id}>
-              <PickerRow user={u} checked={selected.has(u.id)} open={openCount.get(u.id) ?? 0} showProject={!scoped} onToggle={() => toggle(u.id)} />
+              <PickerRow user={u} checked={selected.has(u.id)} open={openCount.get(u.id) ?? { count: 0, seconds: 0 }} showProject={!scoped} onToggle={() => toggle(u.id)} />
             </li>
           ))}
         </ul>
@@ -285,7 +342,7 @@ function AssigneePicker({ value, onChange, projectName, error }: {
   );
 }
 
-function PickerRow({ user, checked, open, showProject, onToggle }: { user: User; checked: boolean; open: number; showProject: boolean; onToggle: () => void }) {
+function PickerRow({ user, checked, open, showProject, onToggle }: { user: User; checked: boolean; open: { count: number; seconds: number }; showProject: boolean; onToggle: () => void }) {
   const onLeave = user.status === 'IZINLI';
   return (
     <button
@@ -306,8 +363,11 @@ function PickerRow({ user, checked, open, showProject, onToggle }: { user: User;
           {showProject && ` · ${user.currentProject ?? 'Boşta'}`}
         </span>
       </span>
-      {onLeave && <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-clay-soft text-clay-ink shrink-0">İzinli</span>}
-      <span className="text-xs font-semibold text-theme-muted tabular shrink-0 w-14 text-right" title="Açık görev sayısı">{open} açık</span>
+      {onLeave && <span className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-full bg-clay-soft text-clay-ink shrink-0">İzinli</span>}
+      <span className="text-right shrink-0 w-20" title="Açık görev sayısı ve kalan tahmini iş">
+        <span className="block text-xs font-semibold text-theme-muted tabular">{open.count} açık</span>
+        {open.seconds > 0 && <span className="block text-[0.6875rem] font-bold text-theme-deep tabular">{formatDuration(open.seconds, true)} iş</span>}
+      </span>
     </button>
   );
 }

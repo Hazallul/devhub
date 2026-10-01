@@ -96,7 +96,7 @@ export default function Overview() {
                 {USER_STATUS[s].label}
               </MenuItem>
             ))}
-            {hint && <p className="text-[11px] text-theme-muted font-medium px-3 pt-2 pb-1 leading-snug">{hint}</p>}
+            {hint && <p className="text-[0.6875rem] text-theme-muted font-medium px-3 pt-2 pb-1 leading-snug">{hint}</p>}
           </Menu>
         </div>
       </div>
@@ -147,8 +147,8 @@ export default function Overview() {
         {/* Ekip durumu */}
         <section className="card p-6" aria-labelledby="team-dist">
           <div className="flex items-center justify-between mb-5">
-            <h2 id="team-dist" className="text-lg font-bold tracking-tight">Ekip Durumu</h2>
-            <button onClick={() => navigate('/team')} className="text-sm font-bold text-theme-deep hover:underline underline-offset-4">Ekibe git</button>
+            <h2 id="team-dist" className="text-lg font-bold tracking-tight">Çalışanların Durumu</h2>
+            <button onClick={() => navigate('/team')} className="text-sm font-bold text-theme-deep hover:underline underline-offset-4">Tümünü gör</button>
           </div>
           {!users ? <Skeleton className="h-40" /> : (
             <>
@@ -216,7 +216,7 @@ export default function Overview() {
                       )}
                     </div>
                     <p className="text-sm text-theme-muted mt-1.5 leading-relaxed">{a.content}</p>
-                    <p className="text-[11px] font-semibold text-theme-muted/80 mt-2">{ago(a.createdAt)}</p>
+                    <p className="text-[0.6875rem] font-semibold text-theme-muted/80 mt-2">{ago(a.createdAt)}</p>
                   </motion.li>
                 ))}
               </AnimatePresence>
@@ -276,7 +276,7 @@ export default function Overview() {
                     <span className="w-2 h-2 rounded-full bg-theme-medium mt-1.5 shrink-0" aria-hidden="true" />
                     <div className="min-w-0">
                       <p className="text-sm font-medium leading-snug">{p.text}</p>
-                      <p className="text-[11px] font-semibold text-theme-muted mt-0.5">{l.actorName ?? 'Sistem'} · {ago(l.createdAt)}</p>
+                      <p className="text-[0.6875rem] font-semibold text-theme-muted mt-0.5">{l.actorName ?? 'Sistem'} · {ago(l.createdAt)}</p>
                     </div>
                   </li>
                 );

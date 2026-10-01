@@ -25,6 +25,16 @@ public class TaskDto {
     private Long createdById;
     private String createdByName;
     private long commentCount;
+    /** Tahmini iş gücü (dakika); eski görevlerde null */
+    private Integer estimatedMinutes;
+    /** Harcanan çalışma süresi (saniye, yalnızca mesai saatleri, düzeltme dahil) */
+    private long spentSeconds;
+    /** Görev şu an Devam Ediyor'da (çalışma oturumu açık) */
+    private boolean running;
+    /** Oturum açık ve şu an mesai saati: süre canlı artıyor (istemci saniyeyi kendisi ilerletir) */
+    private boolean ticking;
+    /** İlk kez Devam Ediyor'a alındığı an (UTC); hiç başlanmadıysa null */
+    private LocalDateTime startedAt;
 
     public static TaskDto from(Task t) {
         return from(t, 0);
@@ -45,6 +55,7 @@ public class TaskDto {
             .createdById(t.getCreatedBy() != null ? t.getCreatedBy().getId() : null)
             .createdByName(t.getCreatedBy() != null ? t.getCreatedBy().getFullName() : null)
             .commentCount(commentCount)
+            .estimatedMinutes(t.getEstimatedMinutes())
             .build();
     }
 }

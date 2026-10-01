@@ -61,3 +61,35 @@ export function useTheme(): [ThemePref, boolean] {
   const dark = useSyncExternalStore(subscribe, () => isDark(pref));
   return [p, dark];
 }
+
+// ---------------------------------------------------------------- arayüz ölçeği
+
+/** Arayüz ölçeği (kök yazı boyutu oranı). Kompakt = %75 (varsayılan), Orta = %87,5, Rahat = %100. Cihaza özel. */
+export type UiScale = '0.75' | '0.875' | '1';
+const SCALE_KEY = 'devhub.scale';
+
+function readScale(): UiScale {
+  try {
+    const v = localStorage.getItem(SCALE_KEY);
+    return v === '0.875' || v === '1' ? v : '0.75';
+  } catch {
+    return '0.75';
+  }
+}
+
+let scale: UiScale = readScale();
+const scaleListeners = new Set<() => void>();
+
+export function setUiScale(next: UiScale) {
+  scale = next;
+  try {
+    if (next === '0.75') localStorage.removeItem(SCALE_KEY);
+    else localStorage.setItem(SCALE_KEY, next);
+  } catch { /* yalnızca bu oturum */ }
+  document.documentElement.style.setProperty('--ui-scale', next);
+  scaleListeners.forEach(l => l());
+}
+
+export function useUiScale(): UiScale {
+  return useSyncExternalStore(cb => { scaleListeners.add(cb); return () => { scaleListeners.delete(cb); }; }, () => scale);
+}

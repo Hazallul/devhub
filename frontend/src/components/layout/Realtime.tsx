@@ -72,7 +72,7 @@ export default function Realtime() {
     <>
       <TitleBadge />
       {createPortal(
-        <div aria-live="polite" className="fixed top-20 right-4 sm:right-6 z-[190] flex flex-col gap-2 items-end pointer-events-none w-[min(380px,calc(100vw-2rem))]">
+        <div aria-live="polite" className="fixed top-20 right-4 sm:right-6 z-[190] flex flex-col gap-2 items-end pointer-events-none w-[min(23.75rem,calc(100vw-2rem))]">
           <AnimatePresence initial={false}>
             {notices.map(n => <Notice key={n.id} n={n} onOpen={() => open(n)} onClose={() => dismiss(n.id)} />)}
           </AnimatePresence>
@@ -118,8 +118,8 @@ function Notice({ n, onOpen, onClose }: { n: AppNotification; onOpen: () => void
           <span className="flex items-center gap-2">
             <span className="text-sm font-semibold leading-snug line-clamp-2">{n.title}</span>
           </span>
-          {n.body && <span className="block text-[13px] text-theme-muted leading-snug mt-0.5 line-clamp-2">{n.body}</span>}
-          <span className="block text-[11px] font-semibold text-theme-dark mt-1">Şimdi{n.link ? ' · açmak için tıklayın' : ''}</span>
+          {n.body && <span className="block text-[0.8125rem] text-theme-muted leading-snug mt-0.5 line-clamp-2">{n.body}</span>}
+          <span className="block text-[0.6875rem] font-semibold text-theme-dark mt-1">Şimdi{n.link ? ' · açmak için tıklayın' : ''}</span>
         </span>
       </button>
       <button type="button" onClick={onClose} aria-label="Bildirimi kapat" className="p-1.5 rounded-lg text-theme-muted hover:text-theme-text hover:bg-theme-lightest shrink-0">

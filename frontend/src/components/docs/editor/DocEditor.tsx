@@ -200,7 +200,7 @@ function SlashMenu({ state, index, onPick, onHover }: { state: SlashState; index
       role="listbox"
       aria-label="Blok ekle"
       style={{ left: Math.min(state.left, window.innerWidth - 300), ...(below ? { top: state.top + 6 } : { bottom: window.innerHeight - state.top + 30 }) }}
-      className="fixed z-[150] w-[284px] max-h-[320px] overflow-y-auto scrollbar-thin bg-surface rounded-2xl shadow-float border border-theme-light/70 p-1.5"
+      className="fixed z-[150] w-[17.75rem] max-h-[20rem] overflow-y-auto scrollbar-thin bg-surface rounded-2xl shadow-float border border-theme-light/70 p-1.5"
       onMouseDown={e => e.preventDefault()}
     >
       <p className="eyebrow px-2.5 pt-1.5 pb-1">Blok ekle {state.query && `· “${state.query}”`}</p>
@@ -399,11 +399,11 @@ function LinkBar({ editor, onClose }: { editor: Editor; onClose: () => void }) {
         onChange={e => setHref(e.target.value)}
         placeholder="https://… ya da /docs/sayfa"
         aria-label="Bağlantı adresi"
-        className="input py-2 text-sm flex-1 min-w-[200px]"
+        className="input py-2 text-sm flex-1 min-w-[12.5rem]"
       />
-      <button type="submit" className="btn-primary min-h-[38px] px-3 text-sm"><Check size={15} weight="bold" /> Uygula</button>
+      <button type="submit" className="btn-primary min-h-[2.375rem] px-3 text-sm"><Check size={15} weight="bold" /> Uygula</button>
       {current && (
-        <button type="button" onClick={() => { setHref(''); editor.chain().focus().extendMarkRange('link').unsetLink().run(); onClose(); }} className="btn-secondary min-h-[38px] px-3 text-sm">
+        <button type="button" onClick={() => { setHref(''); editor.chain().focus().extendMarkRange('link').unsetLink().run(); onClose(); }} className="btn-secondary min-h-[2.375rem] px-3 text-sm">
           Kaldır
         </button>
       )}
@@ -452,7 +452,7 @@ function TableBar({ editor }: { editor: Editor }) {
           </button>
         ),
       )}
-      <span className="text-[11px] text-theme-muted font-semibold ml-auto hidden lg:inline">İpucu: hücrede sağ tıklayın · Tab ile sonraki hücre</span>
+      <span className="text-[0.6875rem] text-theme-muted font-semibold ml-auto hidden lg:inline">İpucu: hücrede sağ tıklayın · Tab ile sonraki hücre</span>
     </div>
   );
 }

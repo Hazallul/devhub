@@ -104,9 +104,9 @@ export default function Team() {
   return (
     <>
       <PageHeader
-        eyebrow="Ekip"
-        title="Ekip Üyeleri"
-        description="Çalışanların durumunu, projelerini ve görevlerini tek yerden yönetin. Karta tıklayın; sağ tıkla işlemler açılır."
+        eyebrow="Çalışanlar"
+        title="Çalışanlar"
+        description="Şirketteki tüm çalışanlar: durumları, projeleri ve görevleri. Proje ekipleri Projeler sayfasındadır. Karta tıklayın; sağ tıkla işlemler açılır."
         actions={me.role === 'ADMIN' ? (
           <button onClick={() => actions.newTask()} className="btn-primary"><UserPlus size={18} weight="bold" /> Görev Ata</button>
         ) : undefined}
@@ -165,7 +165,7 @@ export default function Team() {
       </div>
 
       {isLoading ? (
-        <div className="flex flex-col gap-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-[88px] rounded-3xl" />)}</div>
+        <div className="flex flex-col gap-3">{[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-[5.5rem] rounded-3xl" />)}</div>
       ) : visible.length === 0 ? (
         <EmptyState
           icon={Users}

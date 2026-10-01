@@ -93,7 +93,7 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
   return (
     <>
       <header className="pt-4 pb-5 flex flex-wrap items-end gap-x-4 gap-y-3">
-        <div className="flex-1 min-w-[220px]">
+        <div className="flex-1 min-w-[13.75rem]">
           <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-theme-text">Haftalık plan</h1>
           <p className="text-sm font-semibold text-theme-muted mt-1.5">
             {formatDate(first)} – {formatDate(last)} · {weekOpen ? `${weekOpen} açık kart` : 'açık kart yok'}
@@ -107,7 +107,7 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
       </header>
 
       <div className="overflow-x-auto scrollbar-thin -mx-1 px-1 pb-2">
-        <div className="grid grid-cols-7 gap-2 min-w-[980px]">
+        <div className="grid grid-cols-7 gap-2 min-w-[61.25rem]">
           {days.map((day, idx) => {
             const date = addDays(start, idx);
             const isToday = day === today;
@@ -121,7 +121,7 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
                 key={day}
                 aria-label={`${DAY_LONG[idx]} ${formatDate(day)}`}
                 {...dropProps(day)}
-                className={`flex flex-col min-h-[340px] rounded-3xl border p-2 transition-colors ${
+                className={`flex flex-col min-h-[21.25rem] rounded-3xl border p-2 transition-colors ${
                   over === day ? 'border-theme-deep bg-theme-lightest' : isToday ? 'border-theme-medium bg-surface' : weekend || holiday || leave ? 'border-theme-light/40 bg-theme-lightest/40' : 'border-theme-light/50 bg-surface/70'
                 }`}
               >
@@ -133,8 +133,8 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
 
                 {(holiday || leave) && (
                   <div className="space-y-1 mb-1.5">
-                    {holiday && <p className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-theme-lightest text-[11px] font-bold text-theme-deep"><Confetti size={12} weight="bold" aria-hidden="true" /><span className="truncate" title={holiday}>{holiday}</span></p>}
-                    {leave && <p className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-theme-lightest text-[11px] font-bold text-theme-deep"><Airplane size={12} weight="bold" aria-hidden="true" /> İzinlisiniz</p>}
+                    {holiday && <p className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-theme-lightest text-[0.6875rem] font-bold text-theme-deep"><Confetti size={12} weight="bold" aria-hidden="true" /><span className="truncate" title={holiday}>{holiday}</span></p>}
+                    {leave && <p className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-theme-lightest text-[0.6875rem] font-bold text-theme-deep"><Airplane size={12} weight="bold" aria-hidden="true" /> İzinlisiniz</p>}
                   </div>
                 )}
 
@@ -143,7 +143,7 @@ export default function WeekPlan({ items, now, selectedId, onSelect, onSend }: P
                     {dayTasks.map(t => (
                       <li key={t.id}>
                         <button type="button" onClick={() => openTask(t.id)} title={`Görev: ${t.content}`}
-                          className="w-full flex items-start gap-1.5 px-2 py-1.5 rounded-xl border border-dashed border-theme-medium/70 text-left text-[11px] font-semibold text-theme-muted hover:text-theme-deep hover:border-theme-deep transition-colors">
+                          className="w-full flex items-start gap-1.5 px-2 py-1.5 rounded-xl border border-dashed border-theme-medium/70 text-left text-[0.6875rem] font-semibold text-theme-muted hover:text-theme-deep hover:border-theme-deep transition-colors">
                           <CheckSquare size={13} weight="bold" className="shrink-0 mt-px" aria-hidden="true" />
                           <span className="line-clamp-2 break-words"><span className="sr-only">Görev: </span>{t.content}</span>
                         </button>
@@ -201,9 +201,9 @@ function PlanCard({ item, selected, dragging, onSelect, onSend, onDragStart, onD
     >
       <span className="mt-px"><DoneToggle size="sm" done={item.done} onToggle={() => update.mutate({ id: item.id, done: !item.done })} label={item.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'} /></span>
       <button type="button" onClick={onSelect} aria-expanded={selected} className="min-w-0 flex-1 text-left rounded-lg">
-        <span className={`block text-[13px] font-semibold leading-snug break-words line-clamp-3 ${item.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{item.title}</span>
+        <span className={`block text-[0.8125rem] font-semibold leading-snug break-words line-clamp-3 ${item.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{item.title}</span>
         {(item.dueTime || item.repeatRule || item.important || item.taskId !== null) && (
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[11px] font-bold text-theme-muted">
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-[0.6875rem] font-bold text-theme-muted">
             {item.dueTime && <span className="inline-flex items-center gap-0.5 tabular"><Bell size={11} weight="bold" aria-hidden="true" /> {item.dueTime}</span>}
             {item.repeatRule && <Repeat size={11} weight="bold" aria-label="Tekrarlanır" />}
             {item.taskId !== null && <CheckSquare size={11} weight="bold" aria-label="Bir göreve bağlı" />}

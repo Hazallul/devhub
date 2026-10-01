@@ -112,11 +112,11 @@ export function LineChart({ points, from, to, format, label, height = 150, minMa
           {yTicks.map(v => (
             <g key={v}>
               <line x1={pad.l} x2={pad.l + w} y1={y(v)} y2={y(v)} stroke="rgb(var(--grid))" strokeWidth={1} />
-              <text x={pad.l - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" className="fill-theme-muted text-[10px] font-semibold tabular">{format(v)}</text>
+              <text x={pad.l - 8} y={y(v)} textAnchor="end" dominantBaseline="middle" className="fill-theme-muted text-[0.625rem] font-semibold tabular">{format(v)}</text>
             </g>
           ))}
           {xTicks.map((t, i) => (
-            <text key={t} x={x(t)} y={height - 6} textAnchor={i === 0 ? 'start' : i === 3 ? 'end' : 'middle'} className="fill-theme-muted text-[10px] font-semibold tabular">{timeFmt.format(t)}</text>
+            <text key={t} x={x(t)} y={height - 6} textAnchor={i === 0 ? 'start' : i === 3 ? 'end' : 'middle'} className="fill-theme-muted text-[0.625rem] font-semibold tabular">{timeFmt.format(t)}</text>
           ))}
           {segs.map((s, i) => {
             const line = s.map((p, j) => `${j ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.v).toFixed(1)}`).join('');
@@ -149,7 +149,7 @@ export function LineChart({ points, from, to, format, label, height = 150, minMa
           }}
         >
           <p className="text-sm font-bold tabular leading-tight">{format(hp.v)}</p>
-          <p className="text-[11px] text-white/80 font-medium tabular">{timeFmtSec.format(hp.t)}</p>
+          <p className="text-[0.6875rem] text-white/80 font-medium tabular">{timeFmtSec.format(hp.t)}</p>
         </div>
       )}
       {valid.length < 2 && width > 0 && (
@@ -199,8 +199,8 @@ export function StateTimeline({ samples, from, to }: { samples: { t: number; sta
   const covered = runs.length ? runs[0].start : to;
 
   return (
-    <div className="flex h-3 w-full gap-[2px]" role="list" aria-label="Durum geçmişi">
-      {covered > from && <span className="h-full rounded-[3px] bg-theme-lightest" style={{ flexGrow: (covered - from) / span }} title="Veri yok" role="listitem" aria-label="Bu aralık için veri yok" />}
+    <div className="flex h-3 w-full gap-[0.125rem]" role="list" aria-label="Durum geçmişi">
+      {covered > from && <span className="h-full rounded-[0.1875rem] bg-theme-lightest" style={{ flexGrow: (covered - from) / span }} title="Veri yok" role="listitem" aria-label="Bu aralık için veri yok" />}
       {runs.map((r, i) => {
         const next = runs[i + 1]?.start ?? to;
         const label = `${HEALTH_STATUS[r.status].label} · ${timeFmt.format(r.start)}–${timeFmt.format(next)}`;
@@ -210,7 +210,7 @@ export function StateTimeline({ samples, from, to }: { samples: { t: number; sta
             role="listitem"
             aria-label={label}
             title={label}
-            className="h-full rounded-[3px] min-w-[3px]"
+            className="h-full rounded-[0.1875rem] min-w-[0.1875rem]"
             style={{ flexGrow: Math.max(next - r.start, 1) / span, backgroundColor: STATUS_COLOR[r.status] }}
           />
         );

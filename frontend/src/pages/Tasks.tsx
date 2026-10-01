@@ -7,13 +7,15 @@ import {
 import { PageHeader, Segmented, Skeleton, Avatar, PriorityBadge, EmptyState, ProgressBar } from '../components/ui/primitives';
 import { useAllTasks, useUsers, useMe, useUpdateTask, useDeleteTask, useProjects } from '../hooks/api';
 import { useQuickActions } from '../components/layout/QuickActions';
+import PeopleBoard, { EffortChip } from '../components/tasks/PeopleBoard';
+import { effortTone, liveSpent, useNow } from '../lib/effort';
 import { useContextMenu } from '../components/layout/ContextMenu';
 import { TASK_STATUS, TASK_STATUSES, TASK_PRIORITY, TASK_PRIORITIES, projectColor } from '../lib/meta';
 import { dueLabel, firstName, trLower } from '../lib/format';
 import type { Project, Task, TaskPriority, TaskStatus, User } from '../types';
 
 type Scope = 'MINE' | 'ALL';
-type View = 'BOARD' | 'LIST';
+type View = 'PEOPLE' | 'BOARD' | 'LIST';
 type GroupBy = 'PERSON' | 'PROJECT';
 /** Proje filtresi: '' = hepsi, 'none' = projesiz, diğerleri proje id'si */
 const NO_PROJECT = 'none';
@@ -43,7 +45,8 @@ export default function Tasks() {
   const update = useUpdateTask();
 
   const [scope, setScope] = useState<Scope>(isAdmin ? 'ALL' : 'MINE');
-  const [view, setView] = useState<View>(() => readPref<View>(VIEW_KEY, 'BOARD', ['BOARD', 'LIST']));
+  // Varsayılan: yöneticiye kişi bazlı pano (herkesi bir bakışta görmek için), çalışana klasik pano.
+  const [view, setView] = useState<View>(() => readPref<View>(VIEW_KEY, isAdmin ? 'PEOPLE' : 'BOARD', ['PEOPLE', 'BOARD', 'LIST']));
   const [groupBy, setGroupBy] = useState<GroupBy>(() => readPref<GroupBy>(`${VIEW_KEY}.group`, 'PROJECT', ['PERSON', 'PROJECT']));
   const [priority, setPriority] = useState<'ALL' | TaskPriority>('ALL');
   const [person, setPerson] = useState('');
@@ -80,6 +83,16 @@ export default function Tasks() {
     update.mutate({ id: task.id, status });
   };
 
+  /** Kişi panosu: aynı satırda durum değişir; yönetici başka birinin satırına bırakırsa görev o kişiye de aktarılır. */
+  const moveTo = (task: Task, status: TaskStatus, userId?: number) => {
+    const statusChanged = (task.status ?? 'YAPILACAK') !== status;
+    if (userId !== undefined && isAdmin && userId !== task.userId) {
+      update.mutate({ id: task.id, userId, ...(statusChanged ? { status } : {}) });
+      return;
+    }
+    move(task, status);
+  };
+
   const changeView = (v: View) => { setView(v); writePref(VIEW_KEY, v); };
   const changeGroup = (g: GroupBy) => { setGroupBy(g); writePref(`${VIEW_KEY}.group`, g); };
 
@@ -92,20 +105,22 @@ export default function Tasks() {
       <PageHeader
         eyebrow="Görevler"
         title="Görev Panosu"
-        description="Bir göreve tıklayarak ayrıntısını, geçmişini ve yorumlarını açın. Kartları sütunlar arasında sürükleyebilir veya oklarla taşıyabilirsiniz."
+        description={view === 'PEOPLE'
+          ? 'Her satır bir çalışan: görevleri, bu haftaki çalışma süresi ve kalan iş yükü. Kartları satır içinde sürükleyerek durumunu değiştirin.'
+          : 'Bir göreve tıklayarak ayrıntısını, geçmişini ve yorumlarını açın. Kartları sütunlar arasında sürükleyebilir veya oklarla taşıyabilirsiniz.'}
         actions={<>
           <Segmented<View>
             label="Görünüm"
             layoutId="task-view"
             value={view}
             onChange={changeView}
-            options={[{ value: 'BOARD', label: 'Pano' }, { value: 'LIST', label: 'Liste' }]}
+            options={[{ value: 'PEOPLE', label: 'Kişiler' }, { value: 'BOARD', label: 'Pano' }, { value: 'LIST', label: 'Liste' }]}
           />
           <button onClick={newTaskForFilter} className="btn-primary"><Plus size={18} weight="bold" /> {isAdmin ? 'Görev Ata' : 'Görev Ekle'}</button>
         </>}
       />
 
-      <div className="flex flex-col lg:flex-row gap-3 mb-6 lg:items-center">
+      <div className="flex flex-wrap gap-3 mb-6 items-center">
         <Segmented<Scope>
           label="Kapsam"
           layoutId="task-scope"
@@ -113,22 +128,23 @@ export default function Tasks() {
           onChange={setScope}
           options={[{ value: 'MINE', label: 'Benim', count: mineCount }, { value: 'ALL', label: 'Tüm ekip' }]}
         />
-        <div className="relative flex-1 min-w-0">
+        {/* Dar ekranda arama kendi satırına iner; seçiciler küçülüp aramanın üstüne binmez */}
+        <div className="relative flex-1 basis-64 min-w-[15rem]">
           <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted" size={18} aria-hidden="true" />
           <input type="search" aria-label="Görevlerde ara" placeholder="Görev, açıklama veya kişi ara…" value={search} onChange={e => setSearch(e.target.value)} className="input pl-11 shadow-soft" />
         </div>
-        <select aria-label="Projeye göre filtrele" value={project} onChange={e => setProject(e.target.value)} className="input lg:w-48 shadow-soft">
+        <select aria-label="Projeye göre filtrele" value={project} onChange={e => setProject(e.target.value)} className="input w-full sm:w-auto sm:min-w-[11rem] sm:flex-none shadow-soft">
           <option value="">Tüm projeler</option>
           {projects?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           <option value={NO_PROJECT}>Projesiz</option>
         </select>
         {scope === 'ALL' && (
-          <select aria-label="Kişiye göre filtrele" value={person} onChange={e => setPerson(e.target.value)} className="input lg:w-44 shadow-soft">
+          <select aria-label="Kişiye göre filtrele" value={person} onChange={e => setPerson(e.target.value)} className="input w-full sm:w-auto sm:min-w-[10rem] sm:flex-none shadow-soft">
             <option value="">Herkes</option>
             {users?.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
           </select>
         )}
-        <select aria-label="Önceliğe göre filtrele" value={priority} onChange={e => setPriority(e.target.value as 'ALL' | TaskPriority)} className="input lg:w-40 shadow-soft">
+        <select aria-label="Önceliğe göre filtrele" value={priority} onChange={e => setPriority(e.target.value as 'ALL' | TaskPriority)} className="input w-full sm:w-auto sm:min-w-[10rem] sm:flex-none shadow-soft">
           <option value="ALL">Tüm öncelikler</option>
           {TASK_PRIORITIES.map(p => <option key={p} value={p}>{TASK_PRIORITY[p].label}</option>)}
         </select>
@@ -138,6 +154,18 @@ export default function Tasks() {
         <div className="grid md:grid-cols-3 gap-5">{[1, 2, 3].map(i => <Skeleton key={i} className="h-96 rounded-4xl" />)}</div>
       ) : (tasks ?? []).length === 0 ? (
         <EmptyState icon={Kanban} title="Henüz görev yok" description="İlk görevi ekleyerek panoyu başlatın." action={<button onClick={() => actions.newTask()} className="btn-primary">Görev ekle</button>} />
+      ) : view === 'PEOPLE' ? (
+        <PeopleBoard
+          tasks={visible}
+          users={(users ?? []).filter(u => scope === 'ALL' ? (!person || u.id === Number(person)) : u.id === me.id)}
+          projectById={projectById}
+          filtered={filtered || scope === 'MINE'}
+          canEdit={canEdit}
+          canAssign={isAdmin}
+          onMove={moveTo}
+          onOpen={actions.openTask}
+          onNew={userId => actions.newTask(userId, project && project !== NO_PROJECT ? Number(project) : undefined)}
+        />
       ) : view === 'LIST' ? (
         <ListView
           tasks={visible}
@@ -169,7 +197,7 @@ export default function Tasks() {
                     if (t) move(t, col);
                     setDragId(null); setOverCol(null);
                   }}
-                  className={`rounded-4xl p-4 border-2 transition-colors min-h-[240px] ${isOver ? 'border-theme-deep bg-theme-lightest/70' : 'border-transparent bg-surface/60'}`}
+                  className={`rounded-4xl p-4 border-2 transition-colors min-h-[15rem] ${isOver ? 'border-theme-deep bg-theme-lightest/70' : 'border-transparent bg-surface/60'}`}
                 >
                   <header className="flex items-center justify-between px-2 pt-1 pb-4">
                     <h2 className={`flex items-center gap-2 text-sm font-bold ${meta.className}`}>
@@ -219,7 +247,7 @@ function TaskHints({ task }: { task: Task }) {
     <span className="inline-flex items-center gap-2 text-theme-muted">
       {task.description && <TextAlignLeft size={14} weight="bold" aria-label="Açıklaması var" />}
       {comments > 0 && (
-        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold tabular" aria-label={`${comments} yorum`}>
+        <span className="inline-flex items-center gap-0.5 text-[0.6875rem] font-bold tabular" aria-label={`${comments} yorum`}>
           <ChatCircleText size={14} weight="bold" aria-hidden="true" /> {comments}
         </span>
       )}
@@ -231,7 +259,7 @@ function DueText({ task }: { task: Task }) {
   const due = task.dueDate && task.status !== 'TAMAMLANDI' ? dueLabel(task.dueDate) : null;
   if (!due) return null;
   return (
-    <span className={`inline-flex items-center gap-1 text-[11px] font-bold whitespace-nowrap ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
+    <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-bold whitespace-nowrap ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : 'text-theme-muted'}`}>
       <CalendarBlank size={12} weight="bold" aria-hidden="true" /> {due.text}
     </span>
   );
@@ -252,6 +280,8 @@ interface TaskCardProps {
 function TaskCard({ task, owner, project, editable, dragging, onDragStart, onDragEnd, onMove, onOpen }: TaskCardProps) {
   const remove = useDeleteTask();
   const menu = useContextMenu();
+  const now = useNow(30_000, !!task.ticking);
+  const spent = liveSpent(task, now);
   const status = task.status ?? 'YAPILACAK';
   const idx = TASK_STATUSES.indexOf(status);
   const done = status === 'TAMAMLANDI';
@@ -305,6 +335,7 @@ function TaskCard({ task, owner, project, editable, dragging, onDragStart, onDra
             {owner && <Avatar user={owner} size="xs" />}
             <span className="text-xs font-semibold text-theme-muted truncate">{owner ? firstName(owner.fullName) : '—'}</span>
             <DueText task={task} />
+            <span className="text-[0.6875rem] font-bold"><EffortChip spent={spent} estimate={task.estimatedMinutes} ticking={!!task.ticking} tone={effortTone(spent, task.estimatedMinutes)} /></span>
             <TaskHints task={task} />
           </div>
           {editable && (

@@ -15,7 +15,7 @@ import type { OnboardingRule, OnboardingStep } from '../../types';
 /** Bağlantı seçicide sunulan sayfalar (dokümanlar ayrıca listelenir) */
 const PAGES: { path: string; label: string }[] = [
   { path: '/settings', label: 'Ayarlar' },
-  { path: '/team', label: 'Ekip' },
+  { path: '/team', label: 'Çalışanlar' },
   { path: '/projects', label: 'Projeler' },
   { path: '/tasks', label: 'Görevler' },
   { path: '/leaves', label: 'İzinler' },
@@ -71,7 +71,7 @@ export default function OnboardingStepsModal({ open, onClose }: { open: boolean;
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold">{s.title}</p>
                       {s.description && <p className="text-xs text-theme-muted mt-0.5 line-clamp-2">{s.description}</p>}
-                      <div className="flex items-center gap-3 mt-1.5 flex-wrap text-[11px] font-semibold text-theme-muted">
+                      <div className="flex items-center gap-3 mt-1.5 flex-wrap text-[0.6875rem] font-semibold text-theme-muted">
                         {s.link && <span className="inline-flex items-center gap-1"><LinkIcon size={12} weight="bold" /> {s.link}</span>}
                         <span className="inline-flex items-center gap-1">
                           {s.autoRule ? <><Lightning size={12} weight="fill" className="text-theme-dark" /> {RULE_LABEL[s.autoRule]}</> : 'Kişi işaretler'}
@@ -145,7 +145,7 @@ function StepForm({ initial, onDone }: { initial: OnboardingStep | null; onDone:
       </div>
       <div>
         <label htmlFor="onb-desc-in" className="label">Açıklama <span className="text-theme-muted font-medium">(isteğe bağlı)</span></label>
-        <textarea id="onb-desc-in" className="input min-h-[72px] resize-y" maxLength={500} value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+        <textarea id="onb-desc-in" className="input min-h-[4.5rem] resize-y" maxLength={500} value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
       </div>
       <div className="grid sm:grid-cols-2 gap-3">
         <div>

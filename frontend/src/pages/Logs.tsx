@@ -266,9 +266,9 @@ function LogsPage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Combobox label="Kategori" value={category} onChange={v => setCategory(v as LogCategory | '')} options={categoryOptions}
-              searchPlaceholder="Kategori ara…" emptyText="Eşleşen kategori yok" width={240} className="w-[215px]" />
+              searchPlaceholder="Kategori ara…" emptyText="Eşleşen kategori yok" width={240} className="w-[13.4375rem]" />
             <Combobox label="Kişi" value={actorId} onChange={setActorId} options={personOptions}
-              searchPlaceholder="İsim yazın…" emptyText="Bu isimde kimse yok" width={300} className="w-[220px]" />
+              searchPlaceholder="İsim yazın…" emptyText="Bu isimde kimse yok" width={300} className="w-[13.75rem]" />
             <label className="flex items-center gap-1.5 text-xs font-bold text-theme-muted">
               <span className="sr-only sm:not-sr-only">Başlangıç</span>
               <input type="date" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} className="input w-auto py-2.5" aria-label="Başlangıç tarihi" />
@@ -362,14 +362,14 @@ function DayBars({ days, selected, onSelect }: { days: { date: string; count: nu
             aria-label={`${dayMonth.format(date)}: ${d.count} kayıt${d.warnings ? `, ${d.warnings} uyarı veya kritik` : ''}. ${on ? 'Filtreyi kaldır' : 'Bu günü listele'}`}
             className={`flex-1 min-w-0 h-full flex flex-col items-center justify-end gap-1 group rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-medium ${on ? 'bg-theme-lightest/80' : ''}`}
             title={`${dayMonth.format(date)}: ${d.count} kayıt${d.warnings ? `, ${d.warnings} uyarı/kritik` : ''} · tıklayınca listelenir`}>
-            <span className="text-[10px] font-bold tabular text-theme-muted opacity-0 group-hover:opacity-100 transition-opacity">{d.count}</span>
+            <span className="text-[0.625rem] font-bold tabular text-theme-muted opacity-0 group-hover:opacity-100 transition-opacity">{d.count}</span>
             <motion.span
               initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className={`w-full max-w-[34px] rounded-t-lg rounded-b-sm origin-bottom ${isToday || on ? 'bg-accent' : 'bg-theme-medium group-hover:bg-theme-dark'} transition-colors`}
+              className={`w-full max-w-[2.125rem] rounded-t-lg rounded-b-sm origin-bottom ${isToday || on ? 'bg-accent' : 'bg-theme-medium group-hover:bg-theme-dark'} transition-colors`}
               style={{ height: `${Math.max((d.count / max) * 100, d.count ? 4 : 1.5)}%` }}
             />
-            <span className={`text-[10px] font-bold uppercase ${isToday ? 'text-theme-deep' : 'text-theme-muted'}`}>{dayShort.format(date)}</span>
-            <span className={`text-[10px] font-semibold tabular -mt-1 ${isToday ? 'text-theme-deep' : 'text-theme-muted/70'}`}>{date.getDate()}</span>
+            <span className={`text-[0.625rem] font-bold uppercase ${isToday ? 'text-theme-deep' : 'text-theme-muted'}`}>{dayShort.format(date)}</span>
+            <span className={`text-[0.625rem] font-semibold tabular -mt-1 ${isToday ? 'text-theme-deep' : 'text-theme-muted/70'}`}>{date.getDate()}</span>
           </button>
         );
       })}
@@ -411,7 +411,7 @@ function LogRow({ log, open, onToggle, onFilterActor, onFilterCategory, onSearch
       ],
     })}>
       <button type="button" onClick={onToggle} aria-expanded={open} className="w-full flex items-start gap-3 sm:gap-4 px-4 sm:px-5 py-3.5 text-left hover:bg-theme-cream/60 transition-colors">
-        <time className="text-xs font-bold tabular text-theme-muted pt-1 w-[58px] shrink-0" dateTime={when.toISOString()}>{when.toLocaleTimeString('tr-TR')}</time>
+        <time className="text-xs font-bold tabular text-theme-muted pt-1 w-[3.625rem] shrink-0" dateTime={when.toISOString()}>{when.toLocaleTimeString('tr-TR')}</time>
         <span className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${cat.className}`} title={cat.label}><cat.icon size={16} weight="bold" aria-hidden="true" /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-theme-text leading-snug break-words">{log.message}</span>
@@ -426,7 +426,7 @@ function LogRow({ log, open, onToggle, onFilterActor, onFilterCategory, onSearch
           </span>
         </span>
         {log.level !== 'BILGI' && (
-          <span className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold shrink-0 ${lvl.className}`}>
+          <span className={`hidden sm:inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[0.6875rem] font-bold shrink-0 ${lvl.className}`}>
             <lvl.icon size={13} weight="bold" aria-hidden="true" /> {lvl.label}
           </span>
         )}
@@ -435,7 +435,7 @@ function LogRow({ log, open, onToggle, onFilterActor, onFilterCategory, onSearch
       <AnimatePresence initial={false}>
         {open && (
           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden">
-            <div className="px-4 sm:px-5 pb-4 sm:pl-[118px] grid md:grid-cols-[1fr_260px] gap-4">
+            <div className="px-4 sm:px-5 pb-4 sm:pl-[7.375rem] grid md:grid-cols-[1fr_16.25rem] gap-4">
               <div>
                 <p className="eyebrow mb-2">Ayrıntılar</p>
                 {details.length === 0 ? <p className="text-sm text-theme-muted font-medium">Bu işlem için ek ayrıntı yok.</p> : (
@@ -448,9 +448,9 @@ function LogRow({ log, open, onToggle, onFilterActor, onFilterCategory, onSearch
                 <dt className="font-bold text-theme-muted">Kayıt no</dt><dd className="font-semibold tabular">#{log.id}</dd>
                 <dt className="font-bold text-theme-muted">Zaman</dt><dd className="font-semibold tabular">{when.toLocaleString('tr-TR')}</dd>
                 <dt className="font-bold text-theme-muted">Seviye</dt><dd className="font-semibold">{lvl.label}</dd>
-                <dt className="font-bold text-theme-muted">İşlem kodu</dt><dd className="font-mono text-[11px]">{log.category}.{log.action}</dd>
-                {log.targetType && <><dt className="font-bold text-theme-muted">Hedef</dt><dd className="font-semibold break-words">{log.targetName ?? '—'} <span className="text-theme-muted font-mono text-[11px]">({log.targetType}{log.targetId !== null ? ` #${log.targetId}` : ''})</span></dd></>}
-                <dt className="font-bold text-theme-muted">IP adresi</dt><dd className="font-mono text-[11px]">{log.ipAddress ?? 'Sistem işlemi'}</dd>
+                <dt className="font-bold text-theme-muted">İşlem kodu</dt><dd className="font-mono text-[0.6875rem]">{log.category}.{log.action}</dd>
+                {log.targetType && <><dt className="font-bold text-theme-muted">Hedef</dt><dd className="font-semibold break-words">{log.targetName ?? '—'} <span className="text-theme-muted font-mono text-[0.6875rem]">({log.targetType}{log.targetId !== null ? ` #${log.targetId}` : ''})</span></dd></>}
+                <dt className="font-bold text-theme-muted">IP adresi</dt><dd className="font-mono text-[0.6875rem]">{log.ipAddress ?? 'Sistem işlemi'}</dd>
               </dl>
             </div>
           </motion.div>

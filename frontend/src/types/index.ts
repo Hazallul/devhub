@@ -109,6 +109,39 @@ export interface Task {
     createdById?: number | null;
     createdByName?: string | null;
     commentCount?: number;
+    /** Tahmini iş gücü (dakika); eski görevlerde null */
+    estimatedMinutes?: number | null;
+    /** Harcanan çalışma süresi (saniye; yalnızca mesai saatleri, elle düzeltme dahil) */
+    spentSeconds?: number;
+    /** Görev Devam Ediyor'da: çalışma oturumu açık */
+    running?: boolean;
+    /** Oturum açık ve şu an mesai saati: süre canlı artıyor */
+    ticking?: boolean;
+    /** İlk kez Devam Ediyor'a alındığı an; hiç başlanmadıysa null */
+    startedAt?: string | null;
+    /** İstemci: verinin yüklendiği an (canlı sayaç için) */
+    fetchedAt?: number;
+}
+
+/** Görevin "Devam Ediyor"da geçen bir aralığı */
+export interface TaskSession {
+    id: number;
+    userId: number;
+    userName: string;
+    startedAt: string;
+    endedAt: string | null;
+    /** Aralığın mesaiye düşen kısmı (saniye) */
+    workSeconds: number;
+}
+
+/** Kişinin bu haftaki çalışması */
+export interface Workload {
+    userId: number;
+    weekWorkedSeconds: number;
+    todayWorkedSeconds: number;
+    /** Haftalık mesai kapasitesi (tatil ve izin günleri düşülmüş) */
+    weekCapacitySeconds: number;
+    weekStart: string;
 }
 
 export type TaskActivityKind = 'EVENT' | 'COMMENT';

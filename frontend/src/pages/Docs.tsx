@@ -200,10 +200,10 @@ function PendingReviews() {
               <Avatar user={users?.find(u => u.id === r.authorId) ?? { fullName: r.authorName ?? '?', avatarColor: '', status: null }} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-theme-text">
-                  {r.isNew && <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-theme-light text-theme-text">Yeni doküman</span>}
+                  {r.isNew && <span className="text-[0.625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-theme-light text-theme-text">Yeni doküman</span>}
                   {r.isNew ? r.title : r.docTitle}
                   {r.outdated && (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-warn-ink" title="Öneriden sonra doküman güncellendi">
+                    <span className="inline-flex items-center gap-1 text-[0.6875rem] font-bold text-warn-ink" title="Öneriden sonra doküman güncellendi">
                       <Warning size={13} weight="fill" /> Eski sürüm üzerine
                     </span>
                   )}
@@ -242,7 +242,7 @@ function MyProposals() {
           const st = REVISION_STATUS[r.status];
           return (
             <li key={r.id} className="flex flex-wrap items-center gap-3 py-3">
-              <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg ${st.className}`}><st.icon size={13} weight="bold" /> {st.label}</span>
+              <span className={`inline-flex items-center gap-1 text-[0.6875rem] font-bold px-2 py-1 rounded-lg ${st.className}`}><st.icon size={13} weight="bold" /> {st.label}</span>
               <Link to={`/docs/oneri/${r.id}`} className="min-w-0 flex-1 text-sm font-bold text-theme-text hover:text-theme-deep">
                 {r.isNew ? `Yeni: ${r.title}` : r.docTitle ?? r.title}
                 {r.decisionNote && <span className="block text-xs text-theme-muted font-medium">Yönetici: “{r.decisionNote}”</span>}
@@ -250,8 +250,8 @@ function MyProposals() {
               <span className="text-xs text-theme-muted font-semibold">{timeAgo(r.decidedAt ?? r.createdAt)}</span>
               {r.status === 'BEKLIYOR' && (
                 <span className="flex gap-1.5">
-                  <Link to={`/docs/${r.isNew ? 'yeni' : `${r.docSlug}/duzenle`}?oneri=${r.id}`} className="btn-secondary min-h-[34px] px-3 text-xs"><PencilSimple size={13} weight="bold" /> Düzenle</Link>
-                  <button type="button" onClick={() => withdraw.mutate(r.id)} disabled={withdraw.isPending} className="btn-secondary min-h-[34px] px-3 text-xs">Geri çek</button>
+                  <Link to={`/docs/${r.isNew ? 'yeni' : `${r.docSlug}/duzenle`}?oneri=${r.id}`} className="btn-secondary min-h-[2.125rem] px-3 text-xs"><PencilSimple size={13} weight="bold" /> Düzenle</Link>
+                  <button type="button" onClick={() => withdraw.mutate(r.id)} disabled={withdraw.isPending} className="btn-secondary min-h-[2.125rem] px-3 text-xs">Geri çek</button>
                 </span>
               )}
             </li>
@@ -327,9 +327,9 @@ function DocView({ doc }: { doc: DocDetail }) {
   }, [confirmDelete]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[220px_minmax(0,1fr)_190px] pb-10">
+    <div className="grid gap-8 lg:grid-cols-[13.75rem_minmax(0,1fr)] xl:grid-cols-[13.75rem_minmax(0,1fr)_11.875rem] pb-10">
       {/* Sol: kategori ağacı (mobilde açılır kapanır) */}
-      <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-72px-5rem)] lg:overflow-y-auto scrollbar-thin lg:-mt-2 lg:pt-2">
+      <div className="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100dvh-4.5rem-5rem)] lg:overflow-y-auto scrollbar-thin lg:-mt-2 lg:pt-2">
         <button type="button" onClick={() => setNavOpen(o => !o)} aria-expanded={navOpen} className="lg:hidden btn-secondary w-full justify-between">
           <span className="flex items-center gap-2"><ListBullets size={18} weight="bold" /> Tüm dokümanlar</span>
           <CaretDown size={16} weight="bold" className={`transition-transform ${navOpen ? 'rotate-180' : ''}`} />
@@ -354,7 +354,7 @@ function DocView({ doc }: { doc: DocDetail }) {
               <CaretRight size={11} weight="bold" aria-hidden="true" />
               <span>{categoryName(doc.category)}</span>
             </nav>
-            <Link to={editHref} className="btn-secondary min-h-[38px] px-3 text-sm"><PencilSimple size={16} weight="bold" /> {doc.myPendingRevisionId ? 'Önerimi düzenle' : 'Düzenle'}</Link>
+            <Link to={editHref} className="btn-secondary min-h-[2.375rem] px-3 text-sm"><PencilSimple size={16} weight="bold" /> {doc.myPendingRevisionId ? 'Önerimi düzenle' : 'Düzenle'}</Link>
             <button type="button" onClick={e => setMoreAnchor(e.currentTarget)} className="icon-btn border border-theme-light/60" aria-label="Diğer işlemler" aria-haspopup="menu">
               <DotsThree size={20} weight="bold" />
             </button>
@@ -373,13 +373,13 @@ function DocView({ doc }: { doc: DocDetail }) {
           {confirmDelete && (
             <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-danger-line bg-danger-soft p-4 mb-5 text-sm font-semibold text-danger-ink">
               <Warning size={20} weight="fill" className="shrink-0" />
-              <span className="flex-1 min-w-[200px]">“{doc.title}” geçmişi ve bekleyen önerileriyle birlikte silinecek. Bu geri alınamaz.</span>
-              <button type="button" onClick={() => setConfirmDelete(false)} className="btn-secondary min-h-[36px] px-3 text-xs">Vazgeç</button>
+              <span className="flex-1 min-w-[12.5rem]">“{doc.title}” geçmişi ve bekleyen önerileriyle birlikte silinecek. Bu geri alınamaz.</span>
+              <button type="button" onClick={() => setConfirmDelete(false)} className="btn-secondary min-h-[2.25rem] px-3 text-xs">Vazgeç</button>
               <button
                 type="button"
                 onClick={() => remove.mutate(doc.id, { onSuccess: () => navigate('/docs', { replace: true }) })}
                 disabled={remove.isPending}
-                className="min-h-[36px] px-3 rounded-xl text-xs font-bold bg-danger-solid text-white hover:bg-danger-solid-hover"
+                className="min-h-[2.25rem] px-3 rounded-xl text-xs font-bold bg-danger-solid text-white hover:bg-danger-solid-hover"
               >
                 Evet, sil
               </button>
@@ -389,17 +389,17 @@ function DocView({ doc }: { doc: DocDetail }) {
           {doc.myPendingRevisionId && (
             <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-theme-light bg-theme-lightest/70 p-4 mb-5 text-sm">
               <HourglassMedium size={20} weight="duotone" className="text-theme-deep shrink-0" aria-hidden="true" />
-              <span className="flex-1 min-w-[200px] font-semibold text-theme-text">Bu doküman için gönderdiğiniz değişiklik yönetici onayı bekliyor. Onaylanana kadar herkes bu hâlini görür.</span>
-              <Link to={`/docs/oneri/${doc.myPendingRevisionId}`} className="btn-secondary min-h-[36px] px-3 text-xs">Önerimi gör</Link>
+              <span className="flex-1 min-w-[12.5rem] font-semibold text-theme-text">Bu doküman için gönderdiğiniz değişiklik yönetici onayı bekliyor. Onaylanana kadar herkes bu hâlini görür.</span>
+              <Link to={`/docs/oneri/${doc.myPendingRevisionId}`} className="btn-secondary min-h-[2.25rem] px-3 text-xs">Önerimi gör</Link>
             </div>
           )}
           {isAdmin && pending.length > 0 && (
             <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-theme-light bg-theme-lightest/70 p-4 mb-5 text-sm">
               <HourglassMedium size={20} weight="duotone" className="text-theme-deep shrink-0" aria-hidden="true" />
-              <span className="flex-1 min-w-[200px] font-semibold text-theme-text">
+              <span className="flex-1 min-w-[12.5rem] font-semibold text-theme-text">
                 Bu dokümanda {pending.length} değişiklik önerisi onay bekliyor ({pending.map(p => p.authorName ?? '?').join(', ')}).
               </span>
-              <Link to={`/docs/oneri/${pending[0].id}`} className="btn-primary min-h-[36px] px-3 text-xs">İncele</Link>
+              <Link to={`/docs/oneri/${pending[0].id}`} className="btn-primary min-h-[2.25rem] px-3 text-xs">İncele</Link>
             </div>
           )}
 
@@ -418,7 +418,7 @@ function DocView({ doc }: { doc: DocDetail }) {
             <span className="flex items-center gap-1"><Clock size={14} weight="bold" aria-hidden="true" /> {readMinutes(doc.plainText)} dk okuma</span>
             {doc.tags.length > 0 && (
               <span className="flex flex-wrap gap-1.5">
-                {doc.tags.map(t => <span key={t} className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-theme-lightest text-theme-deep">#{t}</span>)}
+                {doc.tags.map(t => <span key={t} className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-full bg-theme-lightest text-theme-deep">#{t}</span>)}
               </span>
             )}
           </div>
@@ -544,7 +544,7 @@ function Toc({ items }: { items: { id: string; text: string; level: number }[] }
                 history.replaceState(null, '', `#${i.id}`);
                 setActive(i.id);
               }}
-              className={`block -ml-0.5 border-l-2 py-1 text-[13px] leading-snug transition-colors ${i.level === 3 ? 'pl-6' : 'pl-3'} ${
+              className={`block -ml-0.5 border-l-2 py-1 text-[0.8125rem] leading-snug transition-colors ${i.level === 3 ? 'pl-6' : 'pl-3'} ${
                 active === i.id ? 'border-theme-deep text-theme-deep font-bold' : 'border-transparent text-theme-muted font-medium hover:text-theme-deep'
               }`}
               aria-current={active === i.id ? 'location' : undefined}

@@ -37,7 +37,7 @@ function useTooltip() {
     >
       <p className="text-base font-bold tabular leading-tight">{tip.value}</p>
       <p className="text-xs text-white/80 font-medium flex items-center gap-1.5 mt-0.5">
-        <span className="inline-block w-3 h-[3px] rounded-full" style={{ backgroundColor: tip.color }} aria-hidden="true" />
+        <span className="inline-block w-3 h-[0.1875rem] rounded-full" style={{ backgroundColor: tip.color }} aria-hidden="true" />
         {tip.label}
       </p>
       {tip.extra && <div className="text-xs text-white/80 mt-1.5 pt-1.5 border-t border-white/15">{tip.extra}</div>}
@@ -52,7 +52,7 @@ export function Legend({ series }: { series: Series[] }) {
     <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-semibold text-theme-muted" aria-label="Lejant">
       {series.map(s => (
         <li key={s.key} className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded-[3px]" style={{ backgroundColor: s.color }} aria-hidden="true" />
+          <span className="w-3 h-3 rounded-[0.1875rem]" style={{ backgroundColor: s.color }} aria-hidden="true" />
           {s.label}
         </li>
       ))}
@@ -83,7 +83,7 @@ export function HBarStack({ rows, series, normalize = false, unit, labelWidth = 
               <div className="text-sm font-semibold text-theme-text truncate" title={r.ariaLabel}>{r.label}</div>
               <div className="flex items-center gap-2 min-w-0">
                 <motion.div
-                  className="flex h-[22px] gap-[2px] origin-left"
+                  className="flex h-[1.375rem] gap-[0.125rem] origin-left"
                   style={{ width: `calc(${width}% - ${r.end ? 64 : 0}px)`, minWidth: total ? 6 : 0 }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
@@ -98,7 +98,7 @@ export function HBarStack({ rows, series, normalize = false, unit, labelWidth = 
                         tabIndex={0}
                         aria-label={`${r.ariaLabel}, ${s.label}: ${v} ${unit}`}
                         {...bind(`${v} ${unit}`, `${r.ariaLabel} · ${s.label}`, s.color)}
-                        className={`h-full outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-theme-text focus-visible:ring-offset-1 ${last ? 'rounded-r-[4px]' : ''}`}
+                        className={`h-full outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-theme-text focus-visible:ring-offset-1 ${last ? 'rounded-r-[0.25rem]' : ''}`}
                         style={{ flexGrow: v, flexBasis: 0, backgroundColor: s.color, minWidth: 3 }}
                       />
                     );
@@ -127,7 +127,7 @@ export function ColumnChart({ data, unit, height = 180 }: { data: ColumnDatum[];
   return (
     <div>
       <div className="flex gap-2">
-        <div className="relative w-7 shrink-0 text-[11px] font-semibold text-theme-muted tabular" style={{ height }} aria-hidden="true">
+        <div className="relative w-7 shrink-0 text-[0.6875rem] font-semibold text-theme-muted tabular" style={{ height }} aria-hidden="true">
           {ticks.map(t => (
             <span key={t} className="absolute right-0 -translate-y-1/2" style={{ top: `${(1 - t / max) * 100}%` }}>{t}</span>
           ))}
@@ -136,15 +136,15 @@ export function ColumnChart({ data, unit, height = 180 }: { data: ColumnDatum[];
           {ticks.map(t => (
             <span key={t} className="absolute inset-x-0 h-px bg-theme-lightest" style={{ top: `${(1 - t / max) * 100}%` }} aria-hidden="true" />
           ))}
-          <div className="absolute inset-0 flex items-end gap-[2px]">
+          <div className="absolute inset-0 flex items-end gap-[0.125rem]">
             {data.map((d, i) => (
               <div key={d.id} className="flex-1 h-full flex flex-col items-center justify-end min-w-0">
-                {d.value > 0 && <span className="text-[11px] font-bold text-theme-text tabular mb-1">{d.value}</span>}
+                {d.value > 0 && <span className="text-[0.6875rem] font-bold text-theme-text tabular mb-1">{d.value}</span>}
                 <motion.span
                   tabIndex={0}
                   aria-label={`${d.ariaLabel}: ${d.value} ${unit}`}
                   {...bind(`${d.value} ${unit}`, d.ariaLabel, SERIES_COLOR, d.extra)}
-                  className="block w-full max-w-[24px] rounded-t-[4px] origin-bottom outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-theme-text focus-visible:ring-offset-1"
+                  className="block w-full max-w-[1.5rem] rounded-t-[0.25rem] origin-bottom outline-none hover:brightness-110 focus-visible:ring-2 focus-visible:ring-theme-text focus-visible:ring-offset-1"
                   style={{ height: `${(d.value / max) * 100}%`, minHeight: d.value ? 3 : 0, backgroundColor: SERIES_COLOR }}
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
@@ -157,8 +157,8 @@ export function ColumnChart({ data, unit, height = 180 }: { data: ColumnDatum[];
       </div>
       <div className="flex gap-2 mt-2">
         <div className="w-7 shrink-0" />
-        <div className="flex-1 flex gap-[2px]">
-          {data.map(d => <span key={d.id} className="flex-1 text-center text-[11px] font-semibold text-theme-muted truncate">{d.label}</span>)}
+        <div className="flex-1 flex gap-[0.125rem]">
+          {data.map(d => <span key={d.id} className="flex-1 text-center text-[0.6875rem] font-semibold text-theme-muted truncate">{d.label}</span>)}
         </div>
       </div>
       {node}

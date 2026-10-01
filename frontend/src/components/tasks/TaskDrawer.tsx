@@ -7,6 +7,7 @@ import {
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Avatar, PriorityBadge, Segmented, Skeleton } from '../ui/primitives';
+import EffortPanel from './EffortPanel';
 import {
   useAllTasks, useUsers, useMe, useProjects, useUpdateTask, useDeleteTask, useTaskActivity, useAddTaskComment, useDeleteTaskComment,
 } from '../../hooks/api';
@@ -237,6 +238,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
             )}
           </dl>
 
+          <EffortPanel task={task} canEdit={canEdit} canEditEstimate={isAdmin || (task.createdById === me.id)} />
           <Description task={task} canEdit={canEdit} />
           <Activity task={task} />
         </div>
@@ -300,11 +302,11 @@ function Description({ task, canEdit }: { task: Task; canEdit: boolean }) {
             placeholder="Kabul kriterleri, bağlantılar, notlar…"
             onChange={e => setDraft(e.target.value)}
             onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setEditing(false); } }}
-            className="input resize-y min-h-[120px] text-sm"
+            className="input resize-y min-h-[7.5rem] text-sm"
           />
           <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => setEditing(false)} className="btn-ghost min-h-[38px] px-4 text-sm">Vazgeç</button>
-            <button type="button" onClick={save} className="btn-primary min-h-[38px] px-4 text-sm">Kaydet</button>
+            <button type="button" onClick={() => setEditing(false)} className="btn-ghost min-h-[2.375rem] px-4 text-sm">Vazgeç</button>
+            <button type="button" onClick={save} className="btn-primary min-h-[2.375rem] px-4 text-sm">Kaydet</button>
           </div>
         </div>
       ) : task.description ? (
@@ -346,7 +348,7 @@ function Activity({ task }: { task: Task }) {
           {filter === 'COMMENTS' ? 'Henüz yorum yok. İlk yorumu aşağıdan yazın.' : 'Bu görev için kayıt yok.'}
         </p>
       ) : (
-        <ol className="relative space-y-4 before:absolute before:left-[13px] before:top-2 before:bottom-2 before:w-px before:bg-theme-light/70">
+        <ol className="relative space-y-4 before:absolute before:left-[0.8125rem] before:top-2 before:bottom-2 before:w-px before:bg-theme-light/70">
           <AnimatePresence initial={false}>
             {shown.map(a => (
               <motion.li key={a.id} layout initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.12 } }} className="relative pl-10">
@@ -433,7 +435,7 @@ function CommentBox({ taskId }: { taskId: number }) {
             className="input pl-10 py-2.5 resize-none max-h-32 text-sm [field-sizing:content]"
           />
         </div>
-        <button type="button" onClick={send} disabled={!text.trim() || add.isPending} className="btn-primary px-4 min-h-[44px]" aria-label="Yorumu gönder">
+        <button type="button" onClick={send} disabled={!text.trim() || add.isPending} className="btn-primary px-4 min-h-[2.75rem]" aria-label="Yorumu gönder">
           <PaperPlaneRight size={18} weight="bold" />
         </button>
       </div>

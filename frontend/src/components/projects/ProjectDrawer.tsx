@@ -256,11 +256,11 @@ function ProjectTasks({ projectId, tasks, users, canAssign }: { projectId: numbe
                   <span className="min-w-0 flex-1">
                     <span className={`block text-sm font-medium ${t.status === 'TAMAMLANDI' ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{t.content}</span>
                     <span className="flex flex-wrap items-center gap-2 mt-1.5">
-                      {owner && <span className="flex items-center gap-1.5 text-[11px] font-bold text-theme-muted"><Avatar user={owner} size="xs" /> {firstName(owner.fullName)}</span>}
+                      {owner && <span className="flex items-center gap-1.5 text-[0.6875rem] font-bold text-theme-muted"><Avatar user={owner} size="xs" /> {firstName(owner.fullName)}</span>}
                       {t.priority && t.status !== 'TAMAMLANDI' && <PriorityBadge priority={t.priority} />}
-                      {d && <span className={`text-[11px] font-bold ${d.tone === 'danger' ? 'text-danger' : 'text-theme-muted'}`}>{d.text}</span>}
+                      {d && <span className={`text-[0.6875rem] font-bold ${d.tone === 'danger' ? 'text-danger' : 'text-theme-muted'}`}>{d.text}</span>}
                       {!!t.commentCount && (
-                        <span className="inline-flex items-center gap-0.5 text-[11px] font-bold text-theme-muted tabular" aria-label={`${t.commentCount} yorum`}>
+                        <span className="inline-flex items-center gap-0.5 text-[0.6875rem] font-bold text-theme-muted tabular" aria-label={`${t.commentCount} yorum`}>
                           <ChatCircleText size={13} weight="bold" aria-hidden="true" /> {t.commentCount}
                         </span>
                       )}

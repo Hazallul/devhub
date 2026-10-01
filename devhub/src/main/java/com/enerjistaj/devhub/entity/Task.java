@@ -50,6 +50,14 @@ public class Task {
     @JoinColumn(name = "created_by_id")
     private User createdBy;
 
+    /** Tahmini iş gücü (dakika); eski görevlerde boş olabilir. */
+    @Column(name = "estimated_minutes")
+    private Integer estimatedMinutes;
+
+    /** Harcanan süreye elle yapılan düzeltme (dakika, artı/eksi). Harcanan = çalışma oturumları + düzeltme. */
+    @Column(name = "spent_adjust_minutes", nullable = false)
+    private int spentAdjustMinutes;
+
     /** Durum değişince tamamlanma zamanı tutulur (raporlardaki tamamlanan görev sayıları için). */
     public void changeStatus(TaskStatus newStatus) {
         if (newStatus == TaskStatus.TAMAMLANDI && status != TaskStatus.TAMAMLANDI) completedAt = LocalDateTime.now();

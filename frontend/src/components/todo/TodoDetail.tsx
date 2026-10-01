@@ -169,7 +169,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
 
             <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-theme-light/40">
               <div>
-                <label htmlFor={`time-${item.id}`} className="flex items-center gap-1.5 text-[11px] font-bold text-theme-muted mb-1.5"><Bell size={13} weight="bold" aria-hidden="true" /> Hatırlatma saati</label>
+                <label htmlFor={`time-${item.id}`} className="flex items-center gap-1.5 text-[0.6875rem] font-bold text-theme-muted mb-1.5"><Bell size={13} weight="bold" aria-hidden="true" /> Hatırlatma saati</label>
                 <input
                   id={`time-${item.id}`}
                   type="time"
@@ -179,7 +179,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
                 />
               </div>
               <div>
-                <label htmlFor={`repeat-${item.id}`} className="flex items-center gap-1.5 text-[11px] font-bold text-theme-muted mb-1.5"><Repeat size={13} weight="bold" aria-hidden="true" /> Tekrar</label>
+                <label htmlFor={`repeat-${item.id}`} className="flex items-center gap-1.5 text-[0.6875rem] font-bold text-theme-muted mb-1.5"><Repeat size={13} weight="bold" aria-hidden="true" /> Tekrar</label>
                 <select
                   id={`repeat-${item.id}`}
                   value={item.repeatRule ?? ''}
@@ -192,7 +192,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
               </div>
             </div>
             {(item.dueTime || item.repeatRule) && (
-              <p className="text-[11px] font-medium text-theme-muted mt-2 leading-relaxed">
+              <p className="text-[0.6875rem] font-medium text-theme-muted mt-2 leading-relaxed">
                 {item.dueTime && <>Saati gelince bildirim alırsınız. </>}
                 {item.repeatRule && <>Tamamlayınca yenisi açılır ({REPEAT[item.repeatRule].next}).</>}
               </p>
@@ -223,7 +223,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
             placeholder="Ayrıntı, bağlantı veya hatırlatma yazın…"
             onChange={e => noteField.change(e.target.value)}
             onBlur={noteField.flush}
-            className="w-full min-h-[120px] resize-y rounded-2xl bg-surface border border-theme-light/50 px-3.5 py-3 text-sm leading-relaxed text-theme-text placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-medium [field-sizing:content]"
+            className="w-full min-h-[7.5rem] resize-y rounded-2xl bg-surface border border-theme-light/50 px-3.5 py-3 text-sm leading-relaxed text-theme-text placeholder:text-theme-muted/60 focus:outline-none focus:ring-2 focus:ring-theme-medium [field-sizing:content]"
           />
         </section>
 
@@ -235,7 +235,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
           {item.done && item.doneAt ? `${item.doneById !== null && item.doneById !== me.id && item.doneByName ? `${firstName(item.doneByName)} tamamladı` : 'Tamamlandı'} · ${timeAgo(item.doneAt)}` : `Oluşturuldu · ${formatDate(toIsoDay(parseServerDate(item.createdAt)))}`}
         </p>
         <button type="button" onClick={onSend} className="icon-btn border border-theme-light/70 text-theme-deep" aria-label="Kartı birine gönder" title="Kartı birine gönder"><PaperPlaneTilt size={17} weight="bold" /></button>
-        <button type="button" onClick={saveNow} className="btn-primary min-h-[40px] px-4 text-sm">
+        <button type="button" onClick={saveNow} className="btn-primary min-h-[2.5rem] px-4 text-sm">
           <FloppyDisk size={16} weight="bold" /> Kaydet
         </button>
         {!canDeleteCard(item, lists, me.id) ? null : confirmDelete ? (

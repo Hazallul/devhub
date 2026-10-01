@@ -121,8 +121,8 @@ export default function Projects() {
       >
         <Avatar user={u} size="sm" />
         <div className="min-w-0">
-          <p className="text-sm font-bold text-theme-text truncate max-w-[140px]">{u.fullName}</p>
-          <p className="text-[11px] text-theme-muted font-medium truncate max-w-[180px]">{subtitle ?? u.jobTitle}</p>
+          <p className="text-sm font-bold text-theme-text truncate max-w-[8.75rem]">{u.fullName}</p>
+          <p className="text-[0.6875rem] text-theme-muted font-medium truncate max-w-[11.25rem]">{subtitle ?? u.jobTitle}</p>
         </div>
         {trailing}
       </div>

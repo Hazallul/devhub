@@ -164,7 +164,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
                   )}
                 </div>
               </div>
-              <ul ref={listRef} id={listId} role="listbox" aria-label={label} className="max-h-[280px] overflow-y-auto scrollbar-thin p-1.5">
+              <ul ref={listRef} id={listId} role="listbox" aria-label={label} className="max-h-[17.5rem] overflow-y-auto scrollbar-thin p-1.5">
                 {filtered.length === 0 && <li className="px-3 py-6 text-center text-sm text-theme-muted font-medium">{emptyText}</li>}
                 {filtered.map((o, i) => {
                   const isSel = o.value === value;
