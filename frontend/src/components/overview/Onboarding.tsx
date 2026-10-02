@@ -50,7 +50,7 @@ export default function Onboarding() {
           {allDone ? <Confetti size={24} weight="duotone" /> : <Flag size={24} weight="duotone" />}
         </span>
         <div className="flex-1 min-w-[13.75rem]">
-          <h2 id="onb-title" className="text-lg font-bold tracking-tight">{allDone ? 'İşe başlangıç tamamlandı' : 'İşe başlangıç'}</h2>
+          <h2 id="onb-title" className="text-base font-semibold">{allDone ? 'İşe başlangıç tamamlandı' : 'İşe başlangıç'}</h2>
           <p className="text-sm text-theme-muted mt-0.5">
             {allDone
               ? 'Tüm adımları bitirdin, yöneticine haber verildi. Bu kartı artık kaldırabilirsin.'
@@ -155,7 +155,7 @@ function Step({ step, index, isNext, onToggle }: { step: OnboardingMyStep; index
           </div>
         )}
       </div>
-      {isNext && <span className="text-[0.625rem] font-bold uppercase tracking-wide text-theme-deep bg-theme-lightest px-1.5 py-0.5 rounded-md shrink-0">Sıradaki</span>}
+      {isNext && <span className="text-[0.625rem] font-bold text-theme-deep bg-theme-lightest px-1.5 py-0.5 rounded-md shrink-0">Sıradaki</span>}
     </li>
   );
 }

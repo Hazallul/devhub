@@ -25,7 +25,7 @@ function rate(b: number) {
   return `${Math.round(b)} B/sn`;
 }
 function uptime(startedAt: number | null, now: number) {
-  if (!startedAt) return '—';
+  if (!startedAt) return '-';
   const mins = Math.max(0, Math.floor((now - startedAt) / 60000));
   const d = Math.floor(mins / 1440), h = Math.floor((mins % 1440) / 60), m = mins % 60;
   if (d) return `${d} gün ${h} sa`;
@@ -45,12 +45,16 @@ function useNow() {
 
 export default function Monitoring() {
   const me = useMe();
+  // Kanca çağrılmadan yönlendirilir: çalışan için /admin/monitoring isteği (403) hiç gitmez.
+  if (me.role !== 'ADMIN') return <Navigate to="/" replace />;
+  return <MonitoringPage />;
+}
+
+function MonitoringPage() {
   const [range, setRange] = useState<Range>('15');
   const [live, setLive] = useState(true);
-  const { data, isLoading, isError, dataUpdatedAt } = useMonitoring(Number(range), live && me.role === 'ADMIN');
+  const { data, isLoading, isError, dataUpdatedAt } = useMonitoring(Number(range), live);
   const now = useNow();
-
-  if (me.role !== 'ADMIN') return <Navigate to="/" replace />;
 
   const age = data?.sampledAt ? Math.max(0, Math.round((now - data.sampledAt) / 1000)) : null;
 
@@ -58,7 +62,7 @@ export default function Monitoring() {
     <>
       <PageHeader
         eyebrow="Sistem"
-        title="Sistem İzleme"
+        title="Sistem izleme"
         description="Docker üzerinde çalışan DevHub servislerinin sağlığı ve kaynak kullanımı. Veriler 10 saniyede bir toplanır."
         actions={<>
           <button
@@ -93,7 +97,7 @@ export default function Monitoring() {
           {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-3xl" />)}
         </div>
       ) : isError || !data ? (
-        <div role="alert" className="card p-6 flex items-center gap-3 text-danger">
+        <div role="alert" className="card p-5 flex items-center gap-3 text-danger">
           <WarningCircle size={22} weight="bold" /> İzleme verisi alınamadı. Backend çalışıyor mu?
         </div>
       ) : (
@@ -185,7 +189,7 @@ function Summary({ data }: { data: MonitorOverview }) {
         ) : <p className="text-xs text-theme-muted font-semibold mt-1">Docker bilgisi yok</p>}
       </Tile>
       <Tile icon={Cube} label="Docker motoru">
-        <p className="text-2xl font-bold text-theme-text tabular">{data.host.containersRunning ?? '—'}<span className="text-sm font-semibold text-theme-muted"> / {data.host.containersTotal ?? '—'} konteyner çalışıyor</span></p>
+        <p className="text-2xl font-bold text-theme-text tabular">{data.host.containersRunning ?? '-'}<span className="text-sm font-semibold text-theme-muted"> / {data.host.containersTotal ?? '-'} konteyner çalışıyor</span></p>
         <p className="text-xs text-theme-muted font-semibold mt-1 truncate">{data.host.serverVersion ? `Docker ${data.host.serverVersion} · ${data.host.operatingSystem}` : 'Bağlantı yok'}</p>
       </Tile>
     </div>
@@ -248,16 +252,16 @@ function ServiceRow({ service: s, open, onToggle, minutes, now, warnPercent, sam
               {s.kind && <Pill className="bg-theme-cream text-theme-muted">{s.kind}</Pill>}
               {!s.configured && <Pill className="bg-theme-lightest text-theme-deep">otomatik bulundu</Pill>}
             </div>
-            <p className="text-xs text-theme-muted font-medium truncate mt-0.5 font-mono">{s.container ?? s.check?.target ?? '—'}{s.image && s.image !== s.container ? ` · ${s.image}` : ''}</p>
+            <p className="text-xs text-theme-muted font-medium truncate mt-0.5 font-mono">{s.container ?? s.check?.target ?? '-'}{s.image && s.image !== s.container ? ` · ${s.image}` : ''}</p>
           </div>
         </div>
 
         <div className="lg:justify-self-start"><HealthPill status={s.status} size="sm" /></div>
 
-        <Metric label="CPU" value={s.cpuPercent !== null ? pct(s.cpuPercent) : running ? '…' : '—'} spark={<Sparkline values={cpuHistory} />} className="hidden lg:flex" />
+        <Metric label="CPU" value={s.cpuPercent !== null ? pct(s.cpuPercent) : running ? '…' : '-'} spark={<Sparkline values={cpuHistory} />} className="hidden lg:flex" />
         <Metric
           label="Bellek"
-          value={s.memUsedMb !== null ? mb(s.memUsedMb) : '—'}
+          value={s.memUsedMb !== null ? mb(s.memUsedMb) : '-'}
           sub={s.memPercent !== null ? (s.memLimited ? `sınırın ${pct(s.memPercent)}'i` : `Docker belleğinin ${pct(s.memPercent)}'i`) : undefined}
           spark={<Sparkline values={memHistory} />}
           className="hidden lg:flex"
@@ -328,13 +332,13 @@ function ServiceDetail({ s, minutes, now, warnPercent, sampleSeconds }: { s: Mon
 
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4">
         {hasResources && (
-          <ChartCard title="CPU kullanımı" current={s.cpuPercent !== null ? pct(s.cpuPercent) : '—'} values={cpu} format={pct}
+          <ChartCard title="CPU kullanımı" current={s.cpuPercent !== null ? pct(s.cpuPercent) : '-'} values={cpu} format={pct}
             note={`%100 = 1 çekirdek · uyarı eşiği %${warnPercent}`}>
             <LineChart points={cpu} from={from} to={to} format={pct} label="CPU kullanımı" minMax={5} gapMs={gap} />
           </ChartCard>
         )}
         {hasResources && (
-          <ChartCard title="Bellek" current={s.memUsedMb !== null ? mb(s.memUsedMb) : '—'} values={mem} format={mb}
+          <ChartCard title="Bellek" current={s.memUsedMb !== null ? mb(s.memUsedMb) : '-'} values={mem} format={mb}
             note={s.memLimitMb ? (s.memLimited ? `sınır ${mb(s.memLimitMb)}` : `sınır yok · Docker belleği ${mb(s.memLimitMb)}`) : undefined}>
             <LineChart points={mem} from={from} to={to} format={mb} label="Bellek kullanımı" minMax={64} gapMs={gap} />
           </ChartCard>
@@ -348,12 +352,12 @@ function ServiceDetail({ s, minutes, now, warnPercent, sampleSeconds }: { s: Mon
 
       <dl className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
         {s.container && <>
-          <Fact label="Konteyner durumu" value={s.statusText ?? '—'} />
-          <Fact label="Çalışma süresi" value={s.state === 'running' ? uptime(s.startedAt, now) : '—'} hint={s.restartCount ? `${s.restartCount} kez yeniden başladı` : 'yeniden başlama yok'} />
+          <Fact label="Konteyner durumu" value={s.statusText ?? '-'} />
+          <Fact label="Çalışma süresi" value={s.state === 'running' ? uptime(s.startedAt, now) : '-'} hint={s.restartCount ? `${s.restartCount} kez yeniden başladı` : 'yeniden başlama yok'} />
           <Fact label="Docker sağlık kontrolü" value={s.dockerHealth ? ({ healthy: 'Sağlıklı', unhealthy: 'Başarısız', starting: 'Başlıyor' } as Record<string, string>)[s.dockerHealth] ?? s.dockerHealth : 'Tanımlı değil'} />
-          <Fact label="Süreç (PID)" value={s.pids !== null ? String(s.pids) : '—'} />
-          <Fact label="Ağ" icon={<ArrowDown size={12} weight="bold" aria-hidden="true" />} value={s.netRxRate !== null ? `gelen ${rate(s.netRxRate)}` : '—'} hint={s.netTxRate !== null ? `giden ${rate(s.netTxRate)}` : undefined} />
-          <Fact label="Disk" icon={<HardDrives size={12} weight="bold" aria-hidden="true" />} value={s.diskReadRate !== null ? `okuma ${rate(s.diskReadRate)}` : '—'} hint={s.diskWriteRate !== null ? `yazma ${rate(s.diskWriteRate)}` : undefined} />
+          <Fact label="Süreç (PID)" value={s.pids !== null ? String(s.pids) : '-'} />
+          <Fact label="Ağ" icon={<ArrowDown size={12} weight="bold" aria-hidden="true" />} value={s.netRxRate !== null ? `gelen ${rate(s.netRxRate)}` : '-'} hint={s.netTxRate !== null ? `giden ${rate(s.netTxRate)}` : undefined} />
+          <Fact label="Disk" icon={<HardDrives size={12} weight="bold" aria-hidden="true" />} value={s.diskReadRate !== null ? `okuma ${rate(s.diskReadRate)}` : '-'} hint={s.diskWriteRate !== null ? `yazma ${rate(s.diskWriteRate)}` : undefined} />
         </>}
         {s.details.map(d => <Fact key={d.label} label={d.label} value={d.value} hint={d.hint ?? undefined} />)}
       </dl>
@@ -378,8 +382,8 @@ function ChartCard({ title, current, values, format, note, children }: {
       </div>
       {children}
       <p className="flex gap-4 mt-2 text-[0.6875rem] font-semibold text-theme-muted tabular">
-        <span>Ort. {avg !== null ? format(avg) : '—'}</span>
-        <span>Maks. {max !== null ? format(max) : '—'}</span>
+        <span>Ort. {avg !== null ? format(avg) : '-'}</span>
+        <span>Maks. {max !== null ? format(max) : '-'}</span>
         <span>{nums.length} örnek</span>
       </p>
     </section>

@@ -137,24 +137,24 @@ export default function Projects() {
         eyebrow="Projeler"
         title="Projeler"
         description={isAdmin ? 'Projeleri takip edin. Boştaki çalışanları bir projeye sürükleyerek atayabilirsiniz.' : 'Aktif projeler ve atanmış ekip üyeleri.'}
-        actions={isAdmin ? <button onClick={() => actions.newProject()} className="btn-primary"><Plus size={18} weight="bold" /> Proje Ekle</button> : undefined}
+        actions={isAdmin ? <button onClick={() => actions.newProject()} className="btn-primary"><Plus size={18} weight="bold" /> Proje ekle</button> : undefined}
       />
 
       {loading ? (
-        <div className="space-y-4"><Skeleton className="h-32 rounded-4xl" /><div className="grid md:grid-cols-2 gap-4"><Skeleton className="h-56 rounded-4xl" /><Skeleton className="h-56 rounded-4xl" /></div></div>
+        <div className="space-y-4"><Skeleton className="h-32 rounded-2xl" /><div className="grid md:grid-cols-2 gap-4"><Skeleton className="h-56 rounded-2xl" /><Skeleton className="h-56 rounded-2xl" /></div></div>
       ) : (
         <>
           {/* Boştaki çalışanlar */}
           <section
             aria-labelledby="pool-title"
             {...dropProps('pool', null)}
-            className={`rounded-4xl p-6 border-2 border-dashed mb-8 transition-colors ${
-              dropTarget === 'pool' ? 'border-theme-deep bg-theme-lightest/60' : 'border-theme-light/70 bg-surface/50'
+            className={`card p-5 mb-4 transition-colors ${
+              dropTarget === 'pool' ? 'border-theme-medium bg-theme-lightest/60 ring-1 ring-theme-medium' : ''
             }`}
           >
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
-                <h2 id="pool-title" className="text-lg font-bold text-theme-text tracking-tight">Boşta Olan Çalışanlar</h2>
+                <h2 id="pool-title" className="text-base font-semibold text-theme-text">Boşta olan çalışanlar</h2>
                 <Pill className="bg-theme-lightest text-theme-deep">{unassigned.length} kişi</Pill>
               </div>
               {isAdmin && <p className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-theme-muted"><HandGrabbing size={16} weight="bold" /> Bir projeye sürükleyin</p>}
@@ -167,10 +167,10 @@ export default function Projects() {
           </section>
 
           {/* Projede olup açık görevi olmayanlar */}
-          <section aria-labelledby="idle-title" className="rounded-4xl p-6 border-2 border-dashed border-theme-light/70 bg-surface/50 mb-8">
+          <section aria-labelledby="idle-title" className="card p-5 mb-6">
             <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
               <div className="flex items-center gap-3">
-                <h2 id="idle-title" className="text-lg font-bold text-theme-text tracking-tight">Projede, Görevi Olmayanlar</h2>
+                <h2 id="idle-title" className="text-base font-semibold text-theme-text">Projede görevi olmayanlar</h2>
                 <Pill className="bg-theme-lightest text-theme-deep">{idle.length} kişi</Pill>
               </div>
               {isAdmin && idle.length > 0 && <p className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-theme-muted"><Plus size={14} weight="bold" /> ile hızlıca görev atayın</p>}
@@ -234,17 +234,17 @@ export default function Projects() {
                     })}
                     whileHover={{ y: -3 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-                    className={`relative bg-surface rounded-4xl p-6 border shadow-soft hover:shadow-diffusion transition-[border-color,box-shadow] flex flex-col gap-5 ${
-                      isDrop ? 'border-theme-deep shadow-glow' : 'border-theme-light/40'
+                    className={`relative bg-surface rounded-2xl p-5 border transition-[border-color,box-shadow] flex flex-col gap-4 ${
+                      isDrop ? 'border-theme-medium shadow-glow' : 'border-theme-light hover:border-theme-dark/30'
                     }`}
                   >
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-theme-text shrink-0" style={{ backgroundColor: projectColor(p.name) }}>
-                        <Briefcase size={22} weight="duotone" aria-hidden="true" />
+                      <div className="w-9 h-9 rounded-lg bg-theme-lightest flex items-center justify-center shrink-0">
+                        <Briefcase size={18} weight="fill" style={{ color: projectColor(p.name) }} aria-hidden="true" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="text-lg font-bold text-theme-text tracking-tight truncate">{p.name}</h3>
+                          <h3 className="text-base font-semibold text-theme-text tracking-tight truncate">{p.name}</h3>
                           <Pill className={status.className}><status.icon size={11} weight="bold" /> {status.label}</Pill>
                         </div>
                         {p.description && <p className="text-sm text-theme-muted mt-1 line-clamp-2">{p.description}</p>}
@@ -271,15 +271,15 @@ export default function Projects() {
                       )}
                     </div>
 
-                    <button onClick={() => setOpenId(p.id)} className="btn-secondary w-full">
-                      <Eye size={18} weight="bold" /> Detayları gör
+                    <button onClick={() => setOpenId(p.id)} className="self-start -mx-1 px-1 rounded-md text-sm font-medium text-theme-deep hover:underline underline-offset-4 inline-flex items-center gap-1">
+                      Ayrıntıları aç <CaretRight size={13} weight="bold" aria-hidden="true" />
                     </button>
 
                     <AnimatePresence>
                       {isDrop && dragUser && (
                         <motion.div
                           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          className="absolute inset-0 rounded-4xl bg-theme-lightest/85 backdrop-blur-[2px] flex items-center justify-center pointer-events-none"
+                          className="absolute inset-0 rounded-2xl bg-theme-lightest/90 flex items-center justify-center pointer-events-none"
                         >
                           <p className="text-sm font-bold text-theme-deep">{dragUser.fullName} → {p.name}</p>
                         </motion.div>

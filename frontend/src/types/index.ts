@@ -208,7 +208,7 @@ export interface LeaveBalance {
 
 export type NotificationType =
     | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'TODO_COMMENT' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
-    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED' | 'ONBOARDING_DONE';
+    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED' | 'ONBOARDING_DONE' | 'PASSWORD_RESET_REQUESTED';
 
 export interface AppNotification {
     id: number;
@@ -365,6 +365,23 @@ export interface ProfileRequest {
     decidedByName: string | null;
     decidedAt: string | null;
     createdAt: string;
+}
+
+// ---------- Şifre sıfırlama talepleri (yönetici onayı) ----------
+export type PasswordResetState = 'KOD_BEKLIYOR' | 'ONAY_BEKLIYOR' | 'ONAYLANDI' | 'REDDEDILDI' | 'IPTAL' | 'SURESI_DOLDU';
+
+export interface PasswordResetRequest {
+    id: number;
+    userId: number;
+    userName: string;
+    userEmail: string;
+    state: PasswordResetState;
+    createdAt: string;
+    verifiedAt: string | null;
+    requestIp: string | null;
+    decisionNote: string | null;
+    decidedByName: string | null;
+    decidedAt: string | null;
 }
 
 // ---------- Dokümantasyon ----------

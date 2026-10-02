@@ -4,15 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import {
   Plus, CaretDown, CaretRight, CaretLeft, DotsThree, Briefcase, UserMinus, ListDashes, CheckSquare, Envelope, PencilSimple, Copy,
 } from '@phosphor-icons/react';
-import type { Task, User, UserStatus, TaskPriority } from '../../types';
-import { Avatar, StatusBadge, Skeleton, PriorityBadge } from '../ui/primitives';
+import type { Task, User, UserStatus } from '../../types';
+import { Avatar, StatusBadge } from '../ui/primitives';
 import { useToast } from '../ui/Toast';
 import { Menu, MenuItem, MenuLabel, MenuDivider } from '../ui/Menu';
 import type { MenuPoint } from '../ui/Menu';
-import TaskRow from '../tasks/TaskRow';
-import { useMe, useProjects, useUpdateStatus, useAssignProject, useCreateTask, useUserTasks } from '../../hooks/api';
+import PersonTasks from './PersonTasks';
+import { useMe, useProjects, useUpdateStatus, useAssignProject, useUserTasks } from '../../hooks/api';
 import { useQuickActions } from '../layout/QuickActions';
-import { USER_STATUS, TASK_PRIORITY, TASK_PRIORITIES, statusOptions, statusHint, LINK_TYPE, linkHref, linkText } from '../../lib/meta';
+import { USER_STATUS, statusOptions, statusHint } from '../../lib/meta';
 
 interface EmployeeCardProps {
   user: User;
@@ -28,19 +28,14 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
   const { data: projects } = useProjects();
   const updateStatus = useUpdateStatus();
   const assignProject = useAssignProject();
-  const createTask = useCreateTask();
 
   const [expanded, setExpanded] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [menuPoint, setMenuPoint] = useState<MenuPoint | null>(null);
   const [menuView, setMenuView] = useState<'root' | 'projects'>('root');
-  const [newTask, setNewTask] = useState('');
-  const [newPriority, setNewPriority] = useState<TaskPriority>('ORTA');
-  /** Hızlı eklemede tahmini iş gücü (saat); zorunlu */
-  const [newHours, setNewHours] = useState('4');
   const [statusBtn, setStatusBtn] = useState<HTMLButtonElement | null>(null);
   const [moreBtn, setMoreBtn] = useState<HTMLButtonElement | null>(null);
-  const newTaskRef = useRef<HTMLInputElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   const isAdmin = me.role === 'ADMIN';
   const isSelf = me.id === user.id;
@@ -86,16 +81,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
   const startNewTask = () => {
     closeMenu();
     setExpanded(true);
-    setTimeout(() => newTaskRef.current?.focus(), 320);
-  };
-
-  const submitTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    const content = newTask.trim();
-    if (!content) return;
-    createTask.mutate({ userIds: [user.id], content, priority: newPriority, estimatedMinutes: Number(newHours) * 60 }, {
-      onSuccess: () => { setNewTask(''); setNewPriority('ORTA'); setNewHours('4'); },
-    });
+    setTimeout(() => cardRef.current?.querySelector<HTMLInputElement>('input[aria-label="Yeni görev"]')?.focus(), 320);
   };
 
   const selectStatus = (status: UserStatus) => {
@@ -110,12 +96,11 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
 
   return (
     <motion.div
+      ref={cardRef}
       layout="position"
       animate={controls}
       onContextMenu={handleContextMenu}
-      className={`relative bg-surface rounded-3xl border transition-colors ${
-        highlighted ? 'border-theme-medium' : expanded ? 'border-theme-light' : 'border-theme-light/40 hover:border-theme-light'
-      } ${expanded ? 'shadow-diffusion' : 'shadow-soft hover:shadow-diffusion'}`}
+      className={`relative transition-colors ${highlighted ? 'bg-theme-lightest/70' : expanded ? 'bg-theme-lightest/40' : 'hover:bg-theme-lightest/40'}`}
     >
       <div
         role="button"
@@ -127,15 +112,15 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
           if (e.target !== e.currentTarget) return;
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setExpanded(v => !v); }
         }}
-        className="flex items-center gap-3 sm:gap-4 p-4 sm:p-5 cursor-pointer rounded-3xl"
+        className="flex items-center gap-3 sm:gap-4 px-4 py-3 cursor-pointer"
       >
-        <Avatar user={user} />
+        <Avatar user={user} size="sm" />
 
         <div className="min-w-0 flex-1 sm:flex-none sm:w-56">
           <div className="flex items-center gap-2">
             <h3 className="text-base font-bold text-theme-text tracking-tight truncate">{user.fullName}</h3>
-            {isSelf && <span className="hidden sm:inline text-[0.625rem] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md shrink-0">Sen</span>}
-            {user.role === 'ADMIN' && <span className="hidden sm:inline text-[0.625rem] font-bold uppercase bg-accent text-white px-1.5 py-0.5 rounded-md shrink-0">Yönetici</span>}
+            {isSelf && <span className="hidden sm:inline text-[0.625rem] font-bold bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md shrink-0">Sen</span>}
+            {user.role === 'ADMIN' && <span className="hidden sm:inline text-[0.6875rem] font-medium border border-theme-medium/40 text-theme-deep px-1.5 rounded-md shrink-0">Yönetici</span>}
           </div>
           <p className="text-xs text-theme-muted font-medium truncate">{user.jobTitle || 'Çalışan'}</p>
         </div>
@@ -162,7 +147,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
               {urgent > 0 && <span className="text-[0.6875rem] font-bold text-clay-ink bg-clay-soft px-1.5 rounded-md" title="Yüksek öncelikli">{urgent}!</span>}
               {doneCount > 0 && <span className="text-theme-muted font-medium text-xs">· {doneCount} bitti</span>}
             </div>
-          ) : <span className="text-sm text-theme-muted">—</span>}
+          ) : <span className="text-sm text-theme-muted">-</span>}
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 shrink-0">
@@ -281,86 +266,9 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
             exit={{ height: 0, opacity: 0, transition: { height: { duration: 0.2 }, opacity: { duration: 0.1 } } }}
             className="overflow-hidden"
           >
-            <div className="px-4 sm:px-5 pb-5">
-              <div className="border-t border-theme-light/40 pt-4 flex flex-col gap-3">
-                {user.links && user.links.length > 0 && (
-                  <ul className="flex flex-wrap gap-2" aria-label={`${user.fullName} iletişim bilgileri`} onClick={e => e.stopPropagation()}>
-                    {user.links.map((l, i) => {
-                      const meta = LINK_TYPE[l.type];
-                      const href = linkHref(l);
-                      const chip = <><meta.icon size={14} weight="bold" aria-hidden="true" /> {linkText(l)}</>;
-                      const cls = 'inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-theme-cream border border-theme-light/50 text-xs font-semibold text-theme-deep max-w-[16.25rem] truncate';
-                      return (
-                        <li key={i}>
-                          {href
-                            ? <a href={href} target={l.type === 'EMAIL' || l.type === 'PHONE' ? undefined : '_blank'} rel="noopener noreferrer" title={`${meta.label}: ${l.value}`} className={`${cls} hover:bg-theme-lightest hover:border-theme-light transition-colors`}>{chip}</a>
-                            : <span title={`${meta.label}: ${l.value}`} className={cls}>{chip}</span>}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-theme-deep flex items-center gap-2">
-                    <ListDashes size={16} weight="bold" aria-hidden="true" />
-                    Görevler
-                  </h4>
-                  {tasks && tasks.length > 0 && (
-                    <span className="text-xs font-semibold text-theme-muted tabular">{doneCount}/{tasks.length} tamamlandı</span>
-                  )}
-                </div>
-
-                {canEditTasks && (
-                  <form onSubmit={submitTask} className="flex flex-col sm:flex-row gap-2" onClick={e => e.stopPropagation()}>
-                    <input
-                      ref={newTaskRef}
-                      value={newTask}
-                      onChange={e => setNewTask(e.target.value)}
-                      placeholder={isSelf ? 'Yeni görev ekle…' : `${user.fullName.split(' ')[0]} için görev yaz…`}
-                      aria-label="Yeni görev"
-                      className="flex-1 px-4 py-2.5 rounded-2xl bg-theme-cream border border-theme-light/60 focus:outline-none focus:ring-2 focus:ring-theme-medium text-sm font-medium text-theme-text"
-                    />
-                    <div className="flex gap-2">
-                      <select
-                        value={newPriority}
-                        onChange={e => setNewPriority(e.target.value as TaskPriority)}
-                        aria-label="Öncelik"
-                        className="px-3 py-2.5 rounded-2xl bg-theme-cream border border-theme-light/60 text-sm font-semibold text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-medium"
-                      >
-                        {TASK_PRIORITIES.map(p => <option key={p} value={p}>{TASK_PRIORITY[p].label}</option>)}
-                      </select>
-                      <select
-                        value={newHours}
-                        onChange={e => setNewHours(e.target.value)}
-                        aria-label="Tahmini iş gücü"
-                        title="Tahmini iş gücü"
-                        className="px-3 py-2.5 rounded-2xl bg-theme-cream border border-theme-light/60 text-sm font-semibold text-theme-text focus:outline-none focus:ring-2 focus:ring-theme-medium"
-                      >
-                        {[1, 2, 4, 8, 16, 24, 40].map(h => <option key={h} value={h}>{h >= 8 && h % 8 === 0 ? `${h / 8} gün` : `${h} sa`}</option>)}
-                      </select>
-                      <button type="submit" disabled={createTask.isPending || !newTask.trim()} className="btn-primary px-4 min-h-[2.625rem]">
-                        <Plus size={16} weight="bold" /> Ekle
-                      </button>
-                    </div>
-                  </form>
-                )}
-
-                {tasksLoading && !tasks ? (
-                  <div className="flex flex-col gap-2"><Skeleton className="h-12" /><Skeleton className="h-12" /></div>
-                ) : !tasks || tasks.length === 0 ? (
-                  <p className="text-sm text-theme-muted font-medium py-3 text-center">Henüz görev yok.</p>
-                ) : (
-                  <div className="flex flex-col gap-2 max-h-[20rem] overflow-y-auto scrollbar-thin pr-1">
-                    <AnimatePresence initial={false}>
-                      {[...tasks]
-                        .sort((a, b) => Number(a.status === 'TAMAMLANDI') - Number(b.status === 'TAMAMLANDI'))
-                        .map(t => <TaskRow key={t.id} task={t} canEdit={canEditTasks} />)}
-                    </AnimatePresence>
-                  </div>
-                )}
-                {tasks && urgent > 0 && (
-                  <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5"><PriorityBadge priority="YUKSEK" /> {urgent} yüksek öncelikli görev açık.</p>
-                )}
+            <div className="px-4 sm:px-5 pb-4">
+              <div className="border-t border-theme-light pt-4">
+                <PersonTasks user={user} tasks={tasks} loading={tasksLoading} canEdit={canEditTasks} isSelf={isSelf} />
               </div>
             </div>
           </motion.div>

@@ -123,7 +123,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${label}: ${selected?.label ?? placeholder}`}
-        className={`input py-2.5 flex items-center gap-2 text-left cursor-pointer ${open ? 'ring-2 ring-theme-medium border-theme-medium' : ''} ${className}`}
+        className={`input-sm flex items-center gap-2 text-left cursor-pointer ${open ? 'ring-4 ring-theme-medium/15 border-theme-medium' : ''} ${className}`}
       >
         {selected?.leading && <span className="shrink-0 flex">{selected.leading}</span>}
         <span className={`flex-1 min-w-0 truncate ${selected ? '' : 'text-theme-muted'}`}>{selected?.label ?? placeholder}</span>
@@ -139,7 +139,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
               animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.18, ease: [0.16, 1, 0.3, 1] } }}
               exit={{ opacity: 0, y: pos.up ? 4 : -4, scale: 0.98, transition: { duration: 0.12 } }}
               style={{ left: pos.left, top: pos.top, bottom: pos.bottom, width, transformOrigin: pos.up ? 'bottom' : 'top' }}
-              className="fixed z-[150] bg-surface rounded-2xl shadow-float border border-theme-light/70 overflow-hidden flex flex-col"
+              className="fixed z-[150] bg-surface rounded-xl shadow-float border border-theme-light overflow-hidden flex flex-col"
               onKeyDown={onKey}
             >
               <div className="p-2 border-b border-theme-light/50">
@@ -155,7 +155,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
                     aria-controls={listId}
                     aria-activedescendant={filtered[active] ? `${listId}-${active}` : undefined}
                     aria-label={`${label} ara`}
-                    className="w-full pl-9 pr-8 py-2 rounded-xl bg-theme-cream/70 border border-transparent text-sm font-medium text-theme-text placeholder:text-theme-muted focus:outline-none focus:bg-surface focus:border-theme-light"
+                    className="w-full pl-9 pr-8 py-2 rounded-lg bg-theme-lightest border border-transparent text-sm font-medium text-theme-text placeholder:text-theme-muted focus:outline-none focus:bg-surface focus:border-theme-light"
                   />
                   {query && (
                     <button type="button" onClick={() => { setQuery(''); inputRef.current?.focus(); }} className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-theme-muted hover:text-theme-text" aria-label="Aramayı temizle">
@@ -178,7 +178,7 @@ export default function Combobox({ value, onChange, options, label, placeholder 
                       onMouseMove={() => setActive(i)}
                       onMouseDown={e => e.preventDefault()}
                       onClick={() => pick(o)}
-                      className={`flex items-center gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer text-sm transition-colors ${i === active ? 'bg-theme-lightest' : ''} ${isSel ? 'font-bold text-theme-deep' : 'font-medium text-theme-text'}`}
+                      className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg cursor-pointer text-sm transition-colors ${i === active ? 'bg-theme-lightest' : ''} ${isSel ? 'font-medium text-theme-deep' : 'font-medium text-theme-text'}`}
                     >
                       {o.leading && <span className="shrink-0 flex">{o.leading}</span>}
                       <span className="flex-1 min-w-0">
@@ -206,7 +206,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
   if (i < 0) return <span className="block truncate">{text}</span>;
   return (
     <span className="block truncate">
-      {text.slice(0, i)}<mark className="bg-theme-light/70 text-theme-text rounded px-0.5">{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}
+      {text.slice(0, i)}<mark className="bg-theme-medium/20 text-theme-text rounded px-0.5">{text.slice(i, i + q.length)}</mark>{text.slice(i + q.length)}
     </span>
   );
 }

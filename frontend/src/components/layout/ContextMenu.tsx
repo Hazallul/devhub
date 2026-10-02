@@ -11,7 +11,7 @@ import type { MenuPoint } from '../ui/Menu';
 import { useToast } from '../ui/Toast';
 import { useMe } from '../../hooks/api';
 import { useQuickActions } from './QuickActions';
-import { NAV_ITEMS, SYSTEM_ITEMS } from './nav';
+import { ALL_NAV_ITEMS } from './nav';
 
 /*
  * Sağ tık menüsü. KURAL: uygulamanın her sayfasında sağ tık çalışır.
@@ -43,7 +43,7 @@ const Ctx = createContext<Api | null>(null);
 interface State { point: MenuPoint; label?: string; items: ContextEntry[]; link?: string; selection?: string }
 
 const PAGE_NAMES: Record<string, string> = {
-  ...Object.fromEntries([...NAV_ITEMS, ...SYSTEM_ITEMS].map(n => [n.to.slice(1) || 'home', n.label])),
+  ...Object.fromEntries(ALL_NAV_ITEMS.map(n => [n.to.slice(1) || 'home', n.label])),
   settings: 'Ayarlar',
   todo: 'Yapılacaklarım',
 };

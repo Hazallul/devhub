@@ -58,7 +58,7 @@ export function ProjectFormModal({ open, onClose, assignUser }: { open: boolean;
     <Modal
       open={open}
       onClose={onClose}
-      title="Yeni Proje"
+      title="Yeni proje"
       description="Sisteme yeni bir proje ekleyin; ardından ekip üyelerini atayabilirsiniz."
       onSubmit={onSubmit}
       footer={<>
@@ -208,7 +208,7 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
             </div>
             <p className="text-xs mt-1 opacity-80">
               {balance.used} gün kullanıldı{balance.pending ? ` · ${balance.pending} gün onay bekliyor` : ''}
-              {requested ? ` · bu talep ${requested} gün${overBalance ? ' — bakiye yetersiz' : `, sonrasında ${Math.max((available ?? 0) - requested, 0)} gün kalır`}` : ''}
+              {requested ? ` · bu talep ${requested} gün${overBalance ? ' - bakiye yetersiz' : `, sonrasında ${Math.max((available ?? 0) - requested, 0)} gün kalır`}` : ''}
             </p>
           </div>
         )}
@@ -249,7 +249,7 @@ export function AnnouncementFormModal({ open, onClose }: { open: boolean; onClos
     <Modal
       open={open}
       onClose={onClose}
-      title="Duyuru Yayınla"
+      title="Duyuru yayınla"
       description="Duyuru tüm çalışanların Genel Bakış ekranında görünür."
       onSubmit={onSubmit}
       footer={<>

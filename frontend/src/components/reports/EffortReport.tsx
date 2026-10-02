@@ -49,10 +49,10 @@ export default function EffortReport({ tasks, userById }: { tasks: Task[]; userB
     deviation((b.estimatedMinutes ?? 0) * 60, b.spentSeconds ?? 0) - deviation((a.estimatedMinutes ?? 0) * 60, a.spentSeconds ?? 0)), [done]);
 
   return (
-    <section className="card p-6 lg:col-span-2" aria-labelledby="r-effort">
+    <section className="card p-5 lg:col-span-2" aria-labelledby="r-effort">
       <div className="flex items-start justify-between gap-3 flex-wrap mb-1">
         <div>
-          <h2 id="r-effort" className="text-lg font-bold tracking-tight">Tahmin ve gerçekleşen iş gücü</h2>
+          <h2 id="r-effort" className="text-base font-semibold">Tahmin ve gerçekleşen iş gücü</h2>
           <p className="text-sm text-theme-muted">Tamamlanan görevlerde tahmini süre ile görev "Devam Ediyor"dayken geçen mesai süresi</p>
         </div>
         <Segmented<Range> label="Dönem" layoutId="effort-range" value={range} onChange={setRange}
@@ -107,7 +107,7 @@ export default function EffortReport({ tasks, userById }: { tasks: Task[]; userB
                 formatEstimate(t.estimatedMinutes ?? 0),
                 formatDuration(act),
                 devText(deviation(est, act)),
-                t.startedAt && t.completedAt ? spanText(t.startedAt, t.completedAt) : '—',
+                t.startedAt && t.completedAt ? spanText(t.startedAt, t.completedAt) : '-',
               ];
             })}
           />

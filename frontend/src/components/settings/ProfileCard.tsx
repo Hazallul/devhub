@@ -51,8 +51,8 @@ export default function ProfileCard() {
   };
 
   return (
-    <section className="card p-6 sm:p-8 lg:col-span-2 space-y-7" aria-labelledby="profile-title">
-      <h2 id="profile-title" className="text-lg font-bold tracking-tight flex items-center gap-2"><UserCircle size={22} weight="duotone" className="text-theme-deep" /> Profil</h2>
+    <section className="card p-5 sm:p-6 lg:col-span-2 space-y-7" aria-labelledby="profile-title">
+      <h2 id="profile-title" className="text-base font-semibold flex items-center gap-2"><UserCircle size={22} weight="duotone" className="text-theme-deep" /> Profil</h2>
 
       <div className="flex items-center gap-5">
         <motion.div key={color} initial={{ scale: 0.9 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 400, damping: 20 }}>
@@ -124,7 +124,7 @@ export default function ProfileCard() {
 export function ProfileDiff({ request }: { request: ProfileRequest }) {
   const rows: [string, string, string][] = [];
   if (request.fullName !== request.previousFullName) rows.push(['Ad soyad', request.previousFullName, request.fullName]);
-  if ((request.jobTitle ?? '') !== (request.previousJobTitle ?? '')) rows.push(['Unvan', request.previousJobTitle || '—', request.jobTitle || '—']);
+  if ((request.jobTitle ?? '') !== (request.previousJobTitle ?? '')) rows.push(['Unvan', request.previousJobTitle || '-', request.jobTitle || '-']);
   return (
     <dl className="space-y-1">
       {rows.map(([label, from, to]) => (
@@ -217,7 +217,7 @@ function LinksEditor() {
         <li className="flex items-center gap-3 rounded-2xl bg-theme-cream border border-theme-light/50 px-4 py-3">
           <EnvelopeSimple size={18} weight="bold" className="text-theme-deep shrink-0" aria-hidden="true" />
           <span className="text-sm font-semibold text-theme-text truncate flex-1">{me.email}</span>
-          <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-theme-muted shrink-0">Giriş e-postası</span>
+          <span className="text-[0.6875rem] font-bold text-theme-muted shrink-0">Giriş e-postası</span>
         </li>
         <AnimatePresence initial={false}>
           {rows.map(r => {

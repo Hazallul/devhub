@@ -1,10 +1,14 @@
 import type { Icon } from '@phosphor-icons/react';
-import { Sun, Star, CalendarBlank, Tray, ListBullets, CalendarDots, CheckSquare } from '@phosphor-icons/react';
-import { addDays, toDate, toIsoDay } from '../../lib/format';
+import { Sun, ListBullets, CalendarDots } from '@phosphor-icons/react';
+import { addDays, parseServerDate, toDate, toIsoDay } from '../../lib/format';
+import { listColor } from '../../lib/meta';
 import type { NewTodo } from '../../hooks/todos';
 import type { TodoItem, TodoList, TodoRepeat } from '../../types';
 
-/** Akıllı görünümler + "Genel" + kişinin kendi listeleri (list-<id>). */
+/**
+ * Bugün panosu + haftalık plan + "Genel" + kişinin kendi listeleri (list-<id>).
+ * Eski Önemli / Planlanan / Görevlerim / Gelenler görünümleri Bugün panosunun bölümleri oldu (kayıtlı eski kimlikler Bugün'e düşer).
+ */
 export type ViewId = 'today' | 'week' | 'important' | 'planned' | 'tasks' | 'inbox' | 'general' | `list-${number}`;
 
 export interface ViewDef {
@@ -21,8 +25,8 @@ export interface ViewDef {
   empty: { title: string; text: string };
   /** Sürükleyerek sıralama yalnızca gerçek listelerde anlamlıdır */
   reorderable: boolean;
-  /** Kart listesi yerine kendi bölmesiyle çizilen görünümler (haftalık plan, DevHub görevleri) */
-  pane?: 'week' | 'tasks';
+  /** Kart listesi yerine kendi bölmesiyle çizilen görünümler (Bugün panosu, haftalık plan) */
+  pane?: 'week' | 'board';
 }
 
 export const REPEAT: Record<TodoRepeat, { label: string; next: string }> = {
@@ -33,12 +37,22 @@ export const REPEAT: Record<TodoRepeat, { label: string; next: string }> = {
 };
 export const REPEATS: TodoRepeat[] = ['DAILY', 'WEEKDAYS', 'WEEKLY', 'MONTHLY'];
 
+/**
+ * "Bugün"e giren kart: tarihi bugün olan ve günü geçmiş açık kartlar; tamamlananlardan tarihi bugün olanlar ve
+ * bugün tamamlanan gecikmiş kartlar (yoksa gecikmiş bir kart tamamlanınca listeden ve "bugün biten" sayısından kaybolurdu).
+ */
+export function inToday(i: TodoItem, today: string) {
+  if (!i.dueDate || i.dueDate > today) return false;
+  if (!i.done) return true;
+  return i.dueDate === today || (!!i.doneAt && toIsoDay(parseServerDate(i.doneAt)) === today);
+}
+
 /** Haftanın pazartesisi */
 export function weekStart(now: Date) {
   return addDays(now, -((now.getDay() + 6) % 7));
 }
 
-export const LIST_COLORS = ['#9CAB84', '#C5D89D', '#89986D', '#D8CFA6', '#D9A88A', '#B7C4A0'];
+export const LIST_COLORS = ['#5C87D8', '#3A9E9A', '#7A8BA6', '#C9932C', '#D0728C', '#8B7BD8'];
 
 export function buildViews(lists: TodoList[], today: string): { smart: ViewDef[]; own: ViewDef[] } {
   const monday = weekStart(toDate(today));
@@ -46,9 +60,10 @@ export function buildViews(lists: TodoList[], today: string): { smart: ViewDef[]
   const weekLast = toIsoDay(addDays(monday, 6));
   const smart: ViewDef[] = [
     {
-      id: 'today', label: 'Bugün', icon: Sun, reorderable: false,
+      // Pano: bugün + gecikmiş, yaklaşan, önemli, gelenler ve DevHub görevleri tek ekranda (TodayBoard).
+      id: 'today', label: 'Bugün', icon: Sun, reorderable: false, pane: 'board',
       // Tarihi bugün olan kartlar + günü geçmiş açık kartlar. Ayrı bir "bugüne ekle" işareti yoktur: bugün = tarihi bugün.
-      matches: i => !!i.dueDate && (i.done ? i.dueDate === today : i.dueDate <= today),
+      matches: i => inToday(i, today),
       defaults: { dueDate: today },
       empty: { title: 'Bugün için plan yok', text: 'Yukarıdaki kutuya yazıp Enter’a basın ya da bir kartın tarihini “Bugün” yapın.' },
     },
@@ -57,31 +72,6 @@ export function buildViews(lists: TodoList[], today: string): { smart: ViewDef[]
       matches: i => !!i.dueDate && i.dueDate >= weekFirst && i.dueDate <= weekLast,
       defaults: { dueDate: today },
       empty: { title: '', text: '' },
-    },
-    {
-      id: 'important', label: 'Önemli', icon: Star, reorderable: false,
-      matches: i => i.important,
-      defaults: { important: true },
-      empty: { title: 'Önemli kart yok', text: 'Bir kartın yıldızına basarak onu buraya alabilirsiniz.' },
-    },
-    {
-      id: 'planned', label: 'Planlanan', icon: CalendarBlank, reorderable: false,
-      matches: i => !!i.dueDate,
-      defaults: { dueDate: today },
-      empty: { title: 'Tarihli kart yok', text: 'Bir karta tarih verdiğinizde burada gün gün sıralanır.' },
-    },
-    {
-      // Kişisel kart değil, DevHub görevleri: sayısı TodoSpace'te görevlerden hesaplanır.
-      id: 'tasks', label: 'Görevlerim', icon: CheckSquare, reorderable: false, pane: 'tasks',
-      matches: () => false,
-      defaults: {},
-      empty: { title: '', text: '' },
-    },
-    {
-      id: 'inbox', label: 'Gelenler', icon: Tray, reorderable: false,
-      matches: i => i.sentById !== null,
-      defaults: {},
-      empty: { title: 'Gelen kart yok', text: 'Ekip arkadaşlarınızın size gönderdiği kartlar burada görünür.' },
     },
   ];
   const own: ViewDef[] = [
@@ -92,7 +82,7 @@ export function buildViews(lists: TodoList[], today: string): { smart: ViewDef[]
       empty: { title: 'Liste boş', text: 'İlk kartınızı yukarıdaki kutuya yazıp Enter’a basarak ekleyin.' },
     },
     ...lists.map<ViewDef>(l => ({
-      id: `list-${l.id}`, label: l.name, icon: ListBullets, color: l.color, list: l, reorderable: true,
+      id: `list-${l.id}`, label: l.name, icon: ListBullets, color: listColor(l.color), list: l, reorderable: true,
       matches: i => i.listId === l.id,
       defaults: { listId: l.id },
       empty: { title: 'Liste boş', text: 'Yukarıdaki kutuya yazıp Enter’a basarak bu listeye ilk kartı ekleyin.' },

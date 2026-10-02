@@ -89,7 +89,7 @@ export default function TodoDetail({ item, lists, onClose, onSend }: Props) {
       <div className="p-5 pb-4 border-b border-theme-light/40 bg-surface">
         <div className="flex items-start gap-3">
           <span className="mt-1.5">
-            <DoneToggle done={item.done} onToggle={() => update.mutate({ id: item.id, done: !item.done })} label={item.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'} />
+            <DoneToggle square={item.taskId !== null} done={item.done} onToggle={() => update.mutate({ id: item.id, done: !item.done })} label={item.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'} />
           </span>
           <textarea
             value={title}

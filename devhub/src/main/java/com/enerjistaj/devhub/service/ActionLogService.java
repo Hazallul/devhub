@@ -105,7 +105,7 @@ public class ActionLogService {
     }
 
     /** İsteğin geldiği adres (vekil sunucu arkasındaysa X-Forwarded-For'daki ilk adres); zamanlanmış işlerde null. */
-    private static String clientIp() {
+    public static String clientIp() {
         if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs)) return null;
         HttpServletRequest request = attrs.getRequest();
         String forwarded = request.getHeader("X-Forwarded-For");

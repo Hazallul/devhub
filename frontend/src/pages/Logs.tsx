@@ -184,7 +184,7 @@ function LogsPage() {
     <>
       <PageHeader
         eyebrow="Sistem"
-        title="Sistem Logları"
+        title="Sistem logları"
         description="Uygulamada yapılan her işlem; kimin yaptığı, ne zaman, hangi adresten ve neyi değiştirdiğiyle birlikte kayıt altında. Excel indir, listede gördüğünüz kayıtları indirir. Kişisel yapılacaklar kişiye özel olduğu için kayda geçmez."
         actions={
           <div className="flex items-center gap-2">
@@ -221,9 +221,9 @@ function LogsPage() {
         />
       </div>
 
-      <section className="card p-6 mb-6 grid lg:grid-cols-3 gap-6" aria-label="Son 14 günün özeti">
+      <section className="card p-5 mb-6 grid lg:grid-cols-3 gap-6" aria-label="Son 14 günün özeti">
         <div className="lg:col-span-2 min-w-0">
-          <h2 className="text-lg font-bold tracking-tight">Günlük işlem sayısı</h2>
+          <h2 className="text-base font-semibold">Günlük işlem sayısı</h2>
           <p className="text-sm text-theme-muted font-medium mb-4">Son 14 gün · bir güne tıklayınca o günün kayıtları listelenir</p>
           {!stats ? <Skeleton className="h-36" /> : (
             <DayBars days={stats.perDay} selected={from && from === to && !category && level === 'ALL' && !action && !actorId && !q && !sinceHours ? from : null}
@@ -231,7 +231,7 @@ function LogsPage() {
           )}
         </div>
         <div className="lg:border-l lg:border-theme-light/40 lg:pl-6">
-          <h2 className="text-lg font-bold tracking-tight">Kategoriler</h2>
+          <h2 className="text-base font-semibold">Kategoriler</h2>
           <p className="text-sm text-theme-muted font-medium mb-3">Son 14 gün · tıklayınca listelenir</p>
           {!stats ? <Skeleton className="h-36" /> : (
             <ul className="space-y-1">
@@ -368,7 +368,7 @@ function DayBars({ days, selected, onSelect }: { days: { date: string; count: nu
               className={`w-full max-w-[2.125rem] rounded-t-lg rounded-b-sm origin-bottom ${isToday || on ? 'bg-accent' : 'bg-theme-medium group-hover:bg-theme-dark'} transition-colors`}
               style={{ height: `${Math.max((d.count / max) * 100, d.count ? 4 : 1.5)}%` }}
             />
-            <span className={`text-[0.625rem] font-bold uppercase ${isToday ? 'text-theme-deep' : 'text-theme-muted'}`}>{dayShort.format(date)}</span>
+            <span className={`text-[0.625rem] font-bold ${isToday ? 'text-theme-deep' : 'text-theme-muted'}`}>{dayShort.format(date)}</span>
             <span className={`text-[0.625rem] font-semibold tabular -mt-1 ${isToday ? 'text-theme-deep' : 'text-theme-muted/70'}`}>{date.getDate()}</span>
           </button>
         );
@@ -449,7 +449,7 @@ function LogRow({ log, open, onToggle, onFilterActor, onFilterCategory, onSearch
                 <dt className="font-bold text-theme-muted">Zaman</dt><dd className="font-semibold tabular">{when.toLocaleString('tr-TR')}</dd>
                 <dt className="font-bold text-theme-muted">Seviye</dt><dd className="font-semibold">{lvl.label}</dd>
                 <dt className="font-bold text-theme-muted">İşlem kodu</dt><dd className="font-mono text-[0.6875rem]">{log.category}.{log.action}</dd>
-                {log.targetType && <><dt className="font-bold text-theme-muted">Hedef</dt><dd className="font-semibold break-words">{log.targetName ?? '—'} <span className="text-theme-muted font-mono text-[0.6875rem]">({log.targetType}{log.targetId !== null ? ` #${log.targetId}` : ''})</span></dd></>}
+                {log.targetType && <><dt className="font-bold text-theme-muted">Hedef</dt><dd className="font-semibold break-words">{log.targetName ?? '-'} <span className="text-theme-muted font-mono text-[0.6875rem]">({log.targetType}{log.targetId !== null ? ` #${log.targetId}` : ''})</span></dd></>}
                 <dt className="font-bold text-theme-muted">IP adresi</dt><dd className="font-mono text-[0.6875rem]">{log.ipAddress ?? 'Sistem işlemi'}</dd>
               </dl>
             </div>

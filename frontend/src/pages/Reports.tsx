@@ -157,10 +157,10 @@ function ReportsPage() {
       ) : (
         <div className="grid lg:grid-cols-2 gap-6 pb-10">
           {/* İş yükü */}
-          <section className="card p-6" aria-labelledby="r-workload">
+          <section className="card p-5" aria-labelledby="r-workload">
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
               <div>
-                <h2 id="r-workload" className="text-lg font-bold tracking-tight">İş yükü</h2>
+                <h2 id="r-workload" className="text-base font-semibold">İş yükü</h2>
                 <p className="text-sm text-theme-muted">Kişi başı açık görev, önceliğe göre</p>
               </div>
               <Legend series={PRIORITY_SERIES} />
@@ -176,10 +176,10 @@ function ReportsPage() {
           </section>
 
           {/* Proje ilerlemesi */}
-          <section className="card p-6" aria-labelledby="r-projects">
+          <section className="card p-5" aria-labelledby="r-projects">
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
               <div>
-                <h2 id="r-projects" className="text-lg font-bold tracking-tight">Proje ilerlemesi</h2>
+                <h2 id="r-projects" className="text-base font-semibold">Proje ilerlemesi</h2>
                 <p className="text-sm text-theme-muted">Projeye bağlı görevlerin durumu (tamamlanma oranı sağda)</p>
               </div>
               <Legend series={STATUS_SERIES} />
@@ -192,16 +192,16 @@ function ReportsPage() {
           <EffortReport tasks={tasks ?? []} userById={userById} />
 
           {/* Haftalık tamamlanan */}
-          <section className="card p-6" aria-labelledby="r-weekly">
-            <h2 id="r-weekly" className="text-lg font-bold tracking-tight">Tamamlanan görevler</h2>
+          <section className="card p-5" aria-labelledby="r-weekly">
+            <h2 id="r-weekly" className="text-base font-semibold">Tamamlanan görevler</h2>
             <p className="text-sm text-theme-muted mb-5">Son 8 hafta, hafta başı tarihine göre</p>
             <ColumnChart data={weeklyData} unit="görev" />
             <DataTable caption="Haftalık tamamlanan görevler" headers={['Hafta', 'Tamamlanan']} rows={weekly.map(w => [weekFmt.format(w.start), w.count])} />
           </section>
 
           {/* Aylık izin */}
-          <section className="card p-6" aria-labelledby="r-leave">
-            <h2 id="r-leave" className="text-lg font-bold tracking-tight">İzin kullanımı · {year}</h2>
+          <section className="card p-5" aria-labelledby="r-leave">
+            <h2 id="r-leave" className="text-base font-semibold">İzin kullanımı · {year}</h2>
             <p className="text-sm text-theme-muted mb-5">Onaylı izinler, aylara göre iş günü (hafta sonu ve resmi tatiller hariç)</p>
             <ColumnChart data={monthlyData} unit="iş günü" height={150} />
             <ul className="mt-5 space-y-2" aria-label="İzin türü dağılımı">
@@ -218,10 +218,10 @@ function ReportsPage() {
           </section>
 
           {/* Bakiyeler */}
-          <section className="card p-6 lg:col-span-2" aria-labelledby="r-balance">
+          <section className="card p-5 lg:col-span-2" aria-labelledby="r-balance">
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
               <div>
-                <h2 id="r-balance" className="text-lg font-bold tracking-tight">Yıllık izin bakiyeleri · {year}</h2>
+                <h2 id="r-balance" className="text-base font-semibold">Yıllık izin bakiyeleri · {year}</h2>
                 <p className="text-sm text-theme-muted">En az kalandan en çoğa; bekleyen talepler ayrıca gösterilir</p>
               </div>
               <button
@@ -265,10 +265,10 @@ function ReportsPage() {
           </section>
 
           {/* Gecikmiş görevler */}
-          <section className="card p-6 lg:col-span-2" aria-labelledby="r-overdue">
+          <section className="card p-5 lg:col-span-2" aria-labelledby="r-overdue">
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
               <div>
-                <h2 id="r-overdue" className="text-lg font-bold tracking-tight flex items-center gap-2">
+                <h2 id="r-overdue" className="text-base font-semibold flex items-center gap-2">
                   <Warning size={20} weight="duotone" className="text-danger" /> Gecikmiş görevler
                 </h2>
                 <p className="text-sm text-theme-muted">Son tarihi geçmiş, tamamlanmamış görevler</p>

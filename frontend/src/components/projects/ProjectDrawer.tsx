@@ -34,7 +34,7 @@ export default function ProjectDrawer({ project, members, tasks, onClose }: Prop
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-ink/25 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/30"
           />
           <motion.aside
             role="dialog"
@@ -43,7 +43,7 @@ export default function ProjectDrawer({ project, members, tasks, onClose }: Prop
             initial={{ x: '100%' }}
             animate={{ x: 0, transition: { type: 'spring', stiffness: 300, damping: 34 } }}
             exit={{ x: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
-            className="absolute inset-y-0 right-0 w-full max-w-lg bg-theme-cream shadow-2xl flex flex-col sm:rounded-l-4xl overflow-hidden"
+            className="absolute inset-y-0 right-0 w-full max-w-lg bg-surface shadow-float border-l border-theme-light flex flex-col overflow-hidden"
           >
             <DrawerBody key={project.id} project={project} members={members} tasks={tasks} onClose={onClose} />
           </motion.aside>
@@ -90,20 +90,20 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
 
   return (
     <>
-      <div className="p-6 sm:p-8 pb-6 bg-surface border-b border-theme-light/40">
+      <div className="px-6 pt-5 pb-5 bg-surface border-b border-theme-light">
         <div className="flex items-start gap-4">
-          <div className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0" style={{ backgroundColor: projectColor(project.name) }}>
-            <Briefcase size={26} weight="duotone" className="text-theme-text" />
+          <div className="w-10 h-10 rounded-xl bg-theme-lightest flex items-center justify-center shrink-0">
+            <Briefcase size={20} weight="fill" style={{ color: projectColor(project.name) }} aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <Pill className={statusMeta.className}><statusMeta.icon size={11} weight="bold" /> {statusMeta.label}</Pill>
-            <h2 className="text-2xl font-bold tracking-tight text-theme-text mt-2 break-words">{project.name}</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-theme-text mt-1.5 break-words">{project.name}</h2>
           </div>
           <div className="flex gap-1 shrink-0">
             {isAdmin && !editing && (
               <button onClick={() => setEditing(true)} className="icon-btn" aria-label="Projeyi düzenle"><PencilSimple size={18} weight="bold" /></button>
             )}
-            <button onClick={onClose} className="icon-btn bg-theme-lightest text-theme-deep hover:bg-theme-light" aria-label="Kapat"><X size={18} weight="bold" /></button>
+            <button onClick={onClose} className="icon-btn w-8 h-8" aria-label="Kapat"><X size={18} weight="bold" /></button>
           </div>
         </div>
         {project.description && !editing && <p className="text-sm text-theme-muted mt-4 leading-relaxed">{project.description}</p>}
@@ -112,16 +112,16 @@ function DrawerBody({ project, members, tasks, onClose }: Props & { project: Pro
           <dl className="grid grid-cols-3 gap-3 mt-6">
             <div className="bg-theme-cream rounded-2xl p-3">
               <dt className="eyebrow flex items-center gap-1"><Users size={12} weight="bold" /> Üye</dt>
-              <dd className="text-xl font-bold tabular mt-1">{members.length}</dd>
+              <dd className="text-lg font-semibold tabular mt-1">{members.length}</dd>
             </div>
             <div className="bg-theme-cream rounded-2xl p-3">
               <dt className="eyebrow flex items-center gap-1"><CheckCircle size={12} weight="bold" /> Görev</dt>
-              <dd className="text-xl font-bold tabular mt-1">{done}/{memberTasks.length}</dd>
+              <dd className="text-lg font-semibold tabular mt-1">{done}/{memberTasks.length}</dd>
             </div>
             <div className="bg-theme-cream rounded-2xl p-3">
               <dt className="eyebrow flex items-center gap-1"><CalendarBlank size={12} weight="bold" /> Teslim</dt>
               <dd className={`text-sm font-bold mt-1.5 ${due?.tone === 'danger' ? 'text-danger' : 'text-theme-text'}`}>
-                {project.deadline ? (due ? due.text : formatDate(project.deadline)) : '—'}
+                {project.deadline ? (due ? due.text : formatDate(project.deadline)) : '-'}
               </dd>
             </div>
           </dl>

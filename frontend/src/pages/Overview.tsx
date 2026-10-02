@@ -78,7 +78,7 @@ export default function Overview() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-5 mb-8">
         <div>
           <p className="eyebrow mb-2">{formatLongDate(new Date())}</p>
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">{greeting()}, {firstName(me.fullName)}</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{greeting()}, {firstName(me.fullName)}</h1>
           <p className="text-theme-muted mt-2 font-medium">
             {myTasks.length > 0 ? `Bugün seni bekleyen ${openTasks.filter(t => t.userId === me.id).length} açık görev var.` : 'Açık görevin yok, harika gidiyorsun.'}
           </p>
@@ -123,9 +123,9 @@ export default function Overview() {
 
       <div className="grid lg:grid-cols-3 gap-6 mb-6">
         {/* Görevlerim */}
-        <section className="card p-6 lg:col-span-2" aria-labelledby="my-tasks">
+        <section className="card p-5 lg:col-span-2" aria-labelledby="my-tasks">
           <div className="flex items-center justify-between mb-4">
-            <h2 id="my-tasks" className="text-lg font-bold tracking-tight">Görevlerim</h2>
+            <h2 id="my-tasks" className="text-base font-semibold">Görevlerim</h2>
             <div className="flex gap-2">
               <button onClick={() => actions.newTask(me.id)} className="icon-btn" aria-label="Görev ekle" title="Görev ekle"><Plus size={18} weight="bold" /></button>
               <button onClick={() => navigate('/tasks')} className="btn-ghost min-h-0 h-10 px-3 text-sm">Panoya git <ArrowRight size={14} weight="bold" /></button>
@@ -145,9 +145,9 @@ export default function Overview() {
         </section>
 
         {/* Ekip durumu */}
-        <section className="card p-6" aria-labelledby="team-dist">
+        <section className="card p-5" aria-labelledby="team-dist">
           <div className="flex items-center justify-between mb-5">
-            <h2 id="team-dist" className="text-lg font-bold tracking-tight">Çalışanların Durumu</h2>
+            <h2 id="team-dist" className="text-base font-semibold">Çalışanların durumu</h2>
             <button onClick={() => navigate('/team')} className="text-sm font-bold text-theme-deep hover:underline underline-offset-4">Tümünü gör</button>
           </div>
           {!users ? <Skeleton className="h-40" /> : (
@@ -193,9 +193,9 @@ export default function Overview() {
 
       <div className="grid lg:grid-cols-3 gap-6 pb-10">
         {/* Duyurular */}
-        <section className="card p-6" aria-labelledby="ann-title">
+        <section className="card p-5" aria-labelledby="ann-title">
           <div className="flex items-center justify-between mb-4">
-            <h2 id="ann-title" className="text-lg font-bold tracking-tight flex items-center gap-2"><Megaphone size={20} weight="duotone" className="text-theme-deep" /> Duyurular</h2>
+            <h2 id="ann-title" className="text-base font-semibold flex items-center gap-2"><Megaphone size={20} weight="duotone" className="text-theme-deep" /> Duyurular</h2>
             {isAdmin && <button onClick={actions.newAnnouncement} className="icon-btn" aria-label="Duyuru yayınla" title="Duyuru yayınla"><Plus size={18} weight="bold" /></button>}
           </div>
           {!announcements ? <Skeleton className="h-32" /> : announcements.length === 0 ? (
@@ -225,9 +225,9 @@ export default function Overview() {
         </section>
 
         {/* Projeler */}
-        <section className="card p-6" aria-labelledby="proj-title">
+        <section className="card p-5" aria-labelledby="proj-title">
           <div className="flex items-center justify-between mb-4">
-            <h2 id="proj-title" className="text-lg font-bold tracking-tight">Yaklaşan Teslimler</h2>
+            <h2 id="proj-title" className="text-base font-semibold">Yaklaşan teslimler</h2>
             <button onClick={() => navigate('/projects')} className="text-sm font-bold text-theme-deep hover:underline underline-offset-4">Tümü</button>
           </div>
           {!projects ? <Skeleton className="h-40" /> : (
@@ -260,9 +260,9 @@ export default function Overview() {
         </section>
 
         {/* Son aktiviteler */}
-        <section className="card p-6" aria-labelledby="act-title">
+        <section className="card p-5" aria-labelledby="act-title">
           <div className="flex items-center justify-between mb-4">
-            <h2 id="act-title" className="text-lg font-bold tracking-tight">Son Aktiviteler</h2>
+            <h2 id="act-title" className="text-base font-semibold">Son aktiviteler</h2>
             <button onClick={actions.openLogs} className="text-sm font-bold text-theme-deep hover:underline underline-offset-4">Tüm loglar</button>
           </div>
           {!logs ? <Skeleton className="h-40" /> : logs.length === 0 ? (

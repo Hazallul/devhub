@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Plus, Sun, CalendarBlank, Bell, Hourglass, Airplane, CheckSquare, IdentificationCard, Users } from '@phosphor-icons/react';
+import { ArrowRight, Plus, Sun, CalendarBlank, Bell, Hourglass, Airplane, CheckSquare, IdentificationCard, Users, PaperPlaneTilt } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { DoneToggle } from '../todo/TodoCard';
+import TaskChip, { TASK_CARD_SURFACE } from '../todo/TaskChip';
+import { inToday } from '../todo/views';
 import { useTodoCardMenu } from '../todo/cardMenu';
 import { useQuickActions } from '../layout/QuickActions';
 import { Skeleton } from '../ui/primitives';
 import { useCreateTodo, useTodos, useUpdateTodo } from '../../hooks/todos';
-import { useAllTasks, useLeaves, useMe, usePendingProfileCount, useProfileRequests } from '../../hooks/api';
-import { addDays, dueLabel, formatDate, toIsoDay } from '../../lib/format';
+import { useAllTasks, useLeaves, useMe, usePendingPasswordResetCount, usePendingProfileCount, useProfileRequests } from '../../hooks/api';
+import { addDays, dueLabel, firstName, formatDate, toIsoDay } from '../../lib/format';
 import type { TodoItem } from '../../types';
 
 /**
@@ -26,6 +28,7 @@ export default function MyDay() {
   const { data: leaves } = useLeaves();
   const { data: profileRequests } = useProfileRequests();
   const pendingProfiles = usePendingProfileCount(isAdmin).data?.count ?? 0;
+  const pendingResets = usePendingPasswordResetCount(isAdmin).data?.count ?? 0;
   const update = useUpdateTodo();
   const create = useCreateTodo();
   const cardMenu = useTodoCardMenu();
@@ -36,7 +39,7 @@ export default function MyDay() {
   const soon = toIsoDay(addDays(now, 2));
   const items = todos?.items ?? [];
   const todays = items
-    .filter(i => !!i.dueDate && (i.done ? i.dueDate === today : i.dueDate <= today))
+    .filter(i => inToday(i, today))
     .sort((a, b) => Number(a.done) - Number(b.done) || (a.dueTime ?? '99').localeCompare(b.dueTime ?? '99') || a.position - b.position);
   const open = todays.filter(i => !i.done);
   const shown = [...open, ...todays.filter(i => i.done)].slice(0, 5);
@@ -71,9 +74,11 @@ export default function MyDay() {
     },
     isAdmin
       ? {
-        icon: Hourglass, to: pendingLeaves.length === 0 && pendingProfiles > 0 ? '/users' : '/leaves', label: 'Onayınızı bekleyenler',
-        value: pendingLeaves.length + pendingProfiles === 0 ? 'Bekleyen talep yok' : [pendingLeaves.length && `${pendingLeaves.length} izin`, pendingProfiles && `${pendingProfiles} profil`].filter(Boolean).join(' · '),
-        tone: pendingLeaves.length + pendingProfiles > 0 ? 'accent' : undefined,
+        // Profil ve şifre sıfırlama talepleri Kullanıcılar sayfasında; yalnızca onlar bekliyorsa oraya gider.
+        icon: Hourglass, to: pendingLeaves.length === 0 && pendingProfiles + pendingResets > 0 ? '/users' : '/leaves', label: 'Onayınızı bekleyenler',
+        value: pendingLeaves.length + pendingProfiles + pendingResets === 0 ? 'Bekleyen talep yok'
+          : [pendingLeaves.length && `${pendingLeaves.length} izin`, pendingProfiles && `${pendingProfiles} profil`, pendingResets && `${pendingResets} şifre sıfırlama`].filter(Boolean).join(' · '),
+        tone: pendingLeaves.length + pendingProfiles + pendingResets > 0 ? 'accent' : undefined,
       }
       : {
         icon: myPendingProfile && !myPendingLeaves ? IdentificationCard : Hourglass, to: myPendingProfile && !myPendingLeaves ? '/settings' : '/leaves', label: 'Taleplerim',
@@ -87,11 +92,11 @@ export default function MyDay() {
   ];
 
   return (
-    <section className="card p-6 mb-8" aria-labelledby="my-day">
+    <section className="card p-5 mb-8" aria-labelledby="my-day">
       <div className="grid lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 min-w-0">
           <div className="flex items-center justify-between gap-3 mb-4">
-            <h2 id="my-day" className="text-lg font-bold tracking-tight flex items-center gap-2">
+            <h2 id="my-day" className="text-base font-semibold flex items-center gap-2">
               <Sun size={20} weight="duotone" className="text-theme-deep" aria-hidden="true" /> Bugünüm
               {todos && todays.length > 0 && <span className="text-sm font-semibold text-theme-muted tabular">{todays.length - open.length}/{todays.length}</span>}
             </h2>
@@ -108,14 +113,18 @@ export default function MyDay() {
                   {shown.map(i => {
                     const late = !i.done && i.dueDate! < today ? dueLabel(i.dueDate!) : null;
                     const list = i.listId !== null ? todos.lists.find(l => l.id === i.listId) : undefined;
+                    // Kaynak ayrı bölüm açmadan satırda görünür: görev kartı mavi tonlu + kare onay kutusu + "Görev · Proje", gelen kart gönderenin adıyla, kendi notun sade.
+                    const isTask = i.taskId !== null;
                     return (
                       <motion.li key={i.id} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, transition: { duration: 0.12 } }}
                         onContextMenu={e => cardMenu(e, i, { onOpen: () => openTodo(e, i), onSend: () => openTodo(e, i) })}
-                        className="flex items-center gap-3 px-3 py-2.5 rounded-2xl bg-theme-cream/70 border border-theme-light/40 hover:border-theme-light transition-colors">
-                        <DoneToggle done={i.done} onToggle={() => update.mutate({ id: i.id, done: !i.done })} label={i.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'} />
+                        className={`flex items-center gap-3 px-3 py-2.5 rounded-2xl border transition-colors ${isTask ? TASK_CARD_SURFACE : 'bg-theme-cream/70 border-theme-light/40 hover:border-theme-light'}`}>
+                        <DoneToggle square={isTask} done={i.done} onToggle={() => update.mutate({ id: i.id, done: !i.done })} label={i.done ? 'Tamamlanmadı olarak işaretle' : 'Tamamlandı olarak işaretle'} />
                         <button type="button" onClick={e => openTodo(e, i)} className="min-w-0 flex-1 text-left rounded-lg">
                           <span className={`block text-sm font-semibold truncate ${i.done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{i.title}</span>
                         </button>
+                        {i.taskId !== null && <TaskChip taskId={i.taskId} />}
+                        {i.sentByName && <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-theme-muted shrink-0"><PaperPlaneTilt size={12} weight="bold" aria-hidden="true" /> {firstName(i.sentByName)} gönderdi</span>}
                         {list && list.members.length > 1 && <span className="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-theme-muted shrink-0"><Users size={12} weight="bold" aria-hidden="true" /> {list.name}</span>}
                         {i.dueTime && !i.done && <span className="inline-flex items-center gap-1 text-xs font-bold text-theme-muted tabular shrink-0"><Bell size={12} weight="bold" aria-hidden="true" /> {i.dueTime}</span>}
                         {late && <span className="inline-flex items-center gap-1 text-xs font-bold text-danger shrink-0"><CalendarBlank size={12} weight="bold" aria-hidden="true" /> {late.text}</span>}

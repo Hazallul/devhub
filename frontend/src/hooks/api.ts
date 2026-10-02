@@ -2,13 +2,13 @@ import { useMemo } from 'react';
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api, { errorMessage } from '../services/api';
 import { livePoll } from '../lib/realtime';
-import { getStoredUser } from '../lib/session';
+import { getStoredUser, saveSession } from '../lib/session';
 import { useToast } from '../components/ui/Toast';
 import { scheduleDelete, usePendingDeletes, UNDO_MS } from '../lib/pendingDelete';
 import type {
   User, Project, Task, TaskActivity, ActionLog, LeaveRequest, Announcement,
   UserStatus, TaskStatus, TaskPriority, ProjectStatus, LeaveType, LeaveState,
-  Holiday, LeaveBalance, TaskSession, Workload, AppNotification, Role, MonitorOverview, ProfileRequest, UserLink, LogPage, LogStats, LogCategory, LogLevel, LogAction,
+  Holiday, LeaveBalance, LoginResponse, TaskSession, Workload, AppNotification, Role, MonitorOverview, ProfileRequest, PasswordResetRequest, UserLink, LogPage, LogStats, LogCategory, LogLevel, LogAction,
 } from '../types';
 
 const get = <T,>(url: string) => async () => (await api.get<T>(url)).data;
@@ -186,6 +186,22 @@ export const useUpdateLinks = () =>
     { invalidate: [['users'], ['admin-users']], success: 'İletişim bilgileri kaydedildi' },
   );
 
+// ---------- Şifre sıfırlama talepleri (yönetici) ----------
+export const usePasswordResets = (enabled: boolean) =>
+  useQuery({ queryKey: ['password-resets', 'list'], queryFn: get<PasswordResetRequest[]>('/admin/password-resets'), enabled });
+
+export const usePendingPasswordResetCount = (enabled: boolean) =>
+  useQuery({ queryKey: ['password-resets', 'count'], queryFn: get<{ count: number }>('/admin/password-resets/pending-count'), enabled, refetchInterval: livePoll(30_000) });
+
+export const useDecidePasswordReset = () =>
+  useAction(
+    ({ id, ...body }: { id: number; decision: 'ONAYLANDI' | 'REDDEDILDI'; note?: string }) => api.put(`/admin/password-resets/${id}/decision`, body),
+    {
+      invalidate: [['password-resets'], ['logs']],
+      success: ({ decision }) => (decision === 'ONAYLANDI' ? 'Onaylandı, yeni şifre geçerli' : 'Şifre sıfırlama talebi reddedildi'),
+    },
+  );
+
 // ---------- Profil değişikliği talepleri ----------
 /** Yönetici tüm talepleri, çalışan kendi taleplerini alır. */
 export const useProfileRequests = () =>
@@ -214,7 +230,11 @@ export const useWithdrawProfileRequest = () =>
 
 export const useChangePassword = () =>
   useAction(
-    (body: { currentPassword: string; newPassword: string }) => api.put<User>('/users/me/password', body).then(r => r.data),
+    // Sunucu diğer oturumları kapatır ve bu tarayıcı için yeni token verir; yenisi hemen saklanır ki sonraki istekler 401 almasın.
+    (body: { currentPassword: string; newPassword: string }) => api.put<LoginResponse>('/users/me/password', body).then(r => {
+      saveSession(r.data.token, r.data.user);
+      return r.data.user;
+    }),
     { invalidate: [['users']], success: 'Şifreniz değiştirildi' },
   );
 

@@ -35,7 +35,7 @@ export default function TaskDrawer({ taskId, onClose }: { taskId: number | null;
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-ink/25 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/30"
           />
           <motion.aside
             role="dialog"
@@ -45,14 +45,14 @@ export default function TaskDrawer({ taskId, onClose }: { taskId: number | null;
             initial={{ x: '100%' }}
             animate={{ x: 0, transition: { type: 'spring', stiffness: 300, damping: 34 } }}
             exit={{ x: '100%', transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
-            className="absolute inset-y-0 right-0 w-full max-w-xl bg-theme-cream shadow-2xl flex flex-col sm:rounded-l-4xl overflow-hidden"
+            className="absolute inset-y-0 right-0 w-full max-w-xl bg-surface shadow-float border-l border-theme-light flex flex-col overflow-hidden"
           >
             {task ? (
               <DrawerBody key={task.id} task={task} onClose={onClose} />
             ) : (
               <div className="p-8 space-y-4">
                 <div className="flex justify-end">
-                  <button onClick={onClose} className="icon-btn bg-theme-lightest text-theme-deep hover:bg-theme-light" aria-label="Kapat"><X size={18} weight="bold" /></button>
+                  <button onClick={onClose} className="icon-btn w-8 h-8" aria-label="Kapat"><X size={18} weight="bold" /></button>
                 </div>
                 {isLoading ? (
                   <><Skeleton className="h-8 w-2/3" /><Skeleton className="h-24" /><Skeleton className="h-40" /></>
@@ -112,7 +112,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
 
   return (
     <>
-      <div className="p-6 sm:p-8 pb-6 bg-surface border-b border-theme-light/40">
+      <div className="px-6 pt-5 pb-5 bg-surface border-b border-theme-light">
         <div className="flex items-center gap-2">
           {project ? (
             <button onClick={openProject} className="inline-flex items-center gap-2 text-xs font-bold text-theme-deep bg-theme-cream hover:bg-theme-lightest px-2.5 py-1.5 rounded-xl transition-colors min-w-0" title="Projeyi aç">
@@ -132,7 +132,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
                 <button onClick={() => setConfirmDelete(true)} className="icon-btn hover:text-danger hover:bg-danger-soft" aria-label="Görevi sil" title="Görevi sil"><Trash size={18} weight="bold" /></button>
               )
             )}
-            <button onClick={onClose} className="icon-btn bg-theme-lightest text-theme-deep hover:bg-theme-light" aria-label="Kapat"><X size={18} weight="bold" /></button>
+            <button onClick={onClose} className="icon-btn w-8 h-8" aria-label="Kapat"><X size={18} weight="bold" /></button>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           />
         ) : (
           <div className="group flex items-start gap-2 mt-4">
-            <h2 className={`text-xl font-bold tracking-tight leading-snug break-words flex-1 ${done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{task.content}</h2>
+            <h2 className={`text-lg font-semibold tracking-tight leading-snug break-words flex-1 ${done ? 'text-theme-muted line-through decoration-theme-medium' : 'text-theme-text'}`}>{task.content}</h2>
             {canEdit && (
               <button onClick={() => { setTitle(task.content); setEditingTitle(true); }} className="icon-btn w-9 h-9 shrink-0 opacity-60 group-hover:opacity-100 focus:opacity-100" aria-label="Başlığı düzenle" title="Başlığı düzenle">
                 <PencilSimple size={16} weight="bold" />
@@ -187,7 +187,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
                 </select>
               ) : owner ? (
                 <span className="flex items-center gap-2"><Avatar user={owner} size="xs" /><span className="truncate">{owner.fullName}</span></span>
-              ) : '—'}
+              ) : '-'}
             </Prop>
 
             <Prop icon={Flag} label="Öncelik">
@@ -208,7 +208,7 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
                   onChange={e => patch({ id: task.id, dueDate: e.target.value || null })}
                   className="prop-select"
                 />
-              ) : task.dueDate ? formatDate(task.dueDate) : '—'}
+              ) : task.dueDate ? formatDate(task.dueDate) : '-'}
             </Prop>
 
             <Prop icon={Briefcase} label="Proje">

@@ -26,7 +26,7 @@ const isDark = (p: ThemePref) => p === 'dark' || (p === 'system' && !!media?.mat
 function apply() {
   const dark = isDark(pref);
   document.documentElement.classList.toggle('dark', dark);
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#15170F' : '#FBF8EC');
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0E131A' : '#F5F7FA');
 }
 
 media?.addEventListener('change', () => {

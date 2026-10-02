@@ -20,7 +20,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback((tone: Tone, message: string, action?: ToastAction) => {
     const id = ++seq.current;
     setItems(list => [...list.slice(-3), { id, tone, message, action }]);
-    // Skill: toast-dismiss 3–5 sn; hatalar ve eylemli bildirimler biraz daha uzun kalır.
+    // Bildirimler 3–5 sn kalır; hatalar ve eylemli bildirimler biraz daha uzun kalır.
     setTimeout(() => dismiss(id), action?.duration ?? (tone === 'error' ? 5000 : 3200));
   }, [dismiss]);
 
@@ -43,16 +43,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, x: 24, transition: { duration: 0.15 } }}
                 role={t.tone === 'error' ? 'alert' : 'status'}
-                className={`pointer-events-auto flex items-center gap-3 pl-4 pr-2 py-2.5 rounded-2xl shadow-float border max-w-sm ${
+                className={`pointer-events-auto flex items-center gap-2.5 pl-3.5 pr-1.5 py-2 rounded-xl shadow-float border max-w-sm ${
                   t.tone === 'error' ? 'bg-surface border-danger-line text-danger-ink' : 'bg-ink border-ink text-white'
                 }`}
               >
                 {t.tone === 'error'
-                  ? <Warning size={20} weight="fill" className="shrink-0" />
-                  : <CheckCircle size={20} weight="fill" className="shrink-0 text-[#C5D89D]" />}
+                  ? <Warning size={18} weight="fill" className="shrink-0" />
+                  : <CheckCircle size={18} weight="fill" className="shrink-0 text-[#7FD8A8]" />}
                 <span className="text-sm font-medium">{t.message}</span>
                 {t.action && (
-                  <button onClick={() => { t.action!.onClick(); dismiss(t.id); }} className="px-2.5 py-1.5 rounded-lg text-sm font-bold text-[#C5D89D] hover:bg-white/10 underline underline-offset-4">
+                  <button onClick={() => { t.action!.onClick(); dismiss(t.id); }} className="px-2 py-1 rounded-md text-sm font-medium text-[#A9C4F5] hover:bg-white/10 underline underline-offset-4">
                     {t.action.label}
                   </button>
                 )}

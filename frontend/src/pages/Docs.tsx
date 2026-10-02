@@ -78,7 +78,7 @@ function DocsHome() {
     <>
       <PageHeader
         eyebrow="Dokümantasyon"
-        title="Mühendislik El Kitabı"
+        title="Dokümantasyon"
         description="Süreçlerimiz, mimarimiz ve kalite standartlarımız tek yerde. Eksik bir şey mi var? Herkes doküman yazabilir veya düzenleyebilir; değişiklikler yönetici onayıyla yayınlanır."
         actions={<Link to="/docs/yeni" className="btn-primary"><Plus size={18} weight="bold" /> Yeni doküman</Link>}
       />
@@ -122,7 +122,7 @@ function DocsHome() {
               {DOC_CATEGORIES.map(c => {
                 const list = docs.filter(d => d.category === c.id);
                 return (
-                  <section key={c.id} className="card p-6" aria-labelledby={`cat-${c.id}`}>
+                  <section key={c.id} className="card p-5" aria-labelledby={`cat-${c.id}`}>
                     <div className="flex items-center gap-3 mb-4">
                       <span className="w-11 h-11 rounded-2xl bg-theme-lightest text-theme-deep flex items-center justify-center"><c.icon size={22} weight="duotone" aria-hidden="true" /></span>
                       <div className="flex-1 min-w-0">
@@ -165,7 +165,7 @@ function DocsHome() {
                 <ul className="grid sm:grid-cols-2 xl:grid-cols-4 gap-3">
                   {recent.map(d => (
                     <li key={d.slug}>
-                      <Link to={`/docs/${d.slug}`} className="card block p-4 h-full hover:shadow-diffusion transition-shadow">
+                      <Link to={`/docs/${d.slug}`} className="card block p-4 h-full hover:border-theme-dark/30 transition-colors">
                         <p className="text-sm font-bold text-theme-text line-clamp-2">{d.title}</p>
                         <p className="text-xs text-theme-muted font-semibold mt-2">{d.updatedByName ?? 'DevHub'} · {timeAgo(d.updatedAt)}</p>
                       </Link>
@@ -200,7 +200,7 @@ function PendingReviews() {
               <Avatar user={users?.find(u => u.id === r.authorId) ?? { fullName: r.authorName ?? '?', avatarColor: '', status: null }} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="flex flex-wrap items-center gap-2 text-sm font-bold text-theme-text">
-                  {r.isNew && <span className="text-[0.625rem] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-theme-light text-theme-text">Yeni doküman</span>}
+                  {r.isNew && <span className="text-[0.625rem] font-bold px-1.5 py-0.5 rounded-md bg-theme-light text-theme-text">Yeni doküman</span>}
                   {r.isNew ? r.title : r.docTitle}
                   {r.outdated && (
                     <span className="inline-flex items-center gap-1 text-[0.6875rem] font-bold text-warn-ink" title="Öneriden sonra doküman güncellendi">
@@ -403,7 +403,7 @@ function DocView({ doc }: { doc: DocDetail }) {
             </div>
           )}
 
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-theme-text">{doc.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-theme-text">{doc.title}</h1>
           {doc.summary && <p className="text-lg text-theme-muted font-medium mt-3 leading-relaxed">{doc.summary}</p>}
 
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-5 pb-6 border-b border-theme-light/50 text-sm text-theme-muted font-semibold">
@@ -429,19 +429,19 @@ function DocView({ doc }: { doc: DocDetail }) {
 
           <p className="mt-10 text-xs text-theme-muted font-semibold">
             Bir hata mı gördünüz? <Link to={editHref} className="text-theme-deep underline underline-offset-4">Bu sayfayı düzenleyin</Link>
-            {!isAdmin && ' — değişikliğiniz yönetici onayından sonra yayınlanır.'}
+            {!isAdmin && ' - değişikliğiniz yönetici onayından sonra yayınlanır.'}
             {doc.createdByName && ` · İlk yazan: ${doc.createdByName}, ${formatDate(toIsoDay(parseServerDate(doc.createdAt)))}`}
           </p>
 
           <nav aria-label="Önceki ve sonraki doküman" className="grid sm:grid-cols-2 gap-4 mt-8 pt-6 border-t border-theme-light/50">
             {prev ? (
-              <Link to={`/docs/${prev.slug}`} className="card p-4 hover:shadow-diffusion transition-shadow group">
+              <Link to={`/docs/${prev.slug}`} className="card p-4 hover:border-theme-dark/30 transition-colors group">
                 <span className="text-xs font-bold text-theme-muted flex items-center gap-1"><CaretLeft size={12} weight="bold" aria-hidden="true" /> Önceki</span>
                 <span className="block text-sm font-bold text-theme-text mt-1 group-hover:text-theme-deep">{prev.title}</span>
               </Link>
             ) : <span />}
             {next && (
-              <Link to={`/docs/${next.slug}`} className="card p-4 hover:shadow-diffusion transition-shadow group text-right">
+              <Link to={`/docs/${next.slug}`} className="card p-4 hover:border-theme-dark/30 transition-colors group text-right">
                 <span className="text-xs font-bold text-theme-muted flex items-center gap-1 justify-end">Sonraki <CaretRight size={12} weight="bold" aria-hidden="true" /></span>
                 <span className="block text-sm font-bold text-theme-text mt-1 group-hover:text-theme-deep">{next.title}</span>
               </Link>

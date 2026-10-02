@@ -161,13 +161,13 @@ function CodeBlock({ lang, code }: { lang: unknown; code: string }) {
   return (
     <div className="rounded-2xl overflow-hidden bg-ink shadow-soft">
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/10">
-        <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-white/60">{langLabel(lang)}</span>
+        <span className="text-[0.6875rem] font-bold text-white/60">{langLabel(lang)}</span>
         <button type="button" onClick={copy} className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/70 hover:text-white px-2 py-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="Kodu kopyala">
           {copied ? <Check size={14} weight="bold" /> : <Copy size={14} weight="bold" />}
           <span aria-live="polite">{copied ? 'Kopyalandı' : 'Kopyala'}</span>
         </button>
       </div>
-      <pre className="overflow-x-auto scrollbar-thin p-4 text-[0.8125rem] leading-6 text-[#F6F0D7]"><code className="font-mono">{code}</code></pre>
+      <pre className="overflow-x-auto scrollbar-thin p-4 text-[0.8125rem] leading-6 text-[#E7EBF1]"><code className="font-mono">{code}</code></pre>
     </div>
   );
 }
@@ -178,7 +178,7 @@ function Callout({ kind, nodes }: { kind: CalloutKind; nodes?: DocNode[] }) {
     <aside className={`flex gap-3 rounded-2xl border p-4 ${c.className}`} aria-label={c.label}>
       <c.icon size={20} weight="duotone" className={`shrink-0 mt-1 ${c.iconClass}`} aria-hidden="true" />
       <div className="min-w-0 flex-1">
-        <p className={`text-xs font-bold uppercase tracking-wider mb-0.5 ${c.iconClass}`}>{c.label}</p>
+        <p className={`text-xs font-bold mb-0.5 ${c.iconClass}`}>{c.label}</p>
         <Children nodes={nodes} tight />
       </div>
     </aside>

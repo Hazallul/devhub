@@ -4,10 +4,7 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <meta name="theme-color" content="#FBF8EC" />
+    <meta name="theme-color" content="#F5F7FA" />
     <title>DevHub</title>
     <script>
       // Koyu tema ilk boyamadan önce uygulanır (src/lib/theme.ts ile aynı kural).
@@ -17,7 +14,7 @@
         var t = localStorage.getItem('devhub.theme');
         if (t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.classList.add('dark');
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#15170F');
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0E131A');
         }
       } catch (e) {}
     </script>

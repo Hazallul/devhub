@@ -90,13 +90,13 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
       open={open}
       onClose={onClose}
       size={isAdmin ? 'lg' : 'md'}
-      title={isAdmin && !onlySelf ? 'Görev Ata' : 'Yeni Görev'}
+      title={isAdmin && !onlySelf ? 'Görev Ata' : 'Yeni görev'}
       description={isAdmin ? 'Bir veya birden fazla kişiye atayın; her kişinin listesine ayrı bir görev olarak düşer.' : 'Kendi görev listenize yeni bir madde ekleyin.'}
       onSubmit={onSubmit}
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
         <button type="submit" disabled={create.isPending} className="btn-primary">
-          {create.isPending ? 'Kaydediliyor…' : count > 1 ? `${count} kişiye ata` : isAdmin && !onlySelf ? 'Görevi Ata' : 'Görevi Ekle'}
+          {create.isPending ? 'Kaydediliyor…' : count > 1 ? `${count} kişiye ata` : isAdmin && !onlySelf ? 'Görevi ata' : 'Görevi ekle'}
         </button>
       </>}
     >

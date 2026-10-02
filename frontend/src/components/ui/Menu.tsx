@@ -102,7 +102,7 @@ export function Menu({ open, onClose, anchor, point, align = 'end', children, wi
           style={{ top: pos?.top ?? -9999, left: pos?.left ?? -9999, width, transformOrigin: 'top' }}
           onClick={e => e.stopPropagation()}
           onContextMenu={e => e.preventDefault()}
-          className="fixed z-[150] bg-surface rounded-2xl shadow-float border border-theme-light/70 p-1.5"
+          className="fixed z-[150] bg-surface rounded-xl shadow-float border border-theme-light p-1"
         >
           {children}
         </motion.div>
@@ -129,7 +129,7 @@ export function MenuItem({ icon: IconCmp, children, onSelect, tone = 'default', 
       role="menuitem"
       disabled={disabled}
       onClick={e => { e.stopPropagation(); onSelect(); }}
-      className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm rounded-xl text-left transition-colors outline-none disabled:opacity-40 ${
+      className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-sm rounded-lg text-left transition-colors outline-none disabled:opacity-40 ${
         tone === 'danger'
           ? 'text-danger hover:bg-danger-soft focus-visible:bg-danger-soft'
           : active
@@ -137,7 +137,7 @@ export function MenuItem({ icon: IconCmp, children, onSelect, tone = 'default', 
             : 'text-theme-text font-medium hover:bg-theme-lightest/70 focus-visible:bg-theme-lightest/70'
       }`}
     >
-      {IconCmp && <IconCmp size={17} weight={active ? 'fill' : 'bold'} className="shrink-0" />}
+      {IconCmp && <IconCmp size={16} weight={active ? 'fill' : 'regular'} className="shrink-0" />}
       <span className="flex-1 truncate">{children}</span>
       {trailing}
     </button>
@@ -145,9 +145,9 @@ export function MenuItem({ icon: IconCmp, children, onSelect, tone = 'default', 
 }
 
 export function MenuLabel({ children }: { children: ReactNode }) {
-  return <p className="eyebrow px-3 pt-2 pb-1.5">{children}</p>;
+  return <p className="eyebrow px-2.5 pt-1.5 pb-1">{children}</p>;
 }
 
 export function MenuDivider() {
-  return <div className="h-px bg-theme-light/50 my-1.5 mx-2" />;
+  return <div className="h-px bg-theme-light my-1 -mx-1" />;
 }

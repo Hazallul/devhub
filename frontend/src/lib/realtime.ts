@@ -67,7 +67,17 @@ export function connectRealtime(onEvent: (e: RealtimeEvent) => void): () => void
         signal: controller.signal,
         cache: 'no-store',
       });
-      if (res.status === 401) { setStatus('offline'); stopped = true; return; } // oturum bitti: axios yakalayıp girişe yönlendirir
+      if (res.status === 401) {
+        // Token yenilendiyse (bu tarayıcıda şifre değişti) yenisiyle tekrar dene; değilse oturum kapandı (başka yerde şifre değişti,
+        // hesap pasifleşti, süre doldu): giriş ekranına dön.
+        if (localStorage.getItem('token') !== token) { schedule(); return; }
+        setStatus('offline');
+        stopped = true;
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        if (window.location.pathname !== '/login') window.location.assign('/login');
+        return;
+      }
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
       let buffer = '';

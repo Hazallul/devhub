@@ -123,9 +123,9 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
               <div key={m.label} className="grid sm:grid-cols-[6.25rem_1fr] gap-1 sm:gap-3">
                 <dt className="font-bold text-theme-muted">{m.label}</dt>
                 <dd className="flex flex-wrap items-center gap-2">
-                  <span className="line-through decoration-clay/70 text-theme-muted">{m.before || '—'}</span>
+                  <span className="line-through decoration-clay/70 text-theme-muted">{m.before || '-'}</span>
                   <ArrowRight size={13} weight="bold" className="text-theme-muted" aria-label="yerine" />
-                  <span className="font-semibold text-theme-text">{m.after || '—'}</span>
+                  <span className="font-semibold text-theme-text">{m.after || '-'}</span>
                 </dd>
               </div>
             ))}
@@ -149,7 +149,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
         </div>
       )}
 
-      <div className="card p-6 sm:p-8">
+      <div className="card p-5 sm:p-6">
         {tab === 'diff' && comparable ? (
           <DocDiff before={current.content} after={rev.content!} />
         ) : tab === 'current' && current ? (
@@ -158,7 +158,7 @@ function Review({ rev, current }: { rev: DocRevision; current: DocDetail | null 
           <>
             {rev.isNew && (
               <>
-                <h2 className="text-3xl font-bold tracking-tight text-theme-text">{rev.title}</h2>
+                <h2 className="text-2xl font-bold tracking-tight text-theme-text">{rev.title}</h2>
                 {rev.summary && <p className="text-lg text-theme-muted font-medium mt-2">{rev.summary}</p>}
                 {rev.tags.length > 0 && <p className="flex flex-wrap gap-1.5 mt-3">{rev.tags.map(t => <span key={t} className="text-[0.6875rem] font-bold px-2 py-0.5 rounded-full bg-theme-lightest text-theme-deep">#{t}</span>)}</p>}
                 <hr className="my-6 border-theme-light/50" />

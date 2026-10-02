@@ -16,10 +16,11 @@ interface Meta { label: string; icon: Icon; className: string }
 
 // Durumlar yalnızca renkle değil ikon + etiketle de ayrışır (erişilebilirlik).
 export const USER_STATUS: Record<UserStatus, Meta & { dot: string }> = {
-  AKTIF: { label: 'Aktif', icon: Lightning, className: 'bg-theme-light text-theme-text border-theme-light', dot: 'bg-accent' },
-  TOPLANTIDA: { label: 'Toplantıda', icon: VideoCamera, className: 'bg-surface text-theme-text border-theme-dark', dot: 'bg-theme-dark' },
-  UZAKTAN: { label: 'Uzaktan', icon: Laptop, className: 'bg-theme-lightest text-theme-text border-theme-medium/60', dot: 'bg-theme-medium' },
-  IZINLI: { label: 'İzinli', icon: Airplane, className: 'bg-theme-cream text-theme-muted border-theme-light/70 border-dashed', dot: 'bg-theme-muted/40' },
+  // Durum rengi anlam taşır (yeşil = çalışıyor, amber = meşgul, mavi = uzaktan, gri = yok); rozette ikon + yazı da her zaman var.
+  AKTIF: { label: 'Aktif', icon: Lightning, className: 'bg-good-soft text-good-ink border-good/25', dot: 'bg-good' },
+  TOPLANTIDA: { label: 'Toplantıda', icon: VideoCamera, className: 'bg-warn-soft text-warn-ink border-warn-line', dot: 'bg-warn' },
+  UZAKTAN: { label: 'Uzaktan', icon: Laptop, className: 'bg-theme-lightest text-theme-deep border-theme-medium/35', dot: 'bg-theme-medium' },
+  IZINLI: { label: 'İzinli', icon: Airplane, className: 'bg-theme-lightest text-theme-muted border-theme-light border-dashed', dot: 'bg-theme-muted/50' },
 };
 
 export const ALL_STATUSES: UserStatus[] = ['AKTIF', 'TOPLANTIDA', 'UZAKTAN', 'IZINLI'];
@@ -43,28 +44,28 @@ export function statusHint(viewer: User, target: User): string | null {
 
 export const TASK_STATUS: Record<TaskStatus, Meta> = {
   YAPILACAK: { label: 'Yapılacak', icon: CircleDashed, className: 'text-theme-muted' },
-  DEVAM: { label: 'Devam Ediyor', icon: Hourglass, className: 'text-theme-dark' },
-  TAMAMLANDI: { label: 'Tamamlandı', icon: CheckCircle, className: 'text-theme-deep' },
+  DEVAM: { label: 'Devam ediyor', icon: Hourglass, className: 'text-theme-deep' },
+  TAMAMLANDI: { label: 'Tamamlandı', icon: CheckCircle, className: 'text-good' },
 };
 export const TASK_STATUSES: TaskStatus[] = ['YAPILACAK', 'DEVAM', 'TAMAMLANDI'];
 
 export const TASK_PRIORITY: Record<TaskPriority, Meta & { rank: number }> = {
   YUKSEK: { label: 'Yüksek', icon: Flag, className: 'bg-clay-soft text-clay-ink', rank: 0 },
-  ORTA: { label: 'Orta', icon: Flag, className: 'bg-theme-lightest text-theme-deep', rank: 1 },
-  DUSUK: { label: 'Düşük', icon: Flag, className: 'bg-theme-lightest text-theme-muted', rank: 2 },
+  ORTA: { label: 'Orta', icon: Flag, className: 'bg-theme-lightest text-theme-muted', rank: 1 },
+  DUSUK: { label: 'Düşük', icon: Flag, className: 'text-theme-muted', rank: 2 },
 };
 export const TASK_PRIORITIES: TaskPriority[] = ['YUKSEK', 'ORTA', 'DUSUK'];
 
 export const PROJECT_STATUS: Record<ProjectStatus, Meta> = {
   PLANLAMA: { label: 'Planlama', icon: PencilSimple, className: 'bg-theme-lightest text-theme-deep' },
-  AKTIF: { label: 'Aktif', icon: Target, className: 'bg-theme-light text-theme-text' },
+  AKTIF: { label: 'Aktif', icon: Target, className: 'bg-good-soft text-good-ink' },
   BEKLEMEDE: { label: 'Beklemede', icon: Pause, className: 'bg-theme-lightest text-theme-muted' },
   TAMAMLANDI: { label: 'Tamamlandı', icon: CheckCircle, className: 'bg-accent text-white' },
 };
 export const PROJECT_STATUSES: ProjectStatus[] = ['PLANLAMA', 'AKTIF', 'BEKLEMEDE', 'TAMAMLANDI'];
 
 export const LEAVE_TYPE: Record<LeaveType, Meta> = {
-  YILLIK: { label: 'Yıllık İzin', icon: Umbrella, className: 'bg-theme-medium' },
+  YILLIK: { label: 'Yıllık izin', icon: Umbrella, className: 'bg-theme-medium' },
   HASTALIK: { label: 'Hastalık', icon: FirstAid, className: 'bg-clay-mid' },
   MAZERET: { label: 'Mazeret', icon: Clock, className: 'bg-theme-dark' },
 };
@@ -74,8 +75,8 @@ export const LEAVE_GENERIC: Meta = { label: 'İzinli', icon: Airplane, className
 export const leaveTypeMeta = (type: LeaveType | null | undefined): Meta => (type ? LEAVE_TYPE[type] : LEAVE_GENERIC);
 
 export const LEAVE_STATE: Record<LeaveState, { label: string; className: string }> = {
-  BEKLIYOR: { label: 'Onay Bekliyor', className: 'bg-theme-lightest text-theme-deep border border-theme-light' },
-  ONAYLANDI: { label: 'Onaylandı', className: 'bg-theme-light text-theme-text' },
+  BEKLIYOR: { label: 'Onay bekliyor', className: 'bg-theme-lightest text-theme-deep border border-theme-light' },
+  ONAYLANDI: { label: 'Onaylandı', className: 'bg-good-soft text-good-ink' },
   REDDEDILDI: { label: 'Reddedildi', className: 'bg-theme-lightest text-theme-muted line-through' },
   IPTAL: { label: 'İptal edildi', className: 'bg-theme-lightest text-theme-muted line-through' },
 };
@@ -117,11 +118,30 @@ export function logActorName(log: { actorName: string | null; action: LogAction 
   return log.action === 'GIRIS_BASARISIZ' ? 'Bilinmeyen kişi' : 'Sistem';
 }
 
-export const AVATAR_COLORS = ['#F6F0D7', '#C5D89D', '#9CAB84', '#89986D', '#E4D9B4', '#B7C4A0'];
+/** Avatar zemini: soğuk pastel aile, üzerinde koyu yazı (her biri koyu yazıyla 7:1 üstü). */
+export const AVATAR_COLORS = ['#DCE7F8', '#D3E4F0', '#DDE3EE', '#E4DFF3', '#D6EBE7', '#EFE5D8'];
+/** Eski (zeytin) paletle kaydedilmiş avatar/liste renkleri yeni karşılıklarıyla gösterilir; veritabanı değişmez. */
+const LEGACY_COLOR: Record<string, string> = {
+  '#F6F0D7': '#EFE5D8', '#C5D89D': '#DCE7F8', '#9CAB84': '#D3E4F0', '#89986D': '#DDE3EE', '#E4D9B4': '#E4DFF3', '#B7C4A0': '#D6EBE7',
+  '#D8CFA6': '#E4DFF3', '#D9A88A': '#EFE5D8', '#A9B58F': '#D6EBE7',
+};
+export function avatarBg(color?: string | null) {
+  const c = (color || AVATAR_COLORS[0]).toUpperCase();
+  return LEGACY_COLOR[c] ?? c;
+}
+/** Liste/proje renk noktası: eski zeytin tonları yeni kategori renklerine çevrilir. */
+const LEGACY_LIST: Record<string, string> = {
+  '#9CAB84': '#5C87D8', '#C5D89D': '#3A9E9A', '#89986D': '#7A8BA6', '#D8CFA6': '#C9932C', '#D9A88A': '#D0728C', '#B7C4A0': '#8B7BD8',
+};
+export function listColor(color?: string | null) {
+  if (!color) return '#7A8BA6';
+  return LEGACY_LIST[color.toUpperCase()] ?? color;
+}
 
 /** Proje adından paletteki sabit bir renk üretir. */
 export function projectColor(name: string) {
-  const palette = ['#9CAB84', '#C5D89D', '#89986D', '#B7C4A0', '#D8CFA6', '#A9B58F'];
+  // Kategori renkleri: aynı doygunlukta, birbirinden ayrışan sakin tonlar (yalnızca küçük nokta/şerit olarak, yanında ad yazar)
+  const palette = ['#5C87D8', '#3A9E9A', '#8B7BD8', '#C9932C', '#D0728C', '#7A8BA6'];
   let h = 0;
   for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
   return palette[h % palette.length];
@@ -129,7 +149,7 @@ export function projectColor(name: string) {
 
 /** Sistem İzleme servis durumları; pill metni renkli yüzeyde en az 4.5:1 kontrastlıdır. */
 export const HEALTH_STATUS: Record<HealthStatus, Meta> = {
-  UP: { label: 'Sağlıklı', icon: CheckCircle, className: 'bg-theme-lightest text-theme-deep border-theme-light' },
+  UP: { label: 'Sağlıklı', icon: CheckCircle, className: 'bg-good-soft text-good-ink border-good/25' },
   WARN: { label: 'Uyarı', icon: WarningCircle, className: 'bg-warn-soft text-warn-ink border-warn-line' },
   DOWN: { label: 'Çalışmıyor', icon: XCircle, className: 'bg-danger-soft text-danger border-danger-line' },
   UNKNOWN: { label: 'Bilinmiyor', icon: Question, className: 'bg-theme-lightest text-theme-muted border-theme-light' },

@@ -108,7 +108,7 @@ export default function Team() {
         title="Çalışanlar"
         description="Şirketteki tüm çalışanlar: durumları, projeleri ve görevleri. Proje ekipleri Projeler sayfasındadır. Karta tıklayın; sağ tıkla işlemler açılır."
         actions={me.role === 'ADMIN' ? (
-          <button onClick={() => actions.newTask()} className="btn-primary"><UserPlus size={18} weight="bold" /> Görev Ata</button>
+          <button onClick={() => actions.newTask()} className="btn-primary"><UserPlus size={18} weight="bold" /> Görev ata</button>
         ) : undefined}
       />
 
@@ -174,7 +174,7 @@ export default function Team() {
           action={<button onClick={() => { setSearch(''); setStatus('ALL'); setProject(''); }} className="btn-secondary">Filtreleri temizle</button>}
         />
       ) : (
-        <motion.div variants={listContainer} initial="hidden" animate="visible" className="flex flex-col gap-3 pb-10">
+        <motion.div variants={listContainer} initial="hidden" animate="visible" className="card overflow-hidden divide-y divide-theme-light mb-10">
           {visible.map(user => (
             <motion.div
               key={user.id}

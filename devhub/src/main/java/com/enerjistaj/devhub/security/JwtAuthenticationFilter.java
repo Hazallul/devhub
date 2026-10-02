@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,11 +29,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
         try {
             String jwt = parseJwt(request);
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)) {
-                String username = jwtUtils.getUserNameFromJwtToken(jwt);
-
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                if (!userDetails.isEnabled()) {
+            Claims claims = jwt != null ? jwtUtils.parse(jwt) : null;
+            if (claims != null) {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(claims.getSubject());
+                // Pasif hesap ya da şifre değiştikten önce verilmiş token: kimlik doğrulanmaz, istek 401 alır.
+                boolean stale = userDetails instanceof SessionUser s && s.getSessionVersion() != JwtUtils.sessionVersion(claims);
+                if (!userDetails.isEnabled() || stale) {
                     filterChain.doFilter(request, response);
                     return;
                 }

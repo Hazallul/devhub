@@ -20,6 +20,13 @@ api.interceptors.response.use(
     (res) => res,
     (error) => {
         const isLogin = String(error.config?.url ?? '').includes('/auth/login');
+        // Şifre bu tarayıcıda değiştiyse eski token'la yola çıkmış istek 401 alabilir: yeni token'la bir kez tekrarlanır.
+        const sent = String(error.config?.headers?.Authorization ?? '').replace(/^Bearer /, '');
+        const current = localStorage.getItem('token');
+        if (error.response?.status === 401 && !isLogin && current && sent && sent !== current && !error.config.__retried) {
+            error.config.__retried = true;
+            return api.request(error.config);
+        }
         if (error.response?.status === 401 && !isLogin) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');

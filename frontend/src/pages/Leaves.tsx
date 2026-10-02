@@ -96,20 +96,20 @@ function BarTooltip({ tip, holidays }: { tip: TooltipState | null; holidays: Rea
             <div className="bg-ink text-white rounded-2xl shadow-float p-3.5">
               <div className="flex items-center justify-between gap-2">
                 <p className="text-sm font-bold">{tip.user.fullName}</p>
-                <span className="text-[0.625rem] font-bold uppercase tracking-wide bg-white/15 px-1.5 py-0.5 rounded-md">
+                <span className="text-[0.625rem] font-bold bg-white/15 px-1.5 py-0.5 rounded-md">
                   {tip.leave.state === 'BEKLIYOR' ? 'Onay bekliyor' : LEAVE_STATE[tip.leave.state].label}
                 </span>
               </div>
               <p className="text-xs text-white/80 font-medium mt-1">{leaveTypeMeta(tip.leave.type).label} · {rangeLabel(tip.leave, holidays)}</p>
               {tip.leave.note && (
                 <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 flex gap-1.5 leading-relaxed">
-                  <ChatText size={14} weight="bold" className="shrink-0 mt-px text-[#C5D89D]" aria-hidden="true" />
+                  <ChatText size={14} weight="bold" className="shrink-0 mt-px text-[#A9C4F5]" aria-hidden="true" />
                   <span>“{tip.leave.note}”</span>
                 </p>
               )}
               {tip.leave.decisionNote && (
                 <p className="text-xs text-white mt-2 pt-2 border-t border-white/15 leading-relaxed">
-                  <span className="block text-[0.625rem] font-bold uppercase tracking-wide text-white/60 mb-0.5">{tip.leave.decidedByName ?? 'Yönetici'} açıklaması</span>
+                  <span className="block text-[0.625rem] font-bold text-white/60 mb-0.5">{tip.leave.decidedByName ?? 'Yönetici'} açıklaması</span>
                   {tip.leave.decisionNote}
                 </p>
               )}
@@ -300,9 +300,9 @@ export default function Leaves() {
     <>
       <PageHeader
         eyebrow="İzinler"
-        title="İzin Yönetimi"
+        title="İzinler"
         description={isAdmin ? 'Talepleri onaylayın, önümüzdeki iki haftada kimin izinde olacağını görün.' : 'İzin talebi oluşturun ve ekibin izin takvimini görün.'}
-        actions={<button onClick={() => actions.newLeave()} className="btn-primary"><Plus size={18} weight="bold" /> İzin Talebi</button>}
+        actions={<button onClick={() => actions.newLeave()} className="btn-primary"><Plus size={18} weight="bold" /> İzin talebi</button>}
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -322,10 +322,10 @@ export default function Leaves() {
       </div>
 
       {/* Ekip takvimi */}
-      <section id="leave-calendar" className="card p-6 mb-8 overflow-hidden" aria-labelledby="cal-title">
+      <section id="leave-calendar" className="card p-5 mb-8 overflow-hidden" aria-labelledby="cal-title">
         <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
           <div>
-            <h2 id="cal-title" className="text-lg font-bold tracking-tight">Ekip İzin Takvimi</h2>
+            <h2 id="cal-title" className="text-base font-semibold">Ekip izin takvimi</h2>
             <AnimatePresence mode="wait" initial={false}>
               <motion.p
                 key={windowStart}
@@ -390,14 +390,14 @@ export default function Leaves() {
                       const showMonth = i === BUFFER || d.getDate() === 1;
                       return (
                         <div key={iso} className={`text-center px-px ${past ? 'opacity-40' : ''}`} style={{ flex: `0 0 ${100 / TOTAL}%` }}>
-                          <p className={`text-[0.625rem] font-bold uppercase tracking-wide h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
+                          <p className={`text-[0.625rem] font-bold h-4 ${showMonth ? 'text-theme-deep' : 'text-transparent'}`} aria-hidden={!showMonth}>
                             {showMonth ? monthName.format(d) : '·'}
                           </p>
                           <div
                             title={holidayName ? `Resmi tatil: ${holidayName}` : undefined}
                             className={`py-1.5 rounded-lg ${isToday ? 'bg-accent text-white' : holidayName ? 'bg-clay-soft text-clay-ink' : weekend ? 'text-theme-muted/60' : 'text-theme-muted'} ${d.getDate() === 1 && i !== BUFFER ? 'border-l-2 border-theme-medium rounded-l-none' : ''}`}
                           >
-                            <p className="text-[0.625rem] font-bold uppercase">{weekday.format(d)}</p>
+                            <p className="text-[0.625rem] font-bold">{weekday.format(d)}</p>
                             <p className="text-sm font-bold tabular">{d.getDate()}</p>
                           </div>
                         </div>
@@ -501,8 +501,8 @@ export default function Leaves() {
       <div className={`grid gap-6 pb-10 ${isAdmin ? 'lg:grid-cols-2' : ''}`}>
         {isAdmin && (
           <section aria-labelledby="pending-title">
-            <h2 id="pending-title" className="text-lg font-bold tracking-tight mb-4 flex items-center gap-2">
-              Onay Bekleyenler <Pill className="bg-accent text-white">{pending.length}</Pill>
+            <h2 id="pending-title" className="text-base font-semibold mb-4 flex items-center gap-2">
+              Onay bekleyenler <Pill className="bg-accent text-white">{pending.length}</Pill>
             </h2>
             {pending.length === 0 ? (
               <EmptyState icon={CalendarCheck} title="Bekleyen talep yok" description="Yeni talepler geldiğinde burada görünecek." />
@@ -538,7 +538,7 @@ export default function Leaves() {
               </ul>
             )}
 
-            <h2 id="open-decisions-title" className="text-lg font-bold tracking-tight mt-8 mb-1 flex items-center gap-2">
+            <h2 id="open-decisions-title" className="text-base font-semibold mt-8 mb-1 flex items-center gap-2">
               Kesinleşmemiş Kararlar <Pill className="bg-theme-lightest text-theme-deep border border-theme-light">{openDecisions.length}</Pill>
             </h2>
             <p className="text-sm text-theme-muted mb-4">Yanlış karar verdiyseniz geri alın; emin olduğunuzda kesinleştirin. Kesinleşen karar değiştirilemez.</p>
@@ -581,7 +581,7 @@ export default function Leaves() {
         )}
 
         <section aria-labelledby="mine-title">
-          <h2 id="mine-title" className="text-lg font-bold tracking-tight mb-4 flex items-center gap-2">
+          <h2 id="mine-title" className="text-base font-semibold mb-4 flex items-center gap-2">
             Taleplerim <Pill className="bg-theme-lightest text-theme-deep border border-theme-light">{mine.length}</Pill>
           </h2>
           {mine.length === 0 ? (

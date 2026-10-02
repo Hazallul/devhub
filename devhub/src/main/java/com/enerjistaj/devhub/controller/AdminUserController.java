@@ -32,7 +32,7 @@ import java.util.Map;
 public class AdminUserController {
 
     private static final String ONLY_ADMIN = "Kullanıcı yönetimi yalnızca yöneticilere açıktır.";
-    private static final String[] AVATAR_COLORS = {"#F6F0D7", "#C5D89D", "#9CAB84", "#89986D", "#E4D9B4", "#B7C4A0"};
+    private static final String[] AVATAR_COLORS = {"#DCE7F8", "#D3E4F0", "#DDE3EE", "#E4DFF3", "#D6EBE7", "#EFE5D8"};
     private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
     private static final SecureRandom RANDOM = new SecureRandom();
 
@@ -46,6 +46,7 @@ public class AdminUserController {
     private final com.enerjistaj.devhub.realtime.RealtimeService realtime;
     private final com.enerjistaj.devhub.onboarding.OnboardingService onboarding;
     private final com.enerjistaj.devhub.service.TaskTimeService taskTime;
+    private final com.enerjistaj.devhub.service.SessionService sessionService;
 
     /** Pasifler dahil tüm kullanıcılar. */
     @GetMapping
@@ -187,10 +188,11 @@ public class AdminUserController {
         String temporaryPassword = generatePassword();
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setMustChangePassword(true);
+        sessionService.revokeAll(user);
         userRepository.save(user);
         actionLogService.record(LogCategory.KULLANICI, LogAction.SIFRE_SIFIRLAMA, "Geçici şifre oluşturuldu: " + user.getFullName()).by(me)
                 .target("KULLANICI", user.getId(), user.getFullName())
-                .detail("Eski şifre geçersiz; kişi bir sonraki girişte şifresini değiştirmek zorunda")
+                .detail("Eski şifre geçersiz, açık oturumları kapatıldı; kişi bir sonraki girişte şifresini değiştirmek zorunda")
                 .detail("Şifrenin kendisi loglanmaz").level(LogLevel.KRITIK).save();
         return ResponseEntity.ok(Map.of("temporaryPassword", temporaryPassword));
     }

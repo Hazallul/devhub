@@ -15,3 +15,7 @@ CLAUDE.md
 # Ortam dosyaları (.env.example ve .env.development geliştirme içindir, depoda kalır)
 .env
 .env.local
+
+# Tasarım aracının geliştirme dosyaları
+.impeccable/
+PRODUCT.md

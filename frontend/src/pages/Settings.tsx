@@ -18,8 +18,8 @@ export default function Settings() {
         <ProfileCard />
 
         <div className="space-y-6">
-          <section className="card p-6" aria-labelledby="role-title">
-            <h2 id="role-title" className="text-lg font-bold tracking-tight flex items-center gap-2 mb-3"><ShieldCheck size={20} weight="duotone" className="text-theme-deep" /> Yetkiler</h2>
+          <section className="card p-5" aria-labelledby="role-title">
+            <h2 id="role-title" className="text-base font-semibold flex items-center gap-2 mb-3"><ShieldCheck size={20} weight="duotone" className="text-theme-deep" /> Yetkiler</h2>
             <p className="text-sm font-semibold mb-2">{me.role === 'ADMIN' ? 'Yönetici' : 'Çalışan'}</p>
             <ul className="text-sm text-theme-muted space-y-1.5 list-disc pl-5">
               {me.role === 'ADMIN' ? <>
@@ -64,8 +64,8 @@ function AppearanceCard() {
   const [pref] = useTheme();
   const scale = useUiScale();
   return (
-    <section className="card p-6" aria-labelledby="theme-title">
-      <h2 id="theme-title" className="text-lg font-bold tracking-tight flex items-center gap-2 mb-1"><Palette size={20} weight="duotone" className="text-theme-deep" /> Görünüm</h2>
+    <section className="card p-5" aria-labelledby="theme-title">
+      <h2 id="theme-title" className="text-base font-semibold flex items-center gap-2 mb-1"><Palette size={20} weight="duotone" className="text-theme-deep" /> Görünüm</h2>
       <p className="text-sm text-theme-muted mb-4">Bu cihazda kullanılacak tema.</p>
       <div role="radiogroup" aria-label="Tema" className="grid grid-cols-3 gap-2">
         {THEMES.map(t => {

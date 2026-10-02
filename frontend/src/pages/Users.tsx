@@ -16,12 +16,12 @@ import type { Decision } from '../components/ui/DecisionModal';
 import { ProfileDiff } from '../components/settings/ProfileCard';
 import {
   useMe, useAdminUsers, useProjects, useLeaveBalances, useCreateUser, useUpdateUser, useSetUserActive, useResetPassword,
-  useProfileRequests, useDecideProfileRequest, useDeleteUser, useDeleteImpact
+  useProfileRequests, useDecideProfileRequest, useDeleteUser, useDeleteImpact, usePasswordResets, useDecidePasswordReset
 } from '../hooks/api';
 import type { UserInput } from '../hooks/api';
 import { formatDate, formatFullDate, leaveEntitlement, seniorityLabel, timeAgo, toIsoDay, trLower } from '../lib/format';
 import { listContainer, listItem } from '../lib/motion';
-import type { OnboardingProgress, ProfileRequest, Role, User } from '../types';
+import type { OnboardingProgress, PasswordResetRequest, ProfileRequest, Role, User } from '../types';
 
 type Filter = 'ACTIVE' | 'INACTIVE' | 'ALL';
 
@@ -61,6 +61,12 @@ function UsersPage() {
   const [deciding, setDeciding] = useState<{ request: ProfileRequest; decision: Decision } | null>(null);
   const pendingRequests = (profileRequests ?? []).filter(r => r.state === 'BEKLIYOR');
 
+  // Şifremi unuttum: e-posta kodu doğrulanmış, yönetici onayı bekleyen talepler
+  const { data: resetRequests } = usePasswordResets(true);
+  const decideReset = useDecidePasswordReset();
+  const [decidingReset, setDecidingReset] = useState<{ request: PasswordResetRequest; decision: Decision } | null>(null);
+  const pendingResets = (resetRequests ?? []).filter(r => r.state === 'ONAY_BEKLIYOR');
+
   const balanceOf = useMemo(() => new Map((balances ?? []).map(b => [b.userId, b])), [balances]);
 
   const counts = {
@@ -99,17 +105,71 @@ function UsersPage() {
         actions={
           <div className="flex items-center gap-2">
             <button onClick={() => setStepsOpen(true)} className="btn-secondary" title="Yeni başlayanların Genel Bakış'ta gördüğü adımlar"><Flag size={18} weight="bold" /> Başlangıç adımları</button>
-            <button onClick={() => setEditing('new')} className="btn-primary"><UserPlus size={18} weight="bold" /> Yeni Kullanıcı</button>
+            <button onClick={() => setEditing('new')} className="btn-primary"><UserPlus size={18} weight="bold" /> Yeni kullanıcı</button>
           </div>
         }
       />
 
       <AnimatePresence initial={false}>
+        {pendingResets.length > 0 && (
+          <motion.section initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden" aria-labelledby="reset-requests-title">
+            <div className="mb-8">
+              <h2 id="reset-requests-title" className="text-base font-semibold mb-1 flex items-center gap-2">
+                Şifre sıfırlama talepleri <Pill className="bg-accent text-white">{pendingResets.length}</Pill>
+              </h2>
+              <p className="text-sm text-theme-muted mb-4">Kişi e-postasına gelen kodu doğruladı ve yeni şifresini belirledi. Onaylarsanız yeni şifre geçerli olur; o zamana kadar eski şifre çalışır.</p>
+              <ul className="card divide-y divide-theme-light">
+                <AnimatePresence initial={false}>
+                  {pendingResets.map(r => {
+                    const u = users?.find(x => x.id === r.userId);
+                    const own = r.userId === me.id;
+                    return (
+                      <motion.li key={r.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, x: 40, transition: { duration: 0.18 } }} className="p-4 flex flex-wrap items-center gap-4">
+                        {u ? <Avatar user={u} size="sm" /> : <span className="w-8 h-8 rounded-full bg-theme-lightest flex items-center justify-center"><Key size={16} aria-hidden="true" /></span>}
+                        <div className="flex-1 min-w-[13.75rem]">
+                          <p className="text-sm font-semibold truncate">{r.userName} <span className="font-normal text-theme-muted">· {timeAgo(r.createdAt)}</span></p>
+                          <p className="text-xs text-theme-muted mt-0.5 truncate">{r.userEmail}{r.requestIp ? ` · ${r.requestIp}` : ''}</p>
+                        </div>
+                        <div className="flex gap-2 shrink-0 ml-auto">
+                          <button onClick={() => setDecidingReset({ request: r, decision: 'REDDEDILDI' })} className="icon-btn border border-theme-light/70 hover:text-danger hover:bg-danger-soft hover:border-transparent" aria-label={`${r.userName} şifre talebini reddet`} title="Reddet">
+                            <X size={18} weight="bold" />
+                          </button>
+                          <button onClick={() => setDecidingReset({ request: r, decision: 'ONAYLANDI' })} disabled={own} className="btn-primary h-10 min-h-0 px-4 text-sm disabled:opacity-50"
+                            aria-label={`${r.userName} şifre talebini onayla`} title={own ? 'Kendi talebinizi başka bir yönetici onaylamalı' : 'Onayla'}>
+                            <Check size={16} weight="bold" /> Onayla
+                          </button>
+                        </div>
+                      </motion.li>
+                    );
+                  })}
+                </AnimatePresence>
+              </ul>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      <DecisionModal
+        decision={decidingReset?.decision ?? null}
+        onClose={() => setDecidingReset(null)}
+        subject="şifre sıfırlama talebini"
+        pending={decideReset.isPending}
+        onConfirm={note => decidingReset && decideReset.mutate({ id: decidingReset.request.id, decision: decidingReset.decision, note }, { onSuccess: () => setDecidingReset(null) })}
+      >
+        {decidingReset && (
+          <>
+            <p className="text-sm font-semibold text-theme-text">{decidingReset.request.userName}</p>
+            <p className="text-xs text-theme-muted mt-0.5">{decidingReset.request.userEmail}. Not yazarsanız kişiye e-postayla gider.</p>
+          </>
+        )}
+      </DecisionModal>
+
+      <AnimatePresence initial={false}>
         {pendingRequests.length > 0 && (
           <motion.section initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden" aria-labelledby="profile-requests-title">
             <div className="mb-8">
-              <h2 id="profile-requests-title" className="text-lg font-bold tracking-tight mb-1 flex items-center gap-2">
-                Profil Değişikliği Talepleri <Pill className="bg-accent text-white">{pendingRequests.length}</Pill>
+              <h2 id="profile-requests-title" className="text-base font-semibold mb-1 flex items-center gap-2">
+                Profil değişikliği talepleri <Pill className="bg-accent text-white">{pendingRequests.length}</Pill>
               </h2>
               <p className="text-sm text-theme-muted mb-4">Çalışanlar ad soyad ve unvanlarını doğrudan değiştiremez; onayladığınızda değişiklik profile uygulanır.</p>
               <ul className="space-y-3">
@@ -179,7 +239,7 @@ function UsersPage() {
       ) : visible.length === 0 ? (
         <EmptyState icon={UserPlus} title="Kullanıcı bulunamadı" description={filter === 'INACTIVE' ? 'Pasifleştirilmiş hesap yok.' : 'Arama ölçütlerini değiştirin.'} />
       ) : (
-        <motion.ul variants={listContainer} initial="hidden" animate="visible" className="space-y-3 pb-10">
+        <motion.ul variants={listContainer} initial="hidden" animate="visible" className="card overflow-hidden divide-y divide-theme-light mb-10">
           {visible.map(u => {
             const b = balanceOf.get(u.id);
             const seniority = seniorityLabel(u.hireDate);
@@ -189,24 +249,24 @@ function UsersPage() {
                 variants={listItem}
                 layout="position"
                 onContextMenu={e => { e.preventDefault(); setMenu({ user: u, point: { x: e.clientX, y: e.clientY } }); }}
-                className={`card p-4 sm:p-5 flex items-center gap-4 ${u.active ? '' : 'opacity-70'}`}
+                className={`px-4 py-3 flex items-center gap-4 hover:bg-theme-lightest/40 transition-colors ${u.active ? '' : 'opacity-70'}`}
               >
-                <Avatar user={u.active ? u : { ...u, status: null }} />
+                <Avatar user={u.active ? u : { ...u, status: null }} size="sm" />
                 <div className="min-w-0 flex-1 sm:flex-none sm:w-64">
                   <div className="flex items-center gap-2">
                     <p className="font-bold truncate">{u.fullName}</p>
-                    {u.id === me.id && <span className="text-[0.625rem] font-bold uppercase bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md">Sen</span>}
+                    {u.id === me.id && <span className="text-[0.625rem] font-bold bg-theme-lightest text-theme-deep px-1.5 py-0.5 rounded-md">Sen</span>}
                   </div>
                   <p className="text-xs text-theme-muted font-medium truncate">{u.email}</p>
                 </div>
                 <div className="hidden md:block w-44 min-w-0">
                   <p className="eyebrow mb-0.5">Unvan · Proje</p>
-                  <p className="text-sm font-semibold truncate">{u.jobTitle || '—'}</p>
+                  <p className="text-sm font-semibold truncate">{u.jobTitle || '-'}</p>
                   <p className="text-xs text-theme-muted truncate">{u.currentProject || 'Boşta'}</p>
                 </div>
                 <div className="hidden lg:block w-36">
                   <p className="eyebrow mb-0.5">İşe giriş</p>
-                  <p className="text-sm font-semibold">{u.hireDate ? formatDate(u.hireDate) : '—'}</p>
+                  <p className="text-sm font-semibold">{u.hireDate ? formatDate(u.hireDate) : '-'}</p>
                   {seniority && <p className="text-xs text-theme-muted">{seniority}</p>}
                 </div>
                 <div className="hidden lg:block w-32">
@@ -220,7 +280,7 @@ function UsersPage() {
                   )}
                 </div>
                 <div className="ml-auto flex items-center gap-2 shrink-0">
-                  {u.role === 'ADMIN' && <Pill className="bg-accent text-white"><ShieldCheck size={11} weight="bold" /> Yönetici</Pill>}
+                  {u.role === 'ADMIN' && <Pill className="border border-theme-medium/40 text-theme-deep"><ShieldCheck size={11} weight="bold" /> Yönetici</Pill>}
                   <OnboardingPill progress={progressOf.get(u.id)} active={u.active} />
                   {!u.active && <Pill className="bg-theme-lightest text-theme-muted"><Prohibit size={11} weight="bold" /> Pasif</Pill>}
                   {u.mustChangePassword && u.active && <Pill className="bg-danger-soft text-danger-ink"><Key size={11} weight="bold" /> Geçici şifre</Pill>}
@@ -411,7 +471,7 @@ function UserFormModal({ target, onClose, onCreated }: {
 <div>
             <span className="label">Yıllık izin hakkı</span>
             <p className="input bg-theme-cream/60 flex items-center justify-between gap-2 cursor-default" aria-live="polite">
-              <span className="font-bold tabular">{leave ? `${leave.days} gün` : '—'}</span>
+              <span className="font-bold tabular">{leave ? `${leave.days} gün` : '-'}</span>
               <span className="text-xs font-semibold text-theme-muted">kıdeme göre otomatik</span>
             </p>
           </div>
@@ -439,7 +499,7 @@ function UserFormModal({ target, onClose, onCreated }: {
         {isNew && (
           <Field id="u-password" label="Başlangıç şifresi" required error={errors.password}>
             <div className="flex gap-2">
-              <input id="u-password" className="input font-mono tracking-wide" value={form.password} onChange={e => set('password', e.target.value)} autoComplete="off" spellCheck={false} />
+              <input id="u-password" className="input font-mono" value={form.password} onChange={e => set('password', e.target.value)} autoComplete="off" spellCheck={false} />
               <button type="button" onClick={() => set('password', makePassword())} className="btn-secondary shrink-0 px-3.5" title="Yeni şifre öner">
                 <ArrowsClockwise size={17} weight="bold" /> Yenile
               </button>
@@ -500,7 +560,7 @@ function TempPasswordModal({ value, onClose }: { value: { user: Pick<User, 'full
       {value && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 p-2 pl-4 rounded-2xl bg-theme-cream border border-theme-light">
-            <code className="flex-1 font-mono text-lg font-bold tracking-wider select-all">{value.password}</code>
+            <code className="flex-1 font-mono text-lg font-bold select-all">{value.password}</code>
             <button type="button" onClick={copy} className="btn-secondary h-10 min-h-0 px-3 text-sm" aria-live="polite">
               <AnimatePresence mode="wait" initial={false}>
                 <motion.span key={copied ? 'ok' : 'copy'} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} className="inline-flex items-center gap-1.5">

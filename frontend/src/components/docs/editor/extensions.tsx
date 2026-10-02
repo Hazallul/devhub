@@ -69,7 +69,7 @@ function CalloutView({ node, updateAttributes, editor, getPos }: ReactNodeViewPr
             id={`callout-${getPos()}`}
             value={kind}
             onChange={e => updateAttributes({ kind: e.target.value })}
-            className={`text-xs font-bold uppercase tracking-wider bg-transparent rounded-md pr-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-medium ${c.iconClass}`}
+            className={`text-xs font-bold bg-transparent rounded-md pr-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-theme-medium ${c.iconClass}`}
             title="Kutunun türünü değiştir"
           >
             {CALLOUT_KINDS.map(k => <option key={k} value={k}>{CALLOUT[k].label}</option>)}
@@ -98,7 +98,7 @@ function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
         <select
           value={CODE_LANGS.some(l => l.id === lang) ? lang : 'text'}
           onChange={e => updateAttributes({ language: e.target.value })}
-          className="text-[0.6875rem] font-bold uppercase tracking-wider text-white/80 bg-transparent rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-theme-text"
+          className="text-[0.6875rem] font-bold text-white/80 bg-transparent rounded-md cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/40 [&>option]:text-theme-text"
           aria-label="Kod dili"
           title="Kodun dilini seçin"
         >
@@ -106,7 +106,7 @@ function CodeBlockView({ node, updateAttributes }: ReactNodeViewProps) {
         </select>
         <span className="ml-auto text-[0.6875rem] text-white/45 font-semibold hidden sm:inline">Çıkmak için alta iki kez Enter</span>
       </div>
-      <pre className="overflow-x-auto scrollbar-thin p-4 text-[0.8125rem] leading-6 text-[#F6F0D7] m-0">
+      <pre className="overflow-x-auto scrollbar-thin p-4 text-[0.8125rem] leading-6 text-[#E7EBF1] m-0">
         <NodeViewContent<'code'> as="code" className="font-mono block whitespace-pre" />
       </pre>
     </NodeViewWrapper>

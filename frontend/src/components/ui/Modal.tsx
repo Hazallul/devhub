@@ -55,17 +55,17 @@ export default function Modal({ open, onClose, title, description, children, siz
 
   const body = (
     <>
-      <div className="flex items-start justify-between gap-4 p-6 sm:p-8 pb-0 sm:pb-0">
+      <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-4 border-b border-theme-light">
         <div>
-          <h2 id={titleId} className="text-2xl font-bold tracking-tight text-theme-text">{title}</h2>
-          {description && <p className="text-sm text-theme-muted font-medium mt-1">{description}</p>}
+          <h2 id={titleId} className="text-lg font-semibold tracking-tight text-theme-text">{title}</h2>
+          {description && <p className="text-sm text-theme-muted mt-0.5 text-pretty">{description}</p>}
         </div>
-        <button type="button" onClick={onClose} aria-label="Kapat" className="icon-btn bg-theme-lightest text-theme-deep hover:bg-theme-light shrink-0">
+        <button type="button" onClick={onClose} aria-label="Kapat" className="icon-btn w-8 h-8 -mr-2 shrink-0">
           <X size={18} weight="bold" />
         </button>
       </div>
-      <div className="p-6 sm:p-8 overflow-y-auto scrollbar-thin flex-1">{children}</div>
-      {footer && <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-0 flex gap-3 justify-end">{footer}</div>}
+      <div className="px-6 py-5 overflow-y-auto scrollbar-thin flex-1">{children}</div>
+      {footer && <div className="px-6 py-4 border-t border-theme-light bg-theme-lightest/40 rounded-b-3xl flex gap-2 justify-end">{footer}</div>}
     </>
   );
 
@@ -78,7 +78,7 @@ export default function Modal({ open, onClose, title, description, children, siz
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.15 } }}
             onClick={onClose}
-            className="absolute inset-0 bg-ink/30 backdrop-blur-sm"
+            className="absolute inset-0 bg-ink/40"
           />
           <motion.div
             ref={panelRef}
@@ -90,7 +90,7 @@ export default function Modal({ open, onClose, title, description, children, siz
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`relative w-full ${WIDTH[size]} bg-surface rounded-4xl shadow-2xl max-h-[88vh] flex flex-col outline-none`}
+            className={`relative w-full ${WIDTH[size]} bg-surface rounded-3xl shadow-float border border-theme-light max-h-[88vh] flex flex-col outline-none`}
           >
             {onSubmit ? <form onSubmit={onSubmit} className="flex flex-col min-h-0">{body}</form> : body}
           </motion.div>

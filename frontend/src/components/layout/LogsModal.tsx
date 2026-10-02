@@ -26,7 +26,7 @@ export default function LogsModal({ open, onClose }: { open: boolean; onClose: (
   const visible = parsed.filter(l => (filter === 'ALL' || l.type === filter) && (!q || trLower(`${l.text} ${l.actor}`).includes(q)));
 
   return (
-    <Modal open={open} onClose={onClose} size="lg" title="Ekip Akışı" description="Projeler, görevler, duyurular ve durum değişiklikleri. Ayrıntılı sistem loglarını yöneticiler görür.">
+    <Modal open={open} onClose={onClose} size="lg" title="Ekip akışı" description="Projeler, görevler, duyurular ve durum değişiklikleri. Ayrıntılı sistem loglarını yöneticiler görür.">
       <div className="space-y-4 -mt-2">
         <div className="relative">
           <MagnifyingGlass className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted" size={18} aria-hidden="true" />

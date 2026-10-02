@@ -221,7 +221,7 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
               maxLength={200}
               aria-invalid={!!errors.title}
               aria-describedby={errors.title ? 'doc-title-err' : undefined}
-              className="w-full bg-transparent text-3xl sm:text-4xl font-bold tracking-tight text-theme-text placeholder:text-theme-muted/50 focus:outline-none border-b-2 border-transparent focus:border-theme-light pb-1"
+              className="w-full bg-transparent text-2xl font-bold tracking-tight text-theme-text placeholder:text-theme-muted/50 focus:outline-none border-b-2 border-transparent focus:border-theme-light pb-1"
             />
             {errors.title && <p id="doc-title-err" className="text-sm font-semibold text-danger mt-1">{errors.title}</p>}
           </div>
@@ -250,9 +250,9 @@ function EditForm({ initial, docId, slug, baseVersion, currentVersion, proposalI
       </div>
 
       {preview ? (
-        <div className="card p-6 sm:p-10">
+        <div className="card p-5 sm:p-10">
           <p className="eyebrow mb-2">Önizleme · {categoryName(draft.category)}</p>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-theme-text">{draft.title.trim() || 'Başlıksız doküman'}</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-theme-text">{draft.title.trim() || 'Başlıksız doküman'}</h2>
           {draft.summary.trim() && <p className="text-lg text-theme-muted font-medium mt-3">{draft.summary}</p>}
           <hr className="my-6 border-theme-light/50" />
           <DocContent doc={draft.content} />

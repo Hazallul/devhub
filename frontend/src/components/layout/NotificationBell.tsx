@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
 import {
-  Bell, Flag, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree, BookOpenText,
-} from '@phosphor-icons/react';
+  Bell, Flag, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree, BookOpenText, Key } from '@phosphor-icons/react';
 import { Menu } from '../ui/Menu';
 import { Skeleton } from '../ui/primitives';
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllNotificationsRead } from '../../hooks/api';
@@ -31,6 +30,7 @@ export const TYPE_ICON: Record<NotificationType, Icon> = {
   STATUS_CHANGED: Lightning,
   ANNOUNCEMENT: Megaphone,
   ONBOARDING_DONE: Flag,
+  PASSWORD_RESET_REQUESTED: Key,
 };
 
 

@@ -21,18 +21,15 @@ export default function PasswordCard() {
     if (next !== repeat) { setError('Yeni şifreler birbiriyle aynı değil.'); return; }
     setError('');
     change.mutate({ currentPassword: current, newPassword: next }, {
-      onSuccess: (user) => {
-        setCurrent(''); setNext(''); setRepeat('');
-        try { localStorage.setItem('user', JSON.stringify(user)); } catch { /* yok say */ }
-      },
+      onSuccess: () => { setCurrent(''); setNext(''); setRepeat(''); },
     });
   };
 
   const type = show ? 'text' : 'password';
   return (
-    <form onSubmit={submit} className={`card p-6 space-y-4 ${me.mustChangePassword ? 'ring-2 ring-danger-line' : ''}`} aria-labelledby="pw-title">
+    <form onSubmit={submit} className={`card p-5 space-y-4 ${me.mustChangePassword ? 'ring-2 ring-danger-line' : ''}`} aria-labelledby="pw-title">
       <div className="flex items-center justify-between">
-        <h2 id="pw-title" className="text-lg font-bold tracking-tight flex items-center gap-2"><Key size={20} weight="duotone" className="text-theme-deep" /> Şifre</h2>
+        <h2 id="pw-title" className="text-base font-semibold flex items-center gap-2"><Key size={20} weight="duotone" className="text-theme-deep" /> Şifre</h2>
         <button type="button" onClick={() => setShow(s => !s)} className="icon-btn w-9 h-9" aria-label={show ? 'Şifreleri gizle' : 'Şifreleri göster'}>
           {show ? <EyeSlash size={18} weight="bold" /> : <Eye size={18} weight="bold" />}
         </button>

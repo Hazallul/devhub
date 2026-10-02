@@ -35,13 +35,13 @@ export default function EffortPanel({ task, canEdit, canEditEstimate }: { task: 
       </div>
 
       <div className="grid grid-cols-3 gap-3">
-        <Stat label="Tahmini" value={est ? formatEstimate(est) : '—'}
+        <Stat label="Tahmini" value={est ? formatEstimate(est) : '-'}
           action={canEditEstimate && editing !== 'estimate' ? () => setEditing('estimate') : undefined} actionLabel="Tahmini süreyi değiştir" />
         <Stat label="Harcanan" value={formatDuration(spent)} strong
           action={canEdit && editing !== 'spent' ? () => setEditing('spent') : undefined} actionLabel="Harcanan süreyi düzelt" />
         <Stat
           label={over > 0 ? 'Aşım' : 'Kalan'}
-          value={!est ? '—' : over > 0 ? `+${formatDuration(over)}` : status === 'TAMAMLANDI' ? 'Bitti' : formatDuration(est * 60 - spent)}
+          value={!est ? '-' : over > 0 ? `+${formatDuration(over)}` : status === 'TAMAMLANDI' ? 'Bitti' : formatDuration(est * 60 - spent)}
           tone={over > 0 ? 'text-danger' : undefined}
         />
       </div>

@@ -5,30 +5,37 @@
 @layer base {
   /* Renk değişkenleri ("R G B"): tailwind.config.js bunları theme.*, surface, ink, accent, danger/warn/clay/good olarak kullanır.
      Koyu tema html.dark ile açılır (Ayarlar > Görünüm; tercih localStorage "devhub.theme", ilk boyamadan önce index.html'deki betikle uygulanır). */
+  /* Renk değişkenleri ("R G B"). Yön B: soğuk gri tek aile + tek mavi vurgu (Swiss/minimal iş aracı).
+     Token adları eski paletten kalma ama anlamları sabit:
+       cream = sayfa zemini, surface = kart/panel, lightest = nötr dolgu (hover, seçili satır, ikincil düğme),
+       light = çizgi/kenarlık, medium = yumuşak mavi (odak halkası, ilerleme), dark = ikincil ikon/metin,
+       deep = vurgu metni (bağlantı, seçili menü), accent = beyaz yazılı ana düğme, text/muted = metin.
+     Tüm metin renkleri iki temada da zemine karşı en az 4.5:1. */
   :root {
     color-scheme: light;
-    --lightest: 246 240 215; --light: 197 216 157; --medium: 156 171 132; --dark: 137 152 109; --deep: 90 102 71;
-    --cream: 251 248 236; --text: 44 38 56; --muted: 107 101 119;
-    --surface: 255 255 255; --ink: 44 38 56; --accent: 90 102 71; --shadow: 44 38 56;
-    --danger: 154 59 27; --danger-soft: 251 237 229; --danger-line: 239 201 181; --danger-ink: 122 62 31; --danger-solid: 154 59 27; --danger-solid-hover: 126 47 21;
-    --warn: 184 134 27; --warn-soft: 247 236 208; --warn-line: 232 211 156; --warn-ink: 110 82 16;
-    --clay: 201 116 79; --clay-soft: 243 225 214; --clay-line: 233 201 184; --clay-ink: 138 75 42; --clay-mid: 217 168 138;
-    --good: 126 154 75; --good-soft: 241 245 230; --good-ink: 63 90 26;
-    /* grafikler: ızgara çizgisi ve sıralı tek renk rampası (açık → koyu = az → çok) */
-    --grid: 237 232 213; --ramp-1: 156 171 132; --ramp-2: 111 127 82; --ramp-3: 70 82 51;
+    --cream: 245 247 250; --surface: 255 255 255;
+    --lightest: 238 241 245; --light: 221 227 235; --medium: 108 147 220; --dark: 85 105 138; --deep: 29 86 194;
+    --text: 21 27 38; --muted: 91 101 118;
+    --ink: 16 23 34; --accent: 33 85 192; --accent-hover: 26 70 163; --shadow: 16 24 40;
+    --danger: 180 35 24; --danger-soft: 254 241 239; --danger-line: 246 204 198; --danger-ink: 145 32 24; --danger-solid: 192 54 44; --danger-solid-hover: 160 43 34;
+    --warn: 183 110 0; --warn-soft: 255 246 230; --warn-line: 243 217 167; --warn-ink: 138 75 5;
+    --clay: 210 98 43; --clay-soft: 253 240 232; --clay-line: 244 205 182; --clay-ink: 154 63 18; --clay-mid: 233 165 127;
+    --good: 18 135 90; --good-soft: 234 247 240; --good-ink: 5 96 58;
+    /* grafikler: ızgara çizgisi ve sıralı tek renk (mavi) rampası, açık → koyu = az → çok */
+    --grid: 231 236 242; --ramp-1: 168 192 236; --ramp-2: 92 135 216; --ramp-3: 31 75 163;
   }
-  /* Koyu tema: aynı zeytin tonlarının koyu karşılıkları. Metin/vurgu renkleri açılır, zeminler koyulaşır;
-     "accent" ve "danger-solid" beyaz yazıyla 4.5:1'i korur, "ink" koyu kalır. */
+  /* Koyu tema: aynı ailenin koyu karşılıkları; vurgu ve metin açılır, zemin koyu lacivert-gri. */
   html.dark {
     color-scheme: dark;
-    --lightest: 42 48 33; --light: 66 77 51; --medium: 125 140 99; --dark: 168 183 138; --deep: 197 214 156;
-    --cream: 21 23 15; --text: 236 232 218; --muted: 167 162 174;
-    --surface: 31 34 26; --ink: 10 11 7; --accent: 95 110 71; --shadow: 0 0 0;
-    --danger: 240 165 133; --danger-soft: 59 35 26; --danger-line: 107 59 40; --danger-ink: 245 189 162; --danger-solid: 169 73 42; --danger-solid-hover: 142 59 32;
-    --warn: 222 176 72; --warn-soft: 52 42 18; --warn-line: 98 79 34; --warn-ink: 236 205 130;
-    --clay: 222 146 110; --clay-soft: 60 42 32; --clay-line: 96 66 50; --clay-ink: 236 186 156; --clay-mid: 150 98 72;
-    --good: 152 180 100; --good-soft: 38 48 28; --good-ink: 190 215 145;
-    --grid: 50 56 42; --ramp-1: 84 97 62; --ramp-2: 135 155 98; --ramp-3: 196 213 152;
+    --cream: 14 19 26; --surface: 21 27 36;
+    --lightest: 28 36 48; --light: 42 52 67; --medium: 91 131 214; --dark: 142 161 192; --deep: 141 176 245;
+    --text: 231 235 241; --muted: 154 165 182;
+    --ink: 5 8 12; --accent: 47 99 204; --accent-hover: 62 115 220; --shadow: 0 0 0;
+    --danger: 242 154 142; --danger-soft: 58 29 26; --danger-line: 106 44 37; --danger-ink: 246 180 171; --danger-solid: 192 57 46; --danger-solid-hover: 163 48 38;
+    --warn: 233 178 90; --warn-soft: 51 39 15; --warn-line: 99 74 28; --warn-ink: 242 199 126;
+    --clay: 238 154 108; --clay-soft: 58 36 24; --clay-line: 106 61 37; --clay-ink: 240 175 138; --clay-mid: 168 106 71;
+    --good: 79 195 140; --good-soft: 18 41 30; --good-ink: 127 216 168;
+    --grid: 35 44 56; --ramp-1: 44 76 140; --ramp-2: 79 127 216; --ramp-3: 167 195 245;
   }
 
   /* Arayüz ölçeği: tüm boyutlar rem olduğu için kök yazı boyutu her şeyi orantılı büyütür/küçültür (varsayılan %75,
@@ -43,63 +50,85 @@
 
   body {
     @apply bg-theme-cream text-theme-text font-sans antialiased;
-    font-feature-settings: "cv11", "ss01";
+    /* Geist: sayılar eşit genişlikte (tablolar, süreler, sayaçlar hizalı dursun) */
+    font-variant-numeric: tabular-nums;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3 {
+    text-wrap: balance;
+    letter-spacing: -0.015em;
   }
 
   :focus-visible {
-    @apply outline-none ring-2 ring-theme-deep ring-offset-2 ring-offset-surface;
+    @apply outline-none ring-2 ring-theme-medium ring-offset-2 ring-offset-surface;
   }
 
   ::selection {
-    @apply bg-theme-light text-theme-text;
+    background: rgb(var(--medium) / 0.3);
+  }
+
+  /* Yazı imleci de vurgu renginde: tarayıcının varsayılan siyahı tasarımın parçası değil. */
+  input, textarea, [contenteditable="true"] {
+    caret-color: rgb(var(--accent));
   }
 }
 
 @layer components {
+  /* Biçim kuralı (tek köşe ölçeği): düğme/alan = rounded-xl, kart/panel = rounded-2xl, açılır pencere = rounded-3xl.
+     Gölge yok; katmanlar 1px çizgiyle ayrılır. Yalnızca açılır menü/pencere gibi üstte duranlar gölge alır. */
   .input {
-    @apply w-full px-4 py-3 rounded-2xl bg-surface border border-theme-light/70 text-theme-text font-medium
-      placeholder:text-theme-muted/60 transition-shadow
-      focus:outline-none focus:ring-2 focus:ring-theme-medium focus:border-transparent;
+    @apply w-full px-3.5 py-2.5 rounded-xl bg-surface border border-theme-light text-theme-text text-sm
+      placeholder:text-theme-muted transition-[border-color,box-shadow] duration-150
+      hover:border-theme-dark/40 focus:outline-none focus:border-theme-medium focus:ring-4 focus:ring-theme-medium/15;
+  }
+
+  /* Filtre çubuğundaki kompakt alanlar (arama, seçiciler): sayfa içeriğinden bir kademe küçük */
+  .input-sm {
+    @apply input py-1.5 min-h-[2.25rem];
   }
 
   .label {
-    @apply block text-sm font-semibold text-theme-text mb-2;
+    @apply block text-sm font-medium text-theme-text mb-1.5;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl font-semibold whitespace-nowrap transition-colors
-      disabled:opacity-50 disabled:cursor-not-allowed min-h-[2.75rem] px-5;
+    @apply inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium whitespace-nowrap
+      transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.98]
+      disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 min-h-[2.5rem] px-4;
   }
 
+  /* Sayfa başına tek ana eylem */
   .btn-primary {
-    @apply btn bg-accent text-white hover:bg-ink;
+    @apply btn bg-accent text-white hover:bg-accent-hover;
   }
 
   .btn-secondary {
-    @apply btn bg-theme-lightest text-theme-deep hover:bg-theme-light;
+    @apply btn bg-surface text-theme-text border border-theme-light hover:bg-theme-lightest hover:border-theme-dark/30;
   }
 
   .btn-ghost {
-    @apply btn bg-transparent text-theme-muted hover:bg-theme-lightest hover:text-theme-deep;
+    @apply btn bg-transparent text-theme-muted hover:bg-theme-lightest hover:text-theme-text;
   }
 
   /* Ayrıntı panellerindeki kompakt özellik seçicileri (select / date) */
   .prop-select {
-    @apply w-full px-3 py-2 rounded-xl bg-surface border border-theme-light/70 text-sm font-semibold text-theme-text
-      hover:border-theme-medium transition-colors focus:outline-none focus:ring-2 focus:ring-theme-medium;
+    @apply w-full px-3 py-2 rounded-lg bg-surface border border-theme-light text-sm font-medium text-theme-text
+      hover:border-theme-dark/40 transition-colors focus:outline-none focus:border-theme-medium focus:ring-4 focus:ring-theme-medium/15;
   }
 
   .icon-btn {
-    @apply inline-flex items-center justify-center w-10 h-10 rounded-xl text-theme-muted
-      hover:bg-theme-lightest hover:text-theme-deep transition-colors;
+    @apply inline-flex items-center justify-center w-9 h-9 rounded-lg text-theme-muted
+      hover:bg-theme-lightest hover:text-theme-text transition-colors active:scale-95;
   }
 
   .card {
-    @apply bg-surface rounded-3xl border border-theme-light/40 shadow-soft;
+    @apply bg-surface rounded-2xl border border-theme-light;
   }
 
+  /* Küçük etiket (istatistik adı, alan adı, tablo başlığı). Büyük harf + aralık yok: sakin, cümle düzeninde. */
   .eyebrow {
-    @apply text-[0.6875rem] font-bold uppercase tracking-wider text-theme-muted;
+    @apply text-xs font-medium text-theme-muted;
   }
 }
 
@@ -108,7 +137,7 @@
     scrollbar-width: thin;
     scrollbar-color: rgb(var(--light)) transparent;
   }
-  /* Kenar çubukları: kaydırma çubuğu yalnızca üzerine gelince görünür (boşken yeşil şerit dikkat dağıtmasın) */
+  /* Kenar çubukları: kaydırma çubuğu yalnızca üzerine gelince görünür (boşken şerit dikkat dağıtmasın) */
   .scrollbar-hover {
     scrollbar-width: thin;
     scrollbar-color: transparent transparent;
@@ -146,7 +175,7 @@ html.theme-fade *, html.theme-fade *::before, html.theme-fade *::after {
 .doc-prose li > p { @apply m-0; }
 .doc-prose a { @apply font-semibold text-theme-deep underline decoration-theme-medium underline-offset-4; }
 .doc-prose code { @apply px-1.5 py-0.5 rounded-md bg-theme-lightest text-theme-deep text-[0.88em] font-mono font-semibold; }
-.doc-prose pre code { @apply p-0 bg-transparent text-[#F6F0D7] font-normal text-[0.8125rem]; }
+.doc-prose pre code { @apply p-0 bg-transparent text-[#E7EBF1] font-normal text-[0.8125rem]; }
 .doc-prose mark { @apply bg-theme-light/80 text-theme-text rounded px-0.5; }
 .doc-prose hr { @apply border-theme-light/60 my-6; }
 .doc-prose hr.ProseMirror-selectednode { @apply border-theme-deep; }

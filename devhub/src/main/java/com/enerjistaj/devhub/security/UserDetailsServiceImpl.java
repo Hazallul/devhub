@@ -23,11 +23,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User Not Found with email: " + username));
 
         // Pasif hesaplar "disabled" döner: giriş DisabledException ile reddedilir, mevcut token'lar da kabul edilmez.
-        return new org.springframework.security.core.userdetails.User(
+        return new SessionUser(
                 user.getEmail(),
                 user.getPasswordHash(),
-                user.isActive(), true, true, true,
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
+                user.isActive(),
+                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole().name())),
+                user.getSessionVersion()
         );
     }
 }

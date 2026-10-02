@@ -61,6 +61,11 @@ public class User {
     @Column(nullable = false)
     private boolean mustChangePassword = false;
 
+    /** Şifre değişince artar; eski sürümü taşıyan token'lar geçersiz olur (bkz. SessionService). */
+    @Builder.Default
+    @Column(name = "session_version", nullable = false)
+    private int sessionVersion = 0;
+
     /** Profildeki iletişim bilgileri ve bağlantılar; kişi kendisi düzenler. */
     @Builder.Default
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)

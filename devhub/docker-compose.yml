@@ -27,9 +27,12 @@ services:
       - SPRING_DATASOURCE_USERNAME=root
       - SPRING_DATASOURCE_PASSWORD=root
       - DEVHUB_MONITORING_DOCKER_URL=http://docker-proxy:2375
+      - SPRING_MAIL_HOST=mailpit
+      - SPRING_MAIL_PORT=1025
     depends_on:
       - mysql
       - docker-proxy
+      - mailpit
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8081/api/health"]
       interval: 15s
@@ -65,6 +68,15 @@ services:
       - POST=0
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  # Geliştirme e-posta kutusu: backend'in gönderdiği tüm e-postalar burada toplanır, dışarı çıkmaz.
+  # Gelen kutusu: http://localhost:8025 (yalnızca bu bilgisayardan erişilir). SMTP portu dışarı açılmaz.
+  mailpit:
+    image: axllent/mailpit:v1.21
+    container_name: devhub-mailpit
+    ports:
+      - "127.0.0.1:8025:8025"
+    restart: unless-stopped
 
 volumes:
   mysql_data:

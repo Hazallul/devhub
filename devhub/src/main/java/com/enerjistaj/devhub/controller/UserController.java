@@ -42,6 +42,8 @@ public class UserController {
     private final LeaveRequestRepository leaveRepository;
     private final NotificationService notificationService;
     private final PasswordEncoder passwordEncoder;
+    private final com.enerjistaj.devhub.service.SessionService sessionService;
+    private final com.enerjistaj.devhub.security.JwtUtils jwtUtils;
 
     /** Aktif kullanıcılar; pasif hesaplar ekip listelerinde görünmez (tümü için /api/admin/users). */
     @GetMapping
@@ -49,8 +51,9 @@ public class UserController {
         return ResponseEntity.ok(userRepository.findByActiveTrue().stream().map(UserDto::from).toList());
     }
 
+    /** Diğer cihazlardaki oturumlar kapanır; bu tarayıcı yanıttaki yeni token'la devam eder. */
     @PutMapping("/me/password")
-    public ResponseEntity<UserDto> changePassword(@RequestBody Map<String, Object> payload) {
+    public ResponseEntity<com.enerjistaj.devhub.dto.LoginResponse> changePassword(@RequestBody Map<String, Object> payload) {
         User me = currentUser.get();
         String current = payload.get("currentPassword") == null ? "" : payload.get("currentPassword").toString();
         String next = payload.get("newPassword") == null ? "" : payload.get("newPassword").toString();
@@ -62,11 +65,15 @@ public class UserController {
         boolean forced = me.isMustChangePassword();
         me.setPasswordHash(passwordEncoder.encode(next));
         me.setMustChangePassword(false);
+        sessionService.revokeAll(me);
         User saved = userRepository.save(me);
         actionLogService.record(LogCategory.OTURUM, LogAction.SIFRE_DEGISTIRME, "Şifresini değiştirdi").by(me)
                 .target("KULLANICI", me.getId(), me.getFullName())
-                .detail(forced ? "Geçici şifre ilk girişte değiştirildi" : "Kullanıcı kendi isteğiyle değiştirdi").save();
-        return ResponseEntity.ok(UserDto.from(saved));
+                .detail(forced ? "Geçici şifre ilk girişte değiştirildi" : "Kullanıcı kendi isteğiyle değiştirdi")
+                .detail("Diğer açık oturumlar kapatıldı").save();
+        return ResponseEntity.ok(com.enerjistaj.devhub.dto.LoginResponse.builder()
+                .token(jwtUtils.generateToken(saved.getEmail(), saved.getSessionVersion()))
+                .user(UserDto.from(saved)).build());
     }
 
     @PutMapping("/{id}/project")
