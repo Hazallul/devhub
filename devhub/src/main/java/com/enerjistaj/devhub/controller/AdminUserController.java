@@ -78,6 +78,7 @@ public class AdminUserController {
                 .passwordHash(passwordEncoder.encode(temporaryPassword))
                 .role(role(payload, Role.EMPLOYEE))
                 .jobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"))
+                .department(department(payload))
                 .hireDate(Payloads.date(payload, "hireDate", "İşe giriş tarihi"))
                 .annualLeaveDays(0) // hak her zaman işe giriş tarihinden hesaplanır (LeavePolicy); sütun yalnızca bilgi amaçlı güncel tutulur
                 .currentProject(project(payload))
@@ -95,6 +96,7 @@ public class AdminUserController {
                 .detail("E-posta: " + saved.getEmail())
                 .detail("Rol: " + roleLabel(saved.getRole()))
                 .detail(saved.getJobTitle() != null ? "Unvan: " + saved.getJobTitle() : null)
+                .detail(saved.getDepartment() != null ? "Departman: " + saved.getDepartment() : null)
                 .detail(saved.getCurrentProject() != null ? "Proje: " + saved.getCurrentProject() : null)
                 .detail(saved.getHireDate() != null ? "İşe giriş: " + saved.getHireDate() : null)
                 .detail("Yıllık izin hakkı: " + LeavePolicy.entitlement(saved.getHireDate(), LocalDate.now(ActionLogService.ZONE)) + " gün (kıdeme göre otomatik)")
@@ -110,7 +112,7 @@ public class AdminUserController {
     public ResponseEntity<UserDto> update(@PathVariable Long id, @RequestBody Map<String, Object> payload) {
         User me = currentUser.requireAdmin(ONLY_ADMIN);
         User user = find(id);
-        String oName = user.getFullName(), oEmail = user.getEmail(), oTitle = user.getJobTitle();
+        String oName = user.getFullName(), oEmail = user.getEmail(), oTitle = user.getJobTitle(), oDept = user.getDepartment();
         Object oHire = user.getHireDate();
         int oDays = LeavePolicy.entitlement(user.getHireDate(), LocalDate.now(ActionLogService.ZONE));
         Role oRole = user.getRole();
@@ -124,6 +126,7 @@ public class AdminUserController {
             user.setEmail(email);
         }
         if (payload.containsKey("jobTitle")) user.setJobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"));
+        if (payload.containsKey("department")) user.setDepartment(department(payload));
         if (payload.containsKey("hireDate")) user.setHireDate(Payloads.date(payload, "hireDate", "İşe giriş tarihi"));
         if (payload.containsKey("role")) {
             Role role = role(payload, user.getRole());
@@ -139,6 +142,7 @@ public class AdminUserController {
                 ActionLogService.diff("Ad soyad", oName, saved.getFullName()),
                 ActionLogService.diff("E-posta", oEmail, saved.getEmail()),
                 ActionLogService.diff("Unvan", oTitle, saved.getJobTitle()),
+                ActionLogService.diff("Departman", oDept, saved.getDepartment()),
                 ActionLogService.diff("İşe giriş", oHire, saved.getHireDate()),
                 ActionLogService.diff("Yıllık izin hakkı (gün)", oDays, LeavePolicy.entitlement(saved.getHireDate(), LocalDate.now(ActionLogService.ZONE))),
                 ActionLogService.diff("Rol", roleLabel(oRole), roleLabel(saved.getRole()))).filter(java.util.Objects::nonNull).toList();
@@ -188,7 +192,7 @@ public class AdminUserController {
         String temporaryPassword = generatePassword();
         user.setPasswordHash(passwordEncoder.encode(temporaryPassword));
         user.setMustChangePassword(true);
-        sessionService.revokeAll(user);
+        sessionService.passwordChanged(user, true);
         userRepository.save(user);
         actionLogService.record(LogCategory.KULLANICI, LogAction.SIFRE_SIFIRLAMA, "Geçici şifre oluşturuldu: " + user.getFullName()).by(me)
                 .target("KULLANICI", user.getId(), user.getFullName())
@@ -271,5 +275,13 @@ public class AdminUserController {
         // En az bir rakam içersin
         sb.setCharAt(RANDOM.nextInt(10), (char) ('2' + RANDOM.nextInt(8)));
         return sb.toString();
+    }
+
+    /** Departman adı: baştaki/sondaki boşluk atılır, ilk harf büyütülür ("destek" → "Destek") ki aynı ekip iki farklı yazımla bölünmesin. */
+    private static String department(Map<String, Object> payload) {
+        String d = Payloads.optionalText(payload, "department", 60, "Departman");
+        if (d == null) return null;
+        d = d.trim().replaceAll("\\s+", " ");
+        return d.substring(0, 1).toUpperCase(new java.util.Locale("tr", "TR")) + d.substring(1);
     }
 }

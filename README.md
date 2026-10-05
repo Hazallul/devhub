@@ -33,13 +33,15 @@ kim ne üzerinde çalışıyor, hangi iş gecikiyor, kim izinde, bugün ne yapma
 
 | | |
 |---|---|
-| **Görevler** | Herkesin işini tek panoda görün, kartı sürükleyerek durumunu değiştirin. Geciken ve yüksek öncelikli işler kendiliğinden öne çıkar. |
+| **Görevler** | Herkesin işini kişi panosunda ya da bütün görevleri tek tabloda görün. Atanmamış işleri tek tıkla birine atayın. Alt görev, etiket, dosya eki ve "şu bitmeden başlayamaz" bağımlılığı eklenebilir. |
 | **İş gücü takibi** | Her göreve tahmini süre verilir; görev "Devam ediyor"dayken geçen mesai süresi otomatik sayılır. Tahmin ile gerçekleşen yan yana görünür. |
 | **Yapılacaklarım** | Kendinize özel kartlar, listeler ve iki haftalık plan. Listeleri ekip arkadaşlarınızla paylaşabilirsiniz. |
+| **Destek talepleri** | Çalışan arıza, erişim, ekipman gibi ihtiyaçlarını yönetime iletir; yönetici atar, takip eder. Çözüm hedefi önceliğe göre mesai saatiyle hesaplanır; talepten görev açılabilir. |
 | **İzinler** | İzin talebi, yönetici onayı ve ekibin iki haftalık izin takvimi. Yıllık izin hakkı işe giriş tarihinden kendiliğinden hesaplanır. |
+| **Anketler** | Yönetici herkese, bir departmana ya da seçtiği kişilere anket gönderir. Anonim seçeneği, son tarih, hatırlatma ve grafikli sonuçlar. |
 | **Dokümantasyon** | Ekibin el kitabını sitede yazın ve düzenleyin. Çalışanların değişiklikleri yönetici onayından sonra yayınlanır. |
 | **Anlık bildirimler** | Size görev atandığında, izniniz onaylandığında ya da kartınıza yorum geldiğinde sayfayı yenilemeden haberiniz olur. |
-| **Yönetim** | Kullanıcı hesapları, raporlar, ayrıntılı işlem kayıtları (Excel'e aktarılabilir) ve sistem sağlığı ekranı. |
+| **Yönetim** | Kullanıcı hesapları, raporlar, ayrıntılı işlem kayıtları (Excel'e aktarılabilir), sistem sağlığı ve otomatik veritabanı yedekleri. |
 | **Açık ve koyu tema** | Her cihazda ayrı seçilir; giriş ekranından bile değiştirilebilir. |
 
 ## Hızlı başlangıç
@@ -65,6 +67,12 @@ Projeler, görevler, izinler ve duyurular tarihleri bugüne göre ayarlanmış �
 
 ```bash
 docker exec -i devhub-mysql mysql -uroot -proot --default-character-set=utf8mb4 devhub < scripts/demo-data.sql
+```
+
+Departmanlar, etiketler, alt görevler, destek talepleri ve anketler için ardından (Python 3 gerekir, tekrar çalıştırmak veriyi çoğaltmaz):
+
+```bash
+python scripts/demo-extras.py
 ```
 
 </details>
@@ -137,11 +145,24 @@ Her satır bir kişidir: bu hafta kaç saat çalıştığı, kalan işi ve göre
 
 - Kartı aynı satırda başka sütuna **sürükleyerek** durumunu değiştirin.
 - **Kırmızı** kartlar gecikmiş, **turuncu** kartlar yüksek öncelikli işlerdir.
-- Üstteki filtrelerle yalnızca kendi işlerinizi, bir projeyi ya da bir önceliği görebilirsiniz.
+- Üstteki filtrelerle yalnızca kendi işlerinizi, bir projeyi, bir departmanı ya da bir önceliği görebilirsiniz.
+- Kalabalık ekiplerde kişileri **Departman** ya da **Proje** ile gruplayın; gruplar açılıp kapanır ve tercihiniz hatırlanır.
+- Panonun en üstündeki **Atanmamış** satırı henüz kimseye verilmemiş işleri gösterir. Yönetici kartı bir kişinin satırına sürükleyerek atar.
+
+Sağ üstteki **Tablo** görünümü bütün görevleri (atanmış ya da atanmamış) tek listede gösterir: **Atanmamış** sekmesinde bekleyen işleri görün, **Atanan** sütunundan tek tıkla birine atayın ya da birden fazla görevi seçip toplu atayın. Sütun başlıklarına tıklayarak sıralayabilirsiniz. Çalışanlar atanmamış bir görevi **Üstlen** ile kendine alabilir.
+
+<img src="docs/screenshots/tasks-table.webp" alt="Görevler: tablo görünümü" width="100%">
 
 <img src="docs/screenshots/task-drawer.webp" alt="Görev ayrıntısı" width="100%">
 
 Bir karta tıklayınca ayrıntısı sağda açılır: atanan kişi, öncelik, son tarih, açıklama, yorumlar ve görevin bütün geçmişi. **İş gücü** bölümü tahmini süreyi, şu ana kadar harcananı ve tahminin aşılıp aşılmadığını gösterir. Süre yalnızca mesai saatlerinde ve görev "Devam ediyor"dayken işler.
+
+Ayrıntı panelinde ayrıca:
+
+- **Etiketler:** "Müşteri hatası", "Fatura" gibi etiketler ekleyin; listede yoksa yazıp oluşturun.
+- **Alt görevler:** işi adımlara bölün; kartta "1/3" gibi ilerleme görünür.
+- **Bağımlılıklar:** "önce bitmesi gereken" görevi seçin. O görev bitmeden bu görev başlatılamaz; bitince size bildirim gelir.
+- **Dosyalar:** ekran görüntüsü, PDF, Office belgesi ekleyin (en fazla 10 MB). Ekran görüntüsünü **Ctrl+V** ile doğrudan yapıştırabilirsiniz.
 
 ### Çalışanlar
 
@@ -157,6 +178,27 @@ Kendi durumunuzu sol alttaki adınızın yanından değiştirin.
 
 **İzin talebi** düğmesiyle talep oluşturun; yönetici onaylayınca durumunuz izin günlerinde kendiliğinden "İzinli" olur. Ekip takvimini tutup sağa sola sürükleyerek ileriki haftalara bakabilirsiniz. Yıllık izin hakkınız ve kalan gün sayınız bu sayfada.
 
+### Destek talepleri
+
+<img src="docs/screenshots/tickets.webp" alt="Destek talepleri" width="100%">
+
+Bilgisayarınız mı bozuldu, VPN'e mi bağlanamıyorsunuz, yeni bir monitöre mi ihtiyacınız var? **Yeni talep** ile yönetime iletin. Talep her zaman sizin adınıza açılır; türünü (Arıza, Erişim / yetki, Ekipman, Diğer) ve önceliğini seçersiniz. **Çözüm hedefi** önceliğe göre mesai saatiyle hesaplanır (Acil 4 saat, Yüksek 1 iş günü, Normal 3 iş günü, Düşük 5 iş günü).
+
+- Çalışan yalnızca **kendi açtığı** ve **kendisine atanan** talepleri görür; yönetici hepsini görür.
+- Yönetici talebi çözecek kişiye atar; atanan kişi gerekirse **Bırak** ile talebi yönetime geri verir.
+- Bir bilgi gerekiyorsa durum **Yanıt bekleniyor** yapılır; talep edene bildirim gider ve bu sürede talep gecikmiş sayılmaz.
+- Ayrıntı panelinde yorum yazın, ekran görüntüsü ekleyin (Ctrl+V). Yönetici ya da atanan kişi **Bu talepten görev oluştur** ile işi görev panosuna taşıyabilir; görev bitince talebe not düşer.
+
+### Anketler
+
+<img src="docs/screenshots/survey-results.webp" alt="Anket sonuçları" width="100%">
+
+Yönetici **Anketler → Yeni anket** ile hazır bir şablondan ya da boş sayfadan anket hazırlar: tek seçim, çoklu seçim, 1-5 puan ve yazılı yanıt soruları. Herkese, bir departmana ya da seçilen kişilere gönderilir; son tarih verilirse o saatte kendiliğinden kapanır.
+
+- **Anonim** ankette yanıtlar kişiyle eşleştirilmez; kimin yanıtladığı yalnızca katılım için görünür.
+- Çalışanlar bekleyen anketi Genel Bakış'ta ve menüdeki sayıda görür; yanıt birkaç dakika sürer.
+- Yönetici sonuçları grafiklerle görür, yanıtlamayanlara **Hatırlat** der ve yanıtları **Excel** olarak indirir.
+
 ### Dokümantasyon
 
 <img src="docs/screenshots/docs.webp" alt="Dokümantasyon" width="100%">
@@ -169,10 +211,13 @@ Yönetici hesabıyla menüde **Yönetim** bölümü açılır.
 
 | | |
 |---|---|
-| **Kullanıcılar** | Yeni çalışan ekleme, rol ve proje atama, hesabı kapatma. Şifre sıfırlama ve profil değişikliği talepleri burada onaylanır. |
+| **Kullanıcılar** | Yeni çalışan ekleme, ad soyad ve unvan düzenleme, rol ve proje atama, hesabı kapatma. Şifre sıfırlama talepleri burada onaylanır. |
 | **Raporlar** | İş yükü, proje ilerlemesi, tahmin ve gerçekleşen iş gücü, izin kullanımı. |
 | **Loglar** | Kim, ne zaman, ne yaptı: girişler, görev değişiklikleri, onaylar. Filtrelenebilir, Excel'e aktarılabilir. |
 | **Sistem izleme** | Servislerin sağlığı, işlemci ve bellek kullanımı, yanıt süreleri. |
+| **Yedekler** | Bütün veriler 3 günde bir kendiliğinden yedeklenir; **Şimdi yedek al** ile elle de alınır. Yedekler bilgisayarda `devhub/backups` klasöründedir, indirilebilir ve **Bu yedeğe geri dön** ile geri yüklenebilir (önce o anki durumun yedeği alınır). |
+
+Kullanıcı eklerken ya da düzenlerken **Departman** (ör. Proje, Destek, Test) verin: Görevler ve Çalışanlar sayfalarında gruplama ve filtre buna göre çalışır, anketler bir departmana gönderilebilir. Ad soyad ve unvanı yalnızca yönetici değiştirir.
 
 <img src="docs/screenshots/reports.webp" alt="Raporlar" width="100%">
 
@@ -189,6 +234,10 @@ Yönetici hesabıyla menüde **Yönetim** bölümü açılır.
 
 <img src="docs/screenshots/monitoring.webp" alt="Sistem izleme" width="100%">
 
+**Yedekler**
+
+<img src="docs/screenshots/backups.webp" alt="Yedekler" width="100%">
+
 **Koyu tema**
 
 <img src="docs/screenshots/overview-dark.webp" alt="Koyu tema" width="100%">
@@ -203,17 +252,22 @@ Yönetici hesabıyla menüde **Yönetim** bölümü açılır.
 |---|:---:|:---:|
 | Kendi görevlerini ekleme ve güncelleme | ✓ | ✓ |
 | Başkasına görev atama | | ✓ |
+| Atanmamış görevi üstlenme | ✓ | ✓ |
+| Destek talebi açma ve yorum (kendi talepleri) | ✓ | ✓ |
+| Talepleri görme ve atama | | ✓ |
+| Anket yanıtlama | ✓ | ✓ |
+| Anket hazırlama ve sonuçlar | | ✓ |
 | İzin talebi | ✓ | ✓ |
 | İzin onaylama | | ✓ |
 | Doküman düzenleme | öneri olarak | doğrudan |
 | Proje açma, duyuru yayınlama | | ✓ |
-| Kullanıcılar, raporlar, loglar, sistem izleme | | ✓ |
+| Kullanıcılar, raporlar, loglar, sistem izleme, yedekler | | ✓ |
 
 ## Küçük ipuçları
 
 - **Ctrl + K** (Mac'te ⌘ + K): kişi, görev, proje ve doküman arama; sık kullanılan komutlar.
 - **Sağ tık** her sayfada çalışır: kartlarda, satırlarda ve boş alanda o sayfaya özel işlemler açılır.
-- Sağ üstteki **Yeni** düğmesi: görev, izin talebi, proje ya da duyuru.
+- Sağ üstteki **Yeni** düğmesi: görev, izin talebi, destek talebi; yönetici için proje, duyuru ve anket.
 - **Ayarlar → Görünüm**: tema ve arayüz boyutu (Kompakt, Orta, Rahat).
 - Bildirimler sağ üstteki zil simgesinde; okunmamış sayısı sekme başlığında da görünür.
 

@@ -32,7 +32,6 @@ export default function Settings() {
                 <li>Kendi durumunu çalışma şekli ile Toplantıda arasında değiştirir</li>
                 <li>Kendi görevlerini yönetir</li>
                 <li>İzin için talep oluşturur</li>
-                <li>Ad soyad ve unvan değişikliğini yönetici onayına gönderir</li>
               </>}
             </ul>
           </section>
@@ -48,7 +47,7 @@ export default function Settings() {
 }
 
 const THEMES: { value: ThemePref; label: string; hint: string; icon: Icon }[] = [
-  { value: 'light', label: 'Açık', hint: 'Bej zemin', icon: Sun },
+  { value: 'light', label: 'Açık', hint: 'Gündüz için', icon: Sun },
   { value: 'dark', label: 'Koyu', hint: 'Akşam için', icon: Moon },
   { value: 'system', label: 'Sistem', hint: 'Cihaza uyar', icon: Desktop },
 ];

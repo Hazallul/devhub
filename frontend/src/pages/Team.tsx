@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MagnifyingGlass, Funnel, Users, UserPlus, ArrowsDownUp, X } from '@phosphor-icons/react';
+import { MagnifyingGlass, Users, UserPlus, X } from '@phosphor-icons/react';
+import Combobox from '../components/ui/Combobox';
+import GroupHeader from '../components/ui/GroupHeader';
+import { departmentsOf, groupItems, groupKeyOf, NO_DEPARTMENT, useCollapsedGroups, usePersisted } from '../lib/groups';
 import EmployeeCard from '../components/team/EmployeeCard';
 import { PageHeader, Segmented, Skeleton, EmptyState } from '../components/ui/primitives';
 import { useUsers, useAllTasks, useProjects, useMe } from '../hooks/api';
@@ -29,6 +32,10 @@ export default function Team() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<StatusFilter>('ALL');
   const [project, setProject] = useState('');
+  const [department, setDepartment] = useState('');
+  const [groupBy, setGroupBy] = usePersisted<'NONE' | 'DEPARTMENT'>('devhub.team.group', 'NONE');
+  const groups = useCollapsedGroups('devhub.team.closed');
+  const departments = useMemo(() => departmentsOf(users), [users]);
   const [sort, setSort] = useState<Sort>('status');
   // focusId: kaydırılacak kişi; pulseId: kaydırma bittikten sonra vurgulanan kart.
   const [focusId, setFocusId] = useState<number | null>(location.state?.highlightUserId ?? null);
@@ -42,7 +49,7 @@ export default function Team() {
     if (!id) return;
     setFocusId(id);
     // Filtreler kişiyi gizlemesin.
-    setSearch(''); setStatus('ALL'); setProject('');
+    setSearch(''); setStatus('ALL'); setProject(''); setDepartment('');
     // state'i temizle: geri gelindiğinde tekrar parlamasın.
     navigate(location.pathname, { replace: true, state: null });
   }, [location.state, location.pathname, navigate]);
@@ -79,14 +86,15 @@ export default function Team() {
 
   const openTaskCount = useMemo(() => {
     const m = new Map<number, number>();
-    tasks?.forEach(t => { if (t.status !== 'TAMAMLANDI') m.set(t.userId, (m.get(t.userId) ?? 0) + 1); });
+    tasks?.forEach(t => { if (t.status !== 'TAMAMLANDI' && t.userId !== null) m.set(t.userId, (m.get(t.userId) ?? 0) + 1); });
     return m;
   }, [tasks]);
 
   const visible = useMemo(() => {
     const q = trLower(search.trim());
     const list = (users ?? []).filter(u =>
-      (!q || trLower(`${u.fullName} ${u.jobTitle ?? ''} ${u.currentProject ?? ''}`).includes(q)) &&
+      (!q || trLower(`${u.fullName} ${u.jobTitle ?? ''} ${u.department ?? ''} ${u.currentProject ?? ''}`).includes(q)) &&
+      (!department || (department === NO_DEPARTMENT ? !u.department : u.department === department)) &&
       (status === 'ALL' || u.status === status) &&
       (!project || (project === '__none' ? !u.currentProject : u.currentProject === project)),
     );
@@ -97,9 +105,12 @@ export default function Team() {
       if (sort === 'tasks') return (openTaskCount.get(b.id) ?? 0) - (openTaskCount.get(a.id) ?? 0);
       return a.fullName.localeCompare(b.fullName, 'tr');
     });
-  }, [users, search, status, project, sort, me.id, openTaskCount]);
+  }, [users, search, status, project, department, sort, me.id, openTaskCount]);
 
-  const hasFilters = !!search || status !== 'ALL' || !!project;
+  const hasFilters = !!search || status !== 'ALL' || !!project || !!department;
+  const clearFilters = () => { setSearch(''); setStatus('ALL'); setProject(''); setDepartment(''); };
+  // Bir kişiye kaydırılırken kapalı grupta kalmasın diye gruplama yalnızca odak yokken uygulanır.
+  const grouped = groupBy === 'DEPARTMENT' && departments.length > 0 && !focusId;
 
   return (
     <>
@@ -113,6 +124,7 @@ export default function Team() {
       />
 
       <div className="flex flex-col gap-4 mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <Segmented<StatusFilter>
           label="Durum filtresi"
           layoutId="team-status"
@@ -123,6 +135,11 @@ export default function Team() {
             ...ALL_STATUSES.map(s => ({ value: s, label: USER_STATUS[s].label, count: counts[s] })),
           ]}
         />
+        {departments.length > 0 && (
+          <Segmented<'NONE' | 'DEPARTMENT'> label="Gruplama" layoutId="team-group" value={groupBy} onChange={setGroupBy}
+            options={[{ value: 'NONE', label: 'Liste' }, { value: 'DEPARTMENT', label: 'Departmanlara göre' }]} />
+        )}
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
@@ -136,28 +153,23 @@ export default function Team() {
               className="input pl-11 shadow-soft"
             />
           </div>
-          <div className="relative sm:w-56">
-            <Funnel className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted pointer-events-none" size={18} aria-hidden="true" />
-            <select aria-label="Projeye göre filtrele" value={project} onChange={e => setProject(e.target.value)} className="input pl-11 appearance-none shadow-soft">
-              <option value="">Tüm projeler</option>
-              <option value="__none">Boşta olanlar</option>
-              {projects?.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
-            </select>
-          </div>
-          <div className="relative sm:w-52">
-            <ArrowsDownUp className="absolute left-4 top-1/2 -translate-y-1/2 text-theme-muted pointer-events-none" size={18} aria-hidden="true" />
-            <select aria-label="Sırala" value={sort} onChange={e => setSort(e.target.value as Sort)} className="input pl-11 appearance-none shadow-soft">
-              <option value="status">Duruma göre</option>
-              <option value="name">İsme göre (A–Z)</option>
-              <option value="tasks">Açık görev sayısı</option>
-            </select>
-          </div>
+          {departments.length > 0 && (
+            <Combobox label="Departmana göre filtrele" value={department} onChange={setDepartment} width={240} className="sm:w-52"
+              placeholder="Tüm departmanlar" searchPlaceholder="Departman ara" emptyText="Eşleşen departman yok"
+              options={[{ value: '', label: 'Tüm departmanlar' }, ...departments.map(d => ({ value: d, label: d })), { value: NO_DEPARTMENT, label: NO_DEPARTMENT }]} />
+          )}
+          <Combobox label="Projeye göre filtrele" value={project} onChange={setProject} width={260} className="sm:w-52"
+            placeholder="Tüm projeler" searchPlaceholder="Proje ara" emptyText="Eşleşen proje yok"
+            options={[{ value: '', label: 'Tüm projeler' }, { value: '__none', label: 'Boşta olanlar' }, ...(projects ?? []).map(p => ({ value: p.name, label: p.name }))]} />
+          <Combobox label="Sırala" value={sort} onChange={v => setSort(v as Sort)} width={220} className="sm:w-48"
+            placeholder="Duruma göre" searchPlaceholder="Sıralama"
+            options={[{ value: 'status', label: 'Duruma göre' }, { value: 'name', label: 'İsme göre (A–Z)' }, { value: 'tasks', label: 'Açık görev sayısı' }]} />
         </div>
 
         {hasFilters && (
           <div className="flex items-center gap-3 text-sm">
             <span className="font-semibold text-theme-muted tabular">{visible.length} kişi gösteriliyor</span>
-            <button onClick={() => { setSearch(''); setStatus('ALL'); setProject(''); }} className="inline-flex items-center gap-1 font-bold text-theme-deep hover:underline underline-offset-4">
+            <button onClick={clearFilters} className="inline-flex items-center gap-1 font-bold text-theme-deep hover:underline underline-offset-4">
               <X size={14} weight="bold" /> Filtreleri temizle
             </button>
           </div>
@@ -171,9 +183,33 @@ export default function Team() {
           icon={Users}
           title="Sonuç bulunamadı"
           description="Arama kriterlerinize uyan bir ekip üyesi yok."
-          action={<button onClick={() => { setSearch(''); setStatus('ALL'); setProject(''); }} className="btn-secondary">Filtreleri temizle</button>}
+          action={<button onClick={clearFilters} className="btn-secondary">Filtreleri temizle</button>}
         />
       ) : (
+        grouped ? (
+          <div className="card mb-10">
+            {groupItems(visible, u => groupKeyOf(u, 'DEPARTMENT')).map(g => {
+              const open = !groups.isClosed(g.key);
+              const away = g.items.filter(u => u.status === 'IZINLI').length;
+              const openTasks = g.items.reduce((s, u) => s + (openTaskCount.get(u.id) ?? 0), 0);
+              return (
+                <section key={g.key} aria-label={g.key} className="border-b border-theme-light last:border-b-0">
+                  <GroupHeader title={g.key} count={g.items.length} open={open} onToggle={() => groups.toggle(g.key)}
+                    summary={<>{away > 0 && <span>{away} izinli</span>}<span>{openTasks} açık görev</span></>} />
+                  {open && (
+                    <div className="divide-y divide-theme-light">
+                      {g.items.map(user => (
+                        <div key={user.id} ref={el => { cardRefs.current[user.id] = el; }} className="relative">
+                          <EmployeeCard user={user} tasks={tasks} isHighlighted={pulseId === user.id} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              );
+            })}
+          </div>
+        ) : (
         <motion.div variants={listContainer} initial="hidden" animate="visible" className="card overflow-hidden divide-y divide-theme-light mb-10">
           {visible.map(user => (
             <motion.div
@@ -188,6 +224,7 @@ export default function Team() {
             </motion.div>
           ))}
         </motion.div>
+        )
       )}
     </>
   );

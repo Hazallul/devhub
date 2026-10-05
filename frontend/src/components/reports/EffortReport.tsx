@@ -25,18 +25,18 @@ export default function EffortReport({ tasks, userById }: { tasks: Task[]; userB
 
   const done = useMemo(() => {
     const since = now - Number(range) * 86_400_000;
-    return tasks.filter(t => t.status === 'TAMAMLANDI' && t.completedAt && t.estimatedMinutes && userById.has(t.userId)
+    return tasks.filter(t => t.status === 'TAMAMLANDI' && t.completedAt && t.estimatedMinutes && t.userId !== null && userById.has(t.userId)
       && parseServerDate(t.completedAt).getTime() >= since);
   }, [tasks, userById, range, now]);
 
   const people = useMemo(() => {
     const m = new Map<number, { user: User; est: number; act: number; count: number }>();
     done.forEach(t => {
-      const r = m.get(t.userId) ?? { user: userById.get(t.userId)!, est: 0, act: 0, count: 0 };
+      const r = m.get(t.userId!) ?? { user: userById.get(t.userId!)!, est: 0, act: 0, count: 0 };
       r.est += (t.estimatedMinutes ?? 0) * 60;
       r.act += t.spentSeconds ?? 0;
       r.count += 1;
-      m.set(t.userId, r);
+      m.set(t.userId!, r);
     });
     return [...m.values()].sort((a, b) => b.act - a.act);
   }, [done, userById]);
@@ -103,7 +103,7 @@ export default function EffortReport({ tasks, userById }: { tasks: Task[]; userB
               const est = (t.estimatedMinutes ?? 0) * 60;
               const act = t.spentSeconds ?? 0;
               return [
-                `${t.content} · ${userById.get(t.userId)?.fullName ?? ''}`,
+                `${t.content} · ${userById.get(t.userId ?? -1)?.fullName ?? ''}`,
                 formatEstimate(t.estimatedMinutes ?? 0),
                 formatDuration(act),
                 devText(deviation(est, act)),

@@ -21,22 +21,24 @@ const NONE = 'none';
 const schema = z.object({
   content: z.string().trim().min(3, 'Görevi en az 3 karakterle tanımlayın.').max(1000, 'En fazla 1000 karakter.'),
   description: z.string().max(4000, 'En fazla 4000 karakter.'),
-  userIds: z.array(z.number()).min(1, 'En az bir kişi seçin.'),
+  userIds: z.array(z.number()),
+  /** Yönetici: görevi şimdilik kimseye atamadan havuza ekle */
+  unassigned: z.boolean(),
   priority: z.enum(['DUSUK', 'ORTA', 'YUKSEK']),
   dueDate: z.string(),
   project: z.string(),
   estimate: z.string().refine(v => { const m = parseHours(v); return m !== null && m >= 15 && m <= 400 * 60; },
     'Tahmini süreyi saat olarak girin (en az 0,25, en fazla 400). Örn: 6 ya da 2,5'),
-});
+}).refine(v => v.unassigned || v.userIds.length > 0, { message: 'En az bir kişi seçin ya da "Şimdilik kimseye atama"yı işaretleyin.', path: ['userIds'] });
 type Form = z.infer<typeof schema>;
 
-interface Props { open: boolean; onClose: () => void; defaultUserId?: number; defaultProjectId?: number }
+interface Props { open: boolean; onClose: () => void; defaultUserId?: number; defaultProjectId?: number; defaultUnassigned?: boolean }
 
 /**
  * Görev oluşturma. Yönetici bir veya birden fazla kişiye aynı görevi atayabilir (her kişiye ayrı görev oluşur);
  * proje seçilirse kişi listesi o projenin ekibine daralır. Çalışan yalnızca kendine görev ekler.
  */
-export default function TaskFormModal({ open, onClose, defaultUserId, defaultProjectId }: Props) {
+export default function TaskFormModal({ open, onClose, defaultUserId, defaultProjectId, defaultUnassigned }: Props) {
   const me = useMe();
   const isAdmin = me.role === 'ADMIN';
   const create = useCreateTask();
@@ -47,6 +49,7 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
     content: '',
     description: '',
     userIds: defaultUserId ? [defaultUserId] : isAdmin ? [] : [me.id],
+    unassigned: isAdmin && !!defaultUnassigned && !defaultUserId,
     priority: 'ORTA',
     dueDate: '',
     project: isAdmin && defaultProjectId ? String(defaultProjectId) : AUTO,
@@ -63,17 +66,19 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
     reset(defaults());
     setShowDescription(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, defaultUserId, defaultProjectId, me.id, isAdmin, reset]);
+  }, [open, defaultUserId, defaultProjectId, defaultUnassigned, me.id, isAdmin, reset]);
 
   const userIds = watch('userIds');
+  const unassigned = watch('unassigned');
   const project = watch('project');
   const selectedProject = projects?.find(p => String(p.id) === project) ?? null;
-  const count = userIds.length;
+  const count = unassigned ? 0 : userIds.length;
   const onlySelf = count === 1 && userIds[0] === me.id;
 
   const onSubmit = handleSubmit(async v => {
     const body: TaskInput = {
-      userIds: v.userIds,
+      userIds: v.unassigned ? [] : v.userIds,
+      unassigned: v.unassigned || undefined,
       content: v.content,
       description: v.description.trim() || undefined,
       priority: v.priority,
@@ -81,6 +86,8 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
       estimatedMinutes: parseHours(v.estimate)!,
     };
     if (isAdmin && v.project !== AUTO) body.projectId = v.project === NONE ? null : Number(v.project);
+    // Atanmamış görevin "kişinin projesi" diye bir projesi olmaz: otomatik seçiliyse projesiz kalır.
+    else if (v.unassigned) body.projectId = null;
     await create.mutateAsync(body);
     onClose();
   });
@@ -96,7 +103,7 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
       footer={<>
         <button type="button" onClick={onClose} className="btn-ghost">Vazgeç</button>
         <button type="submit" disabled={create.isPending} className="btn-primary">
-          {create.isPending ? 'Kaydediliyor…' : count > 1 ? `${count} kişiye ata` : isAdmin && !onlySelf ? 'Görevi ata' : 'Görevi ekle'}
+          {create.isPending ? 'Kaydediliyor…' : unassigned ? 'Atanmamış olarak ekle' : count > 1 ? `${count} kişiye ata` : isAdmin && !onlySelf ? 'Görevi ata' : 'Görevi ekle'}
         </button>
       </>}
     >
@@ -157,13 +164,26 @@ export default function TaskFormModal({ open, onClose, defaultUserId, defaultPro
               </p>
             </div>
 
-            <AssigneePicker
-              key={selectedProject?.id ?? project}
-              value={userIds}
-              onChange={ids => setValue('userIds', ids, { shouldValidate: !!errors.userIds })}
-              projectName={selectedProject?.name ?? null}
-              error={errors.userIds?.message}
-            />
+            <label className="flex items-start gap-3 rounded-xl border border-theme-light px-3 py-2.5 cursor-pointer hover:bg-theme-lightest/50">
+              <input type="checkbox" className="mt-0.5 w-4 h-4 accent-[rgb(var(--accent))]" checked={unassigned}
+                onChange={e => setValue('unassigned', e.target.checked, { shouldValidate: !!errors.userIds })} />
+              <span>
+                <span className="block text-sm font-medium text-theme-text">Şimdilik kimseye atama</span>
+                <span className="block text-xs text-theme-muted">Görev "Atanmamış" olarak bekler; Görevler sayfasındaki tablodan ya da panodan sonra birine atarsınız.</span>
+              </span>
+            </label>
+
+            {unassigned ? (
+              errors.userIds && <FieldError id="task-users-err" message={errors.userIds.message} />
+            ) : (
+              <AssigneePicker
+                key={selectedProject?.id ?? project}
+                value={userIds}
+                onChange={ids => setValue('userIds', ids, { shouldValidate: !!errors.userIds })}
+                projectName={selectedProject?.name ?? null}
+                error={errors.userIds?.message}
+              />
+            )}
           </>
         )}
 
@@ -251,7 +271,7 @@ function AssigneePicker({ value, onChange, projectName, error }: {
     const m = new Map<number, { count: number; seconds: number }>();
     const now = Date.now();
     tasks?.forEach(t => {
-      if (t.status === 'TAMAMLANDI') return;
+      if (t.status === 'TAMAMLANDI' || t.userId === null) return;
       const cur = m.get(t.userId) ?? { count: 0, seconds: 0 };
       m.set(t.userId, { count: cur.count + 1, seconds: cur.seconds + remainingSeconds(t, liveSpent(t, now)) });
     });

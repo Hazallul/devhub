@@ -12,7 +12,8 @@ export default defineConfig({
           groups: [
             { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler|react-router|react-router-dom)[\\/]/, priority: 30 },
             { name: 'motion', test: /node_modules[\\/](framer-motion|motion-dom|motion-utils)[\\/]/, priority: 20 },
-            { name: 'icons', test: /node_modules[\\/]@phosphor-icons[\\/]/, priority: 20 },
+            // İkonlar büyüdükçe 500 kB'ı aşmasın diye parçalara bölünür (maxSize bayt).
+            { name: 'icons', test: /node_modules[\\/]@phosphor-icons[\\/]/, priority: 20, maxSize: 350_000 },
             { name: 'editor', test: /node_modules[\\/](@tiptap|prosemirror-[^\\/]+|linkifyjs|orderedmap|rope-sequence|w3c-keyname|fast-equals)[\\/]/, priority: 20 },
             { name: 'vendor', test: /node_modules[\\/]/, priority: 10 },
           ],

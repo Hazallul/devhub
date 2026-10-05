@@ -23,6 +23,8 @@ public class LeaveDto {
     /** Yöneticinin karara eklediği açıklama */
     private String decisionNote;
     private String decidedByName;
+    /** Yönetici karar vermeden tarihi geçtiği için sistem tarafından kapatıldı */
+    private boolean expired;
 
     /** Başkasının izni: takvim için yalnızca tarihler yeter; izin türü (ör. hastalık), talep notu ve karar açıklaması kişiye özeldir. */
     public LeaveDto forColleague() {
@@ -46,6 +48,7 @@ public class LeaveDto {
             .finalized(l.isFinalized())
             .decisionNote(l.getDecisionNote())
             .decidedByName(l.getDecidedBy() != null ? l.getDecidedBy().getFullName() : null)
+            .expired(l.getState() == LeaveState.IPTAL && l.getDecidedBy() == null && LeaveRequest.EXPIRED_NOTE.equals(l.getDecisionNote()))
             .build();
     }
 }

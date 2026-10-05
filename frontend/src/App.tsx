@@ -22,6 +22,11 @@ const pages = {
   Users: () => import('./pages/Users'),
   Monitoring: () => import('./pages/Monitoring'),
   Logs: () => import('./pages/Logs'),
+  Backups: () => import('./pages/Backups'),
+  Surveys: () => import('./pages/Surveys'),
+  SurveyView: () => import('./pages/SurveyView'),
+  SurveyEditor: () => import('./pages/SurveyEditor'),
+  Tickets: () => import('./pages/Tickets'),
   Docs: () => import('./pages/Docs'),
   DocReview: () => import('./pages/DocReview'),
 };
@@ -45,6 +50,11 @@ const reports = page(pages.Reports);
 const users = page(pages.Users);
 const monitoring = page(pages.Monitoring);
 const logs = page(pages.Logs);
+const backups = page(pages.Backups);
+const surveys = page(pages.Surveys);
+const surveyView = page(pages.SurveyView);
+const surveyEditor = page(pages.SurveyEditor);
+const tickets = page(pages.Tickets);
 const docs = page(pages.Docs);
 const docReview = page(pages.DocReview);
 const docEdit = page(() => import('./pages/DocEdit'));
@@ -68,6 +78,12 @@ function App() {
               <Route path="/users" element={users} />
               <Route path="/monitoring" element={monitoring} />
               <Route path="/logs" element={logs} />
+              <Route path="/backups" element={backups} />
+              <Route path="/surveys" element={surveys} />
+              <Route path="/surveys/yeni" element={surveyEditor} />
+              <Route path="/surveys/:id" element={surveyView} />
+              <Route path="/surveys/:id/duzenle" element={surveyEditor} />
+              <Route path="/tickets" element={tickets} />
               {/* Kişisel alan: AppLayout bu adreste tam ekran TodoSpace katmanını açar */}
               <Route path="/todo" element={null} />
               <Route path="/docs" element={docs} />

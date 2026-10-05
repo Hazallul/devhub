@@ -9,8 +9,11 @@ import LogsModal from './LogsModal';
 import type { User } from '../../types';
 
 interface QuickActionsApi {
-  /** userId: kişi önceden seçili gelir; projectId: proje önceden seçili gelir (liste o projenin ekibini gösterir). */
-  newTask: (userId?: number, projectId?: number) => void;
+  /**
+   * userId: kişi önceden seçili gelir; projectId: proje önceden seçili gelir (liste o projenin ekibini gösterir);
+   * unassigned: yönetici için "Şimdilik kimseye atama" işaretli açılır.
+   */
+  newTask: (userId?: number, projectId?: number, opts?: { unassigned?: boolean }) => void;
   newProject: (assignUser?: User | null) => void;
   /** forUser: yönetici başka biri adına onaylı izin kaydı açar. */
   newLeave: (forUser?: User) => void;
@@ -23,7 +26,7 @@ interface QuickActionsApi {
 const Ctx = createContext<QuickActionsApi | null>(null);
 
 type Open =
-  | { kind: 'task'; userId?: number; projectId?: number }
+  | { kind: 'task'; userId?: number; projectId?: number; unassigned?: boolean }
   | { kind: 'project'; assignUser?: User | null }
   | { kind: 'leave'; forUser?: User }
   | { kind: 'announcement' }
@@ -50,7 +53,7 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
   }, [linkedTask, setParams]);
 
   const api = useMemo<QuickActionsApi>(() => ({
-    newTask: (userId, projectId) => setOpen({ kind: 'task', userId, projectId }),
+    newTask: (userId, projectId, opts) => setOpen({ kind: 'task', userId, projectId, unassigned: opts?.unassigned }),
     newProject: assignUser => setOpen({ kind: 'project', assignUser }),
     newLeave: forUser => setOpen({ kind: 'leave', forUser }),
     newAnnouncement: () => setOpen({ kind: 'announcement' }),
@@ -68,6 +71,7 @@ export function QuickActionsProvider({ children }: { children: ReactNode }) {
         onClose={close}
         defaultUserId={open?.kind === 'task' ? open.userId : undefined}
         defaultProjectId={open?.kind === 'task' ? open.projectId : undefined}
+        defaultUnassigned={open?.kind === 'task' ? open.unassigned : undefined}
       />
       <ProjectFormModal open={open?.kind === 'project'} onClose={close} assignUser={open?.kind === 'project' ? open.assignUser : null} />
       <LeaveFormModal open={open?.kind === 'leave'} onClose={close} forUser={open?.kind === 'leave' ? open.forUser : null} />

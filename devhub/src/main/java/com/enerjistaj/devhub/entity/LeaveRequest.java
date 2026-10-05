@@ -45,6 +45,9 @@ public class LeaveRequest {
     @Column(name = "decision_note", length = 500)
     private String decisionNote;
 
+    /** Karar verilmeden tarihi geçen talebe sistemin yazdığı not; arayüz bunu "Süresi doldu" olarak gösterir. */
+    public static final String EXPIRED_NOTE = "Tarihi geçtiği için karar verilmeden kapandı.";
+
     /** Kesinleşen karar (onay/ret) geri alınamaz. */
     @Column(nullable = false)
     private boolean finalized;

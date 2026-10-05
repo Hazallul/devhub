@@ -26,6 +26,8 @@ interface Props {
   className?: string;
   /** açılır panelin genişliği */
   width?: number;
+  /** Tablo hücresi gibi sık yerlerde çerçevesiz tetikleyici (yalnızca üzerine gelince belirir) */
+  bare?: boolean;
 }
 
 /** Türkçe karakterleri sadeleştirir: "şen" ile "Şen", "sen" de eşleşsin. */
@@ -35,7 +37,7 @@ const fold = (s: string) => trLower(s).replace(/[çğıöşü]/g, ch => ({ ç: '
  * Tema uyumlu, aranabilir seçim kutusu (yerel <select> yerine). Açılınca üstte arama alanı odaklanır; yazdıkça liste süzülür,
  * ↑/↓ ile gezilir, Enter seçer, Esc kapatır. Panel tetikleyicinin altına (yer yoksa üstüne) portal ile açılır.
  */
-export default function Combobox({ value, onChange, options, label, placeholder = 'Seçin', searchPlaceholder = 'Ara…', emptyText = 'Eşleşen sonuç yok', className = '', width = 300 }: Props) {
+export default function Combobox({ value, onChange, options, label, placeholder = 'Seçin', searchPlaceholder = 'Ara…', emptyText = 'Eşleşen sonuç yok', className = '', width = 300, bare = false }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
@@ -123,7 +125,9 @@ export default function Combobox({ value, onChange, options, label, placeholder 
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={`${label}: ${selected?.label ?? placeholder}`}
-        className={`input-sm flex items-center gap-2 text-left cursor-pointer ${open ? 'ring-4 ring-theme-medium/15 border-theme-medium' : ''} ${className}`}
+        className={`${bare
+          ? 'flex items-center gap-2 text-left cursor-pointer rounded-lg px-2 py-1 text-sm border border-transparent hover:border-theme-light hover:bg-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-theme-medium'
+          : 'input-sm flex items-center gap-2 text-left cursor-pointer'} ${open ? 'ring-4 ring-theme-medium/15 border-theme-medium' : ''} ${className}`}
       >
         {selected?.leading && <span className="shrink-0 flex">{selected.leading}</span>}
         <span className={`flex-1 min-w-0 truncate ${selected ? '' : 'text-theme-muted'}`}>{selected?.label ?? placeholder}</span>

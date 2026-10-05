@@ -5,7 +5,7 @@ import {
   Umbrella, FirstAid, Clock,
   PencilSimple, Target, Pause, Flag,
   Briefcase, ListDashes, Gear, SignIn, UserGear, IdentificationCard, Megaphone, Info, Warning, ShieldWarning,
-  WarningCircle, XCircle, Question, BookOpenText,
+  WarningCircle, XCircle, Question, BookOpenText, ChartPieSlice, Headset,
   EnvelopeSimple, Phone, LinkedinLogo, GithubLogo, Globe, LinkSimple,
 } from '@phosphor-icons/react';
 import type {
@@ -91,9 +91,11 @@ export const LOG_CATEGORY: Record<LogCategory, Meta> = {
   IZIN: { label: 'İzin', icon: Airplane, className: 'bg-theme-lightest text-theme-deep' },
   DUYURU: { label: 'Duyuru', icon: Megaphone, className: 'bg-theme-medium/30 text-theme-deep' },
   DOKUMAN: { label: 'Doküman', icon: BookOpenText, className: 'bg-theme-light text-theme-deep' },
+  ANKET: { label: 'Anket', icon: ChartPieSlice, className: 'bg-theme-lightest text-theme-deep' },
+  DESTEK: { label: 'Destek', icon: Headset, className: 'bg-theme-medium/30 text-theme-deep' },
   SISTEM: { label: 'Sistem', icon: Gear, className: 'bg-theme-lightest text-theme-muted' },
 };
-export const LOG_CATEGORIES: LogCategory[] = ['OTURUM', 'KULLANICI', 'PROFIL', 'PROJE', 'GOREV', 'IZIN', 'DUYURU', 'DOKUMAN', 'SISTEM'];
+export const LOG_CATEGORIES: LogCategory[] = ['OTURUM', 'KULLANICI', 'PROFIL', 'PROJE', 'GOREV', 'IZIN', 'DUYURU', 'DOKUMAN', 'ANKET', 'DESTEK', 'SISTEM'];
 /** Eski ad */
 export const LOG_TYPE = LOG_CATEGORY;
 
@@ -109,7 +111,7 @@ export const LOG_ACTION: Record<LogAction, string> = {
   DURUM_DEGISIKLIGI: 'Durum değişikliği', PROJE_ATAMA: 'Projeye atama', PROJEDEN_CIKARMA: 'Projeden çıkarma', GOREV_AKTARMA: 'Görev aktarma',
   AKTIFLESTIRME: 'Hesap açma', PASIFLESTIRME: 'Hesap kapatma', YETKI_DEGISIKLIGI: 'Yetki değişikliği',
   TALEP: 'Talep', ONAY: 'Onay', RET: 'Ret', GERI_ALMA: 'Karar geri alma', KESINLESTIRME: 'Kesinleştirme', GERI_CEKME: 'Geri çekme', KAYIT: 'Yönetici kaydı',
-  YAYIN: 'Yayın', BILGI: 'Bilgi',
+  YAYIN: 'Yayın', YEDEKLEME: 'Yedekleme', GERI_YUKLEME: 'Geri yükleme', YANIT: 'Yanıt', ATAMA: 'Atama', BILGI: 'Bilgi',
 };
 
 /** Logda işlemi yapan: kişi, sistem ya da (başarısız girişte) tanınmayan biri */

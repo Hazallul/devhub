@@ -18,6 +18,7 @@ public class UserDto {
     private String email;
     private Role role;
     private String jobTitle;
+    private String department;
     private String currentProject;
     private String status;
     private String workMode;
@@ -42,6 +43,7 @@ public class UserDto {
             .fullName(u.getFullName())
             .role(u.getRole())
             .jobTitle(u.getJobTitle())
+            .department(u.getDepartment())
             .currentProject(u.getCurrentProject())
             .status(u.getStatus())
             .workMode(u.getWorkMode())

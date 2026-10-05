@@ -29,6 +29,10 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
     @EntityGraph(attributePaths = "user")
     List<LeaveRequest> findByStateAndEndDate(LeaveState state, LocalDate endDate);
 
+    /** Tarihi tamamen geçmiş, hâlâ karar bekleyen talepler (hastalık hariç: rapor sonradan gelir). */
+    @EntityGraph(attributePaths = "user")
+    List<LeaveRequest> findByStateAndEndDateBeforeAndTypeNot(LeaveState state, LocalDate endDate, LeaveType type);
+
     @Query("select count(l) > 0 from LeaveRequest l"
             + " where l.user.id = :userId and l.state in (com.enerjistaj.devhub.entity.LeaveState.BEKLIYOR, com.enerjistaj.devhub.entity.LeaveState.ONAYLANDI)"
             + " and l.startDate <= :end and l.endDate >= :start")

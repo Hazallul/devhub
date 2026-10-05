@@ -23,6 +23,9 @@
     --good: 18 135 90; --good-soft: 234 247 240; --good-ink: 5 96 58;
     /* grafikler: ızgara çizgisi ve sıralı tek renk (mavi) rampası, açık → koyu = az → çok */
     --grid: 231 236 242; --ramp-1: 168 192 236; --ramp-2: 92 135 216; --ramp-3: 31 75 163;
+    /* Etiket renkleri: kişinin seçtiği kategori renkleri; her zaman etiket adıyla birlikte gösterilir (renk tek başına anlam taşımaz) */
+    --lbl-blue: 33 85 192; --lbl-green: 20 120 70; --lbl-amber: 146 88 0; --lbl-red: 180 40 32; --lbl-violet: 108 66 190;
+    --lbl-teal: 10 115 118; --lbl-pink: 176 40 110; --lbl-gray: 88 98 114;
   }
   /* Koyu tema: aynı ailenin koyu karşılıkları; vurgu ve metin açılır, zemin koyu lacivert-gri. */
   html.dark {
@@ -36,6 +39,8 @@
     --clay: 238 154 108; --clay-soft: 58 36 24; --clay-line: 106 61 37; --clay-ink: 240 175 138; --clay-mid: 168 106 71;
     --good: 79 195 140; --good-soft: 18 41 30; --good-ink: 127 216 168;
     --grid: 35 44 56; --ramp-1: 44 76 140; --ramp-2: 79 127 216; --ramp-3: 167 195 245;
+    --lbl-blue: 141 176 245; --lbl-green: 120 205 150; --lbl-amber: 236 186 96; --lbl-red: 244 146 136; --lbl-violet: 186 160 248;
+    --lbl-teal: 104 206 206; --lbl-pink: 242 146 196; --lbl-gray: 170 178 192;
   }
 
   /* Arayüz ölçeği: tüm boyutlar rem olduğu için kök yazı boyutu her şeyi orantılı büyütür/küçültür (varsayılan %75,
@@ -105,6 +110,28 @@
 
   .btn-secondary {
     @apply btn bg-surface text-theme-text border border-theme-light hover:bg-theme-lightest hover:border-theme-dark/30;
+  }
+
+  /* Etiket çipi: renk değişkeni lib/labels.ts'teki sınıfla seçilir (label-blue …) */
+  .label-chip {
+    @apply inline-flex items-center gap-1 rounded-md border px-1.5 py-px text-[0.6875rem] font-medium leading-4 whitespace-nowrap;
+    color: rgb(var(--lbl));
+    background-color: rgb(var(--lbl) / 0.1);
+    border-color: rgb(var(--lbl) / 0.28);
+  }
+  .label-blue { --lbl: var(--lbl-blue); }
+  .label-green { --lbl: var(--lbl-green); }
+  .label-amber { --lbl: var(--lbl-amber); }
+  .label-red { --lbl: var(--lbl-red); }
+  .label-violet { --lbl: var(--lbl-violet); }
+  .label-teal { --lbl: var(--lbl-teal); }
+  .label-pink { --lbl: var(--lbl-pink); }
+  .label-gray { --lbl: var(--lbl-gray); }
+  .label-dot { background-color: rgb(var(--lbl)); }
+
+  /* Geri alınamayan işlemin onay düğmesi (silme, geri yükleme) */
+  .btn-danger {
+    @apply btn bg-danger-solid text-white hover:bg-danger-solid-hover;
   }
 
   .btn-ghost {

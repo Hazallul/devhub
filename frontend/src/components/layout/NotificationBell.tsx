@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
 import {
-  Bell, Flag, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree, BookOpenText, Key } from '@phosphor-icons/react';
+  Bell, Flag, CheckSquare, CalendarCheck, CalendarBlank, ArrowCounterClockwise, Briefcase, Lightning, Megaphone, Clock, Checks, CheckCircle, ChatCircleText, ListChecks, IdentificationCard, Alarm, UsersThree, BookOpenText, Key, Database, LockOpen, ChartPieSlice, Headset } from '@phosphor-icons/react';
 import { Menu } from '../ui/Menu';
 import { Skeleton } from '../ui/primitives';
 import { useNotifications, useUnreadCount, useMarkNotificationRead, useMarkAllNotificationsRead } from '../../hooks/api';
@@ -31,6 +31,13 @@ export const TYPE_ICON: Record<NotificationType, Icon> = {
   ANNOUNCEMENT: Megaphone,
   ONBOARDING_DONE: Flag,
   PASSWORD_RESET_REQUESTED: Key,
+  BACKUP_FAILED: Database,
+  TASK_UNBLOCKED: LockOpen,
+  SURVEY_PUBLISHED: ChartPieSlice,
+  SURVEY_REMINDER: ChartPieSlice,
+  TICKET_ASSIGNED: Headset,
+  TICKET_UPDATED: Headset,
+  TICKET_COMMENT: ChatCircleText,
 };
 
 
@@ -106,7 +113,8 @@ export default function NotificationBell() {
             </div>
           ) : (
             items.map(n => {
-              const IconCmp = TYPE_ICON[n.type];
+              // Sunucu yeni bir tür eklese bile panel çökmesin
+              const IconCmp = TYPE_ICON[n.type] ?? Bell;
               return (
                 <button
                   key={n.id}

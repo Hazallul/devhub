@@ -15,7 +15,7 @@ import { usePageMenu } from '../components/layout/ContextMenu';
 import type { Decision } from '../components/ui/DecisionModal';
 import { ProfileDiff } from '../components/settings/ProfileCard';
 import {
-  useMe, useAdminUsers, useProjects, useLeaveBalances, useCreateUser, useUpdateUser, useSetUserActive, useResetPassword,
+  useMe, useUsers, useAdminUsers, useProjects, useLeaveBalances, useCreateUser, useUpdateUser, useSetUserActive, useResetPassword,
   useProfileRequests, useDecideProfileRequest, useDeleteUser, useDeleteImpact, usePasswordResets, useDecidePasswordReset
 } from '../hooks/api';
 import type { UserInput } from '../hooks/api';
@@ -260,9 +260,9 @@ function UsersPage() {
                   <p className="text-xs text-theme-muted font-medium truncate">{u.email}</p>
                 </div>
                 <div className="hidden md:block w-44 min-w-0">
-                  <p className="eyebrow mb-0.5">Unvan · Proje</p>
+                  <p className="eyebrow mb-0.5">Unvan · Departman</p>
                   <p className="text-sm font-semibold truncate">{u.jobTitle || '-'}</p>
-                  <p className="text-xs text-theme-muted truncate">{u.currentProject || 'Boşta'}</p>
+                  <p className="text-xs text-theme-muted truncate">{[u.department, u.currentProject || 'Boşta'].filter(Boolean).join(' · ')}</p>
                 </div>
                 <div className="hidden lg:block w-36">
                   <p className="eyebrow mb-0.5">İşe giriş</p>
@@ -360,8 +360,8 @@ function UsersPage() {
 }
 
 // ---------------- Kullanıcı formu ----------------
-interface FormState { fullName: string; email: string; role: Role; jobTitle: string; hireDate: string; currentProject: string; password: string; onboarding: boolean }
-const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', hireDate: '', currentProject: '', password: '', onboarding: true };
+interface FormState { fullName: string; email: string; role: Role; jobTitle: string; department: string; hireDate: string; currentProject: string; password: string; onboarding: boolean }
+const EMPTY: FormState = { fullName: '', email: '', role: 'EMPLOYEE', jobTitle: '', department: '', hireDate: '', currentProject: '', password: '', onboarding: true };
 
 /**
  * Okunması ve söylenmesi kolay başlangıç şifresi, ör. "Zeytin-4821". Herkese aynı sabit şifre (1111 gibi) verilmez:
@@ -391,7 +391,7 @@ function UserFormModal({ target, onClose, onCreated }: {
     if (!target) return;
     setErrors({});
     setForm(target === 'new' ? { ...EMPTY, hireDate: toIsoDay(new Date()), password: makePassword() } : {
-      fullName: target.fullName, email: target.email, role: target.role, jobTitle: target.jobTitle ?? '',
+      fullName: target.fullName, email: target.email, role: target.role, jobTitle: target.jobTitle ?? '', department: target.department ?? '',
       hireDate: target.hireDate ?? '', currentProject: target.currentProject ?? '', password: '', onboarding: false,
     });
   }, [target]);
@@ -413,6 +413,8 @@ function UserFormModal({ target, onClose, onCreated }: {
 
     const body: UserInput = {
       fullName: form.fullName.trim(), email: form.email.trim(), role: form.role, jobTitle: form.jobTitle.trim() || undefined,
+      // Düzenlerken boş gönderilirse departman kaldırılır.
+      department: form.department.trim(),
       hireDate: form.hireDate || undefined,
     };
     if (isNew) {
@@ -464,6 +466,7 @@ function UserFormModal({ target, onClose, onCreated }: {
             {editingSelf && <p className="text-xs text-theme-muted mt-1.5">Kendi yönetici yetkinizi kaldıramazsınız.</p>}
           </div>
         </div>
+        <DepartmentField value={form.department} onChange={v => set('department', v)} />
         <div className="grid sm:grid-cols-2 gap-5">
           <Field id="u-hire" label="İşe giriş tarihi" required={isNew} error={errors.hireDate}>
             <input id="u-hire" type="date" className="input" value={form.hireDate} onChange={e => set('hireDate', e.target.value)} />
@@ -643,5 +646,29 @@ function OnboardingPill({ progress, active }: { progress?: OnboardingProgress; a
         <Flag size={11} weight="bold" /> Başlangıç {progress.done}/{progress.total}
       </Pill>
     </span>
+  );
+}
+
+/**
+ * Departman: serbest metin, ama mevcut departmanlar tek tıkla seçilebilir (aynı ekip "Destek" / "destek ekibi" diye bölünmesin).
+ * Henüz hiç departman yoksa şirketin yapısına uygun öneriler gösterilir.
+ */
+function DepartmentField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const { data: users } = useUsers();
+  const existing = [...new Set((users ?? []).map(u => u.department).filter((d): d is string => !!d))].sort((a, b) => a.localeCompare(b, 'tr'));
+  const suggestions = existing.length ? existing : ['Proje', 'Destek', 'Test'];
+  return (
+    <div>
+      <label htmlFor="u-dept" className="label">Departman</label>
+      <input id="u-dept" className="input" value={value} maxLength={60} onChange={e => onChange(e.target.value)} placeholder="Örn: Destek" autoComplete="off" />
+      <div className="flex flex-wrap gap-1.5 mt-2" aria-label="Hazır departmanlar">
+        {suggestions.map(d => (
+          <button key={d} type="button" onClick={() => onChange(value === d ? '' : d)} aria-pressed={value === d}
+            className={`px-2.5 py-1 rounded-lg border text-xs font-medium transition-colors ${value === d ? 'bg-accent text-white border-accent' : 'border-theme-light text-theme-text/80 hover:bg-theme-lightest'}`}>
+            {d}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }

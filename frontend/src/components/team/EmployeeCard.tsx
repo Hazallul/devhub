@@ -1,3 +1,4 @@
+import { taskUrgency } from '../../lib/urgency';
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useAnimation } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +52,7 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
   const openCount = tasks?.filter(t => t.status !== 'TAMAMLANDI').length ?? 0;
   const doneCount = tasks?.filter(t => t.status === 'TAMAMLANDI').length ?? 0;
   const urgent = tasks?.filter(t => t.status !== 'TAMAMLANDI' && t.priority === 'YUKSEK').length ?? 0;
+  const overdue = tasks?.filter(t => t.status !== 'TAMAMLANDI' && taskUrgency(t).overdue).length ?? 0;
 
   useEffect(() => {
     if (!isHighlighted) return;
@@ -139,13 +141,18 @@ export default function EmployeeCard({ user, tasks: allTasks, isHighlighted = fa
           )}
         </div>
 
-        <div className="hidden lg:block w-36">
+        <div className="hidden lg:block w-44">
           <p className="eyebrow mb-1">Görevler</p>
           {tasks ? (
-            <div className="flex items-center gap-2 text-sm font-semibold text-theme-text tabular">
-              <span title="Açık görev">{openCount} açık</span>
-              {urgent > 0 && <span className="text-[0.6875rem] font-bold text-clay-ink bg-clay-soft px-1.5 rounded-md" title="Yüksek öncelikli">{urgent}!</span>}
-              {doneCount > 0 && <span className="text-theme-muted font-medium text-xs">· {doneCount} bitti</span>}
+            <div className="text-sm font-semibold text-theme-text tabular">
+              <span>{openCount} açık</span>
+              {doneCount > 0 && <span className="text-theme-muted font-medium text-xs"> · {doneCount} bitti</span>}
+              {(overdue > 0 || urgent > 0) && (
+                <p className="flex flex-wrap gap-1 mt-1 text-[0.6875rem] font-semibold">
+                  {overdue > 0 && <span className="text-danger-ink bg-danger-soft px-1.5 rounded-md">{overdue} gecikmiş</span>}
+                  {urgent > 0 && <span className="text-clay-ink bg-clay-soft px-1.5 rounded-md">{urgent} yüksek öncelik</span>}
+                </p>
+              )}
             </div>
           ) : <span className="text-sm text-theme-muted">-</span>}
         </div>

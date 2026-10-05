@@ -35,13 +35,15 @@ who is working on what, which work is late, who is on leave, what I need to do t
 
 | | |
 |---|---|
-| **Tasks** | See everyone's work on one board and drag a card to change its status. Late and high-priority work stands out automatically. |
+| **Tasks** | See everyone's work on the people board or every task in one table. Assign unassigned work in one click. Add subtasks, labels, file attachments and "can't start until" dependencies. |
 | **Effort tracking** | Every task gets an estimate; working time is counted automatically while the task is "in progress". Estimate and actual time are shown side by side. |
 | **Personal to-dos** | Your own cards, lists and a two-week plan. Lists can be shared with teammates. |
+| **Support tickets** | Employees send their needs (something broken, access, equipment) to management; admins assign and track them. The resolution target is calculated from the priority in working hours; a ticket can be turned into a task. |
 | **Leave** | Leave requests, admin approval and a two-week team calendar. Annual leave entitlement is calculated from the hire date. |
+| **Surveys** | Admins send surveys to everyone, a department or chosen people. Anonymous option, deadline, reminders and charted results. |
 | **Documentation** | Write and edit the team handbook in the app. Employees' changes are published after an admin approves them. |
 | **Live notifications** | Know when a task is assigned to you, your leave is approved or someone comments on your card, without refreshing. |
-| **Administration** | User accounts, reports, a detailed audit log (exportable to Excel) and a system health screen. |
+| **Administration** | User accounts, reports, a detailed audit log (exportable to Excel), system health and automatic database backups. |
 | **Light and dark theme** | Chosen per device, even from the sign-in screen. |
 
 ## Quick start
@@ -67,6 +69,12 @@ Fills projects, tasks, leave and announcements with sample data dated relative t
 
 ```bash
 docker exec -i devhub-mysql mysql -uroot -proot --default-character-set=utf8mb4 devhub < scripts/demo-data.sql
+```
+
+Then, for departments, labels, subtasks, support tickets and surveys (needs Python 3; running it again does not duplicate anything):
+
+```bash
+python scripts/demo-extras.py
 ```
 
 </details>
@@ -139,11 +147,24 @@ Each row is a person: hours worked this week, remaining work, and tasks in **To 
 
 - **Drag** a card to another column in the same row to change its status.
 - **Red** cards are overdue, **orange** cards are high priority.
-- Filters on top show only your work, one project or one priority.
+- Filters on top show only your work, one project, one department or one priority.
+- In large teams, group people by **Departman** (department) or **Proje** (project); groups collapse and your choice is remembered.
+- The **Atanmamış** (unassigned) row at the top holds work nobody has yet. An admin drags a card onto a person's row to assign it.
+
+The **Tablo** (table) view in the top right lists every task, assigned or not: open the **Atanmamış** tab to see waiting work, assign it from the **Atanan** column in one click, or select several tasks and assign them at once. Click a column header to sort. Employees can take an unassigned task with **Üstlen** (take on).
+
+<img src="docs/screenshots/tasks-table.webp" alt="Tasks: table view" width="100%">
 
 <img src="docs/screenshots/task-drawer.webp" alt="Task details" width="100%">
 
 Clicking a card opens its details on the right: assignee, priority, deadline, description, comments and the full history. The **İş gücü** (effort) section shows the estimate, time spent so far and whether the estimate was exceeded. Time only counts during working hours while the task is in progress.
+
+The details panel also has:
+
+- **Labels** such as "customer bug" or "invoice"; type a new one to create it.
+- **Subtasks** to split the work into steps; the card shows progress such as "1/3".
+- **Dependencies:** pick the task that must finish first. This task cannot start until then, and you are notified when it can.
+- **Files:** screenshots, PDFs and Office documents (up to 10 MB). Paste a screenshot straight in with **Ctrl+V**.
 
 ### Employees (Çalışanlar)
 
@@ -159,6 +180,27 @@ Change your own status next to your name in the bottom left.
 
 Create a request with **İzin talebi**; once an admin approves it, your status becomes "on leave" automatically on those days. Drag the team calendar left and right to look ahead. Your annual entitlement and remaining days are on this page.
 
+### Support tickets (Destek talepleri)
+
+<img src="docs/screenshots/tickets.webp" alt="Support tickets" width="100%">
+
+Laptop broken, VPN not connecting, need a new monitor? Send it to management with **Yeni talep** (new request). A ticket is always opened in your own name; pick its type (Arıza / something broken, Erişim / access, Ekipman / equipment, Diğer / other) and priority. The **resolution target** is calculated from the priority in working hours (urgent 4 hours, high 1 working day, normal 3 working days, low 5 working days).
+
+- Employees only see tickets **they opened** and tickets **assigned to them**; admins see all of them.
+- An admin assigns the ticket to whoever will solve it; the assignee can hand it back with **Bırak** (drop).
+- If more information is needed the status is set to **Yanıt bekleniyor** (waiting for reply); the requester is notified and the ticket is not counted as late meanwhile.
+- In the details panel, comment and attach screenshots (Ctrl+V). An admin or the assignee can use **Bu talepten görev oluştur** (create a task from this ticket) to put the work on the task board; when the task is done the ticket gets a note.
+
+### Surveys (Anketler)
+
+<img src="docs/screenshots/survey-results.webp" alt="Survey results" width="100%">
+
+Admins create a survey from a template or from scratch under **Anketler → Yeni anket**: single choice, multiple choice, 1-5 rating and written answers. Send it to everyone, a department or chosen people; with a deadline it closes by itself.
+
+- In an **anonymous** survey answers are never linked to a person; who answered is only visible as participation.
+- Employees see pending surveys on the overview and as a count in the menu; answering takes a few minutes.
+- Admins see charted results, send **Hatırlat** (reminders) to people who have not answered, and download answers as **Excel**.
+
 ### Documentation (Dokümantasyon)
 
 <img src="docs/screenshots/docs.webp" alt="Documentation" width="100%">
@@ -171,10 +213,13 @@ Admin accounts get a **Yönetim** (management) section in the sidebar.
 
 | | |
 |---|---|
-| **Kullanıcılar** (users) | Add employees, assign roles and projects, deactivate accounts. Password reset and profile change requests are approved here. |
+| **Kullanıcılar** (users) | Add employees, edit names and job titles, assign roles and projects, deactivate accounts. Password reset requests are approved here. |
 | **Raporlar** (reports) | Workload, project progress, estimated vs. actual effort, leave usage. |
 | **Loglar** (logs) | Who did what and when: sign-ins, task changes, approvals. Filterable and exportable to Excel. |
 | **Sistem izleme** (monitoring) | Service health, CPU and memory usage, response times. |
+| **Yedekler** (backups) | All data is backed up automatically every 3 days, or right away with **Şimdi yedek al**. Backups are kept in the `devhub/backups` folder on your computer, can be downloaded, and restored with **Bu yedeğe geri dön** (a backup of the current state is taken first). |
+
+When adding or editing a user, set a **Departman** (department, e.g. Proje, Destek, Test): grouping and filters on the Tasks and Employees pages use it, and surveys can target a department. Only admins change names and job titles.
 
 <img src="docs/screenshots/reports.webp" alt="Reports" width="100%">
 
@@ -191,6 +236,10 @@ Admin accounts get a **Yönetim** (management) section in the sidebar.
 
 <img src="docs/screenshots/monitoring.webp" alt="System monitoring" width="100%">
 
+**Backups (Yedekler)**
+
+<img src="docs/screenshots/backups.webp" alt="Backups" width="100%">
+
 **Dark theme**
 
 <img src="docs/screenshots/overview-dark.webp" alt="Dark theme" width="100%">
@@ -205,17 +254,22 @@ Admin accounts get a **Yönetim** (management) section in the sidebar.
 |---|:---:|:---:|
 | Add and update own tasks | ✓ | ✓ |
 | Assign tasks to others | | ✓ |
+| Take on an unassigned task | ✓ | ✓ |
+| Open and comment on own support tickets | ✓ | ✓ |
+| See and assign all tickets | | ✓ |
+| Answer surveys | ✓ | ✓ |
+| Create surveys and see results | | ✓ |
 | Request leave | ✓ | ✓ |
 | Approve leave | | ✓ |
 | Edit documentation | as a suggestion | directly |
 | Create projects, publish announcements | | ✓ |
-| Users, reports, logs, monitoring | | ✓ |
+| Users, reports, logs, monitoring, backups | | ✓ |
 
 ## Tips
 
 - **Ctrl + K** (⌘ + K on Mac): search people, tasks, projects and docs; common commands.
 - **Right click** works on every page: cards, rows and empty space open actions for that page.
-- The **Yeni** (new) button in the top right: task, leave request, project or announcement.
+- The **Yeni** (new) button in the top right: task, leave request, support ticket; for admins also project, announcement and survey.
 - **Ayarlar → Görünüm** (settings → appearance): theme and interface size.
 - Notifications are under the bell icon; the unread count also shows in the tab title.
 

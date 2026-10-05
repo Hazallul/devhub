@@ -32,7 +32,8 @@ export function Avatar({ user, size = 'md', ring }: { user: Pick<User, 'fullName
 export function AvatarStack({ users, max = 4 }: { users: User[]; max?: number }) {
   const extra = users.length - max;
   return (
-    <div className="flex -space-x-1.5">
+    // Baş harfler okunsun diye avatarlar üst üste bindirilmez.
+    <div className="flex gap-1">
       {users.slice(0, max).map(u => (
         <div key={u.id} title={u.fullName}><Avatar user={u} size="xs" ring /></div>
       ))}

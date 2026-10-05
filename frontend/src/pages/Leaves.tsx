@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from 'framer-motion';
-import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwise, CalendarBlank, LockSimple, SealCheck, ChatText, CaretLeft, CaretRight, ArrowRight , HandGrabbing } from '@phosphor-icons/react';
+import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwise, CalendarBlank, LockSimple, SealCheck, ChatText, CaretLeft, CaretRight, ArrowRight, HandGrabbing, WarningCircle } from '@phosphor-icons/react';
 import { PageHeader, StatCard, Skeleton, Avatar, Pill, EmptyState } from '../components/ui/primitives';
 import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useUndoLeaveDecision, useFinalizeLeaveDecision, useHolidayMap, useLeaveBalances } from '../hooks/api';
 import Modal from '../components/ui/Modal';
@@ -272,7 +272,9 @@ export default function Leaves() {
     document.getElementById('leave-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
-  const pending = leaves?.filter(l => l.state === 'BEKLIYOR') ?? [];
+  // En acil karar en üstte: başlangıcı en yakın (ya da geçmiş) talep önce
+  const pending = (leaves?.filter(l => l.state === 'BEKLIYOR') ?? []).sort((a, b) => a.startDate.localeCompare(b.startDate));
+  const startedPending = pending.filter(l => l.startDate <= today).length;
   // Karar verilmiş ama kesinleşmemiş talepler: yönetici geri alabilir veya kesinleştirebilir.
   const openDecisions = leaves?.filter(l => (l.state === 'ONAYLANDI' || l.state === 'REDDEDILDI') && !l.finalized) ?? [];
   const mine = leaves?.filter(l => l.userId === me.id) ?? [];
@@ -307,7 +309,7 @@ export default function Leaves() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Bugün izinde" value={onLeaveToday.length} icon={Airplane} hint={onLeaveToday.length ? onLeaveToday.map(l => userById.get(l.userId)?.fullName.split(' ')[0]).join(', ') : 'Herkes görevde'} />
-        <StatCard label={isAdmin ? 'Onay bekleyen' : 'Bekleyen talebim'} value={isAdmin ? pending.length : pending.filter(l => l.userId === me.id).length} icon={Hourglass} hint={isAdmin ? 'Aşağıdan karar verin' : 'Yönetici onayında'} />
+        <StatCard label={isAdmin ? 'Onay bekleyen' : 'Bekleyen talebim'} value={isAdmin ? pending.length : pending.filter(l => l.userId === me.id).length} icon={Hourglass} hint={isAdmin ? (startedPending ? `${startedPending} tanesinin tarihi geldi` : 'Aşağıdan karar verin') : 'Yönetici onayında'} />
         <StatCard label="Yaklaşan (14 gün)" value={upcoming.length} icon={CalendarCheck} hint="Onaylanmış izinler" />
         <StatCard
           label="Yıllık izin bakiyem"
@@ -519,6 +521,7 @@ export default function Leaves() {
                           <p className="text-sm font-bold truncate">{u?.fullName}</p>
                           <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 mt-0.5"><Meta.icon size={13} weight="bold" /> {Meta.label} · {rangeLabel(l, holidays.set)}</p>
                           {l.note && <p className="text-xs text-theme-text mt-1.5 italic">“{l.note}”</p>}
+                          <PendingUrgency leave={l} today={today} />
                           <button type="button" onClick={() => showInCalendar(l)} className="text-xs font-bold text-theme-deep hover:underline underline-offset-4 mt-1.5 inline-flex items-center gap-1">
                             <CalendarBlank size={12} weight="bold" /> Takvimde göster
                           </button>
@@ -601,9 +604,9 @@ export default function Leaves() {
                         {l.note && <p className="text-xs text-theme-text mt-1 italic truncate">“{l.note}”</p>}
                         <DecisionNote leave={l} />
                       </div>
-                      <Pill className={state.className}>
+                      <Pill className={l.expired ? 'bg-theme-lightest text-theme-muted' : state.className}>
                         {l.finalized && l.state !== 'IPTAL' && <LockSimple size={11} weight="bold" aria-label="Kesinleşti" />}
-                        {state.label}
+                        {l.expired ? 'Süresi doldu' : state.label}
                       </Pill>
                       {l.state === 'BEKLIYOR' && (
                         <button onClick={() => withdraw.mutate(l.id)} className="icon-btn" aria-label="Talebi geri çek" title="Geri çek">
@@ -679,7 +682,29 @@ function DecisionNote({ leave }: { leave: LeaveRequest }) {
   const rejected = leave.state === 'REDDEDILDI';
   return (
     <p className={`text-xs mt-2 rounded-xl px-3 py-2 leading-relaxed whitespace-pre-wrap break-words ${rejected ? 'bg-danger-soft text-danger-ink' : 'bg-theme-lightest/70 text-theme-text'}`}>
-      <span className="font-bold">{leave.decidedByName ?? 'Yönetici'}:</span> {leave.decisionNote}
+      <span className="font-bold">{leave.expired ? 'Sistem' : leave.decidedByName ?? 'Yönetici'}:</span> {leave.decisionNote}
+      {leave.expired && ' İzni kullandıysanız yöneticinize iletin; geriye dönük kaydedebilir.'}
+    </p>
+  );
+}
+
+/**
+ * Bekleyen talebin tarihi gelmişse yöneticiyi uyarır. Yıllık/mazeret talepleri bitiş günü geçince
+ * sistem tarafından kapatılır; hastalık talepleri (rapor sonradan gelir) açık kalır.
+ */
+function PendingUrgency({ leave, today }: { leave: LeaveRequest; today: string }) {
+  if (leave.startDate > today) return null;
+  const sick = leave.type === 'HASTALIK';
+  const text = leave.startDate === today
+    ? 'Bugün başlıyor, karar bekliyor'
+    : sick
+      ? 'Geçmiş tarihli hastalık bildirimi'
+      : leave.endDate === today
+        ? 'İzin başladı; bugün karar verilmezse talep kapanır'
+        : 'İzin başladı, karar bekliyor';
+  return (
+    <p className={`text-xs font-semibold mt-1.5 flex items-center gap-1 ${sick ? 'text-theme-muted' : 'text-danger-ink'}`}>
+      <WarningCircle size={13} weight="bold" aria-hidden="true" /> {text}
     </p>
   );
 }

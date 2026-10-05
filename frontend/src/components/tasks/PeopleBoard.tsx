@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CaretDown, Plus, UsersThree, Airplane, ArrowSquareOut, Trash } from '@phosphor-icons/react';
+import { CaretDown, Plus, UsersThree, Airplane, ArrowSquareOut, Trash, Tray, HandGrabbing } from '@phosphor-icons/react';
 import { Avatar, EmptyState, Segmented } from '../ui/primitives';
 import { useContextMenu } from '../layout/ContextMenu';
 import { useDeleteTask, useWorkload } from '../../hooks/api';
@@ -8,7 +8,11 @@ import { TASK_STATUS, TASK_STATUSES, TASK_PRIORITY, projectColor } from '../../l
 import { DAY_HOURS, effortTone, formatDuration, formatEstimate, liveSpent, remainingSeconds, useNow } from '../../lib/effort';
 import { dueLabel, parseServerDate } from '../../lib/format';
 import { UrgencyTags } from './Urgency';
+import { LabelChips, TaskBadges } from './TaskExtras';
+import { useClaimTask } from '../../hooks/taskExtras';
 import { byUrgency, taskUrgency, urgencySurface } from '../../lib/urgency';
+import GroupHeader from '../ui/GroupHeader';
+import { groupItems, groupKeyOf, useCollapsedGroups, usePersisted, type GroupBy } from '../../lib/groups';
 import type { Project, Task, TaskStatus, User, Workload } from '../../types';
 
 type Density = 'CARDS' | 'SUMMARY';
@@ -40,6 +44,9 @@ interface Props {
   onMove: (t: Task, status: TaskStatus, userId?: number) => void;
   onOpen: (id: number) => void;
   onNew: (userId: number) => void;
+  /** Atanmamış görevler: panonun en üstünde ayrı satır; yönetici kartı bir kişinin satırına sürükleyerek atar. */
+  unassigned?: Task[];
+  onNewUnassigned?: () => void;
 }
 
 /**
@@ -47,11 +54,14 @@ interface Props {
  * Solda kişinin bu haftaki çalışma süresi / kapasitesi ve açık iş yükü. Kartlar satır içinde sütunlar arasında
  * sürüklenir; yönetici bir kartı başka birinin satırına bırakırsa görev o kişiye aktarılır.
  */
-export default function PeopleBoard({ tasks, users, projectById, filtered, canEdit, canAssign, onMove, onOpen, onNew }: Props) {
+export default function PeopleBoard({ tasks, users, projectById, filtered, canEdit, canAssign, onMove, onOpen, onNew, unassigned = [], onNewUnassigned }: Props) {
   const { data: workload } = useWorkload();
   const now = useNow(30_000);
   const [density, setDensity] = useState<Density>(() => (localStorage.getItem('devhub.tasks.people.density') as Density) || 'CARDS');
   const [sort, setSort] = useState<Sort>('LOAD');
+  // Kalabalık ekiplerde kişiler departmana ya da projeye göre gruplanır; gruplar katlanır ve hatırlanır.
+  const [groupBy, setGroupBy] = usePersisted<GroupBy>('devhub.tasks.people.group', 'NONE');
+  const groups = useCollapsedGroups(`devhub.tasks.people.closed.${groupBy}`);
   const [drag, setDrag] = useState<Task | null>(null);
   const [over, setOver] = useState<string | null>(null);
 
@@ -72,7 +82,7 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
     // Filtre yokken görevi olmayan çalışanlar da görünür (boşta olan kim, bir bakışta anlaşılsın); yöneticiler yalnızca görevi varsa.
     if (!filtered) users.filter(u => u.role !== 'ADMIN').forEach(ensure);
     for (const t of tasks) {
-      const u = userById.get(t.userId);
+      const u = t.userId === null ? undefined : userById.get(t.userId);
       if (!u) continue;
       const status = t.status ?? 'YAPILACAK';
       if (status === 'TAMAMLANDI' && (!t.completedAt || parseServerDate(t.completedAt).getTime() < doneSince)) continue;
@@ -119,7 +129,7 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
     setOver(null);
   };
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && unassigned.length === 0) {
     return <EmptyState icon={UsersThree} title="Filtreye uyan görev yok" description="Filtreleri değiştirmeyi deneyin." />;
   }
 
@@ -133,7 +143,9 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
           {totals.capacity > 0 && <> / {formatDuration(totals.capacity, true)}</>} çalışıldı
           {totals.running > 0 && <>, şu an <span className="font-medium text-theme-text tabular">{totals.running}</span> görev sürüyor</>}.
         </p>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Segmented<GroupBy> label="Gruplama" layoutId="people-group" value={groupBy} onChange={setGroupBy}
+            options={[{ value: 'NONE', label: 'Grupsuz' }, { value: 'DEPARTMENT', label: 'Departman' }, { value: 'PROJECT', label: 'Proje' }]} />
           <Segmented<Sort> label="Sıralama" layoutId="people-sort" value={sort} onChange={setSort}
             options={[{ value: 'LOAD', label: 'Yüke göre' }, { value: 'NAME', label: 'Ada göre' }]} />
           <Segmented<Density> label="Yoğunluk" layoutId="people-density" value={density} onChange={changeDensity}
@@ -157,8 +169,35 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
           })}
         </div>
 
+        {unassigned.length > 0 && (
+          <UnassignedRow tasks={unassigned} now={now} projectById={projectById} canAssign={canAssign} dragging={drag}
+            onDragStart={setDrag} onDragEnd={() => { setDrag(null); setOver(null); }} onOpen={onOpen} onNew={onNewUnassigned} />
+        )}
         <div className="divide-y divide-theme-light">
-          {rows.map(r => (
+          {groupBy === 'NONE' ? rows.map(renderRow) : groupItems(rows, r => groupKeyOf(r.user, groupBy)).map(g => {
+            const open = !groups.isClosed(g.key);
+            const remaining = g.items.reduce((s, r) => s + r.remaining, 0);
+            const overdue = g.items.reduce((s, r) => s + [...r.cells.YAPILACAK, ...r.cells.DEVAM].filter(t => taskUrgency(t).overdue).length, 0);
+            const running = g.items.reduce((s, r) => s + r.cells.DEVAM.length, 0);
+            return (
+              <div key={g.key}>
+                <GroupHeader title={g.key} count={g.items.length} open={open} onToggle={() => groups.toggle(g.key)} sticky={false}
+                  summary={<>
+                    {overdue > 0 && <span className="text-danger font-medium">{overdue} gecikmiş</span>}
+                    {running > 0 && <span>{running} görev sürüyor</span>}
+                    <span>açık iş <span className="tabular font-medium text-theme-text">{formatDuration(remaining, true)}</span></span>
+                  </>} />
+                {open && <div className="divide-y divide-theme-light">{g.items.map(renderRow)}</div>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  function renderRow(r: Row) {
+    return (
             <PersonRow
               key={r.user.id}
               row={r}
@@ -177,11 +216,8 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
               onOpen={onOpen}
               onNew={canAssign ? () => onNew(r.user.id) : undefined}
             />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    );
+  }
 }
 
 /** Kişi sütunu + üç durum sütunu; başlık ve satırlar aynı ızgarayı kullanır */
@@ -217,7 +253,7 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
           <Avatar user={u} size="sm" />
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium truncate leading-tight">{u.fullName}</p>
-            <p className="text-xs text-theme-muted truncate">{u.jobTitle || 'Çalışan'}</p>
+            <p className="text-xs text-theme-muted truncate">{[u.jobTitle || 'Çalışan', u.department].filter(Boolean).join(' · ')}</p>
           </div>
           <div className="flex items-center shrink-0">
             {onNew && (
@@ -361,12 +397,68 @@ function MiniCard({ task, now, project, editable, draggable, dragging, onDragSta
     >
       <UrgencyTags u={u} className="mb-1.5" />
       <p className={`text-[0.8125rem] font-medium leading-snug line-clamp-2 ${done ? 'text-theme-muted line-through decoration-theme-light' : 'text-theme-text'}`}>{task.content}</p>
-      <div className="flex items-center gap-2 mt-1 text-xs text-theme-muted min-w-0">
+      <LabelChips ids={task.labelIds} max={2} className="mt-1" />
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-1 text-xs text-theme-muted min-w-0">
         {project && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: projectColor(project.name) }} title={project.name} aria-hidden="true" />}
         <EffortChip spent={spent} estimate={task.estimatedMinutes} ticking={!!task.ticking} tone={tone} />
         {due && !u.overdue && <span className={`whitespace-nowrap ${due.tone === 'danger' ? 'text-danger' : due.tone === 'warn' ? 'text-theme-deep' : ''}`}>{due.text}</span>}
+        <TaskBadges task={task} />
       </div>
     </div>
+  );
+}
+
+/**
+ * Atanmamış görevler satırı (havuz). Yönetici kartı bir kişinin satırına sürükler: görev o kişiye atanır (bırakılan sütunun durumuyla).
+ * Çalışan sağ tıkla "Üstlen" diyebilir.
+ */
+function UnassignedRow({ tasks, now, projectById, canAssign, dragging, onDragStart, onDragEnd, onOpen, onNew }: {
+  tasks: Task[]; now: number; projectById: Map<number, Project>; canAssign: boolean; dragging: Task | null;
+  onDragStart: (t: Task) => void; onDragEnd: () => void; onOpen: (id: number) => void; onNew?: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const claim = useClaimTask();
+  const menu = useContextMenu();
+  const sorted = [...tasks].sort(byPriority);
+  const shown = expanded ? sorted : sorted.slice(0, CELL_LIMIT);
+  const estimate = tasks.reduce((s, t) => s + (t.estimatedMinutes ?? 0) * 60, 0);
+  return (
+    <section aria-label="Atanmamış görevler" className={`md:grid ${GRID} border-b border-theme-light bg-warn-soft/40`}>
+      <div className="px-4 py-3.5 flex md:flex-col gap-2">
+        <div className="flex items-center gap-2.5 flex-1 md:flex-none">
+          <span className="w-8 h-8 rounded-lg bg-warn-soft border border-warn-line text-warn-ink flex items-center justify-center shrink-0"><Tray size={16} weight="bold" aria-hidden="true" /></span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium leading-tight">Atanmamış</p>
+            <p className="text-xs text-theme-muted">{tasks.length} görev · {formatDuration(estimate, true)} tahmini</p>
+          </div>
+          {onNew && <button type="button" onClick={onNew} className="icon-btn w-7 h-7" aria-label="Atanmamış görev ekle" title="Atanmamış görev ekle"><Plus size={14} weight="bold" /></button>}
+        </div>
+        <p className="hidden md:block text-xs text-theme-muted">{canAssign ? 'Kartı bir kişinin satırına sürükleyerek atayın.' : 'Sağ tıklayıp "Üstlen" ile kendinize alabilirsiniz.'}</p>
+      </div>
+      {/* Atanmamış görev her zaman Yapılacak'tadır: kartlar yalnızca o sütunda durur. */}
+      <div className="md:border-l border-theme-light px-2.5 py-2.5">
+        <div className="space-y-1.5">
+          {shown.map(t => (
+            <div key={t.id} onContextMenu={e => menu(e, { label: 'Atanmamış görev', items: [
+              { label: 'Ayrıntıyı aç', icon: ArrowSquareOut, onSelect: () => onOpen(t.id) },
+              !canAssign && { label: 'Üstlen', icon: HandGrabbing, onSelect: () => claim.mutate(t.id) },
+            ] })}>
+              <MiniCard task={t} now={now} project={t.projectId ? projectById.get(t.projectId) : undefined}
+                editable={false} draggable={canAssign} dragging={dragging?.id === t.id}
+                onDragStart={() => onDragStart(t)} onDragEnd={onDragEnd} onOpen={() => onOpen(t.id)} onMove={() => undefined} />
+            </div>
+          ))}
+        </div>
+        {tasks.length > CELL_LIMIT && (
+          <button type="button" onClick={() => setExpanded(x => !x)} className="w-full text-xs font-medium text-theme-deep hover:underline underline-offset-4 py-1.5 rounded">
+            {expanded ? 'Daha az göster' : `${tasks.length - CELL_LIMIT} atanmamış görev daha`}
+          </button>
+        )}
+      </div>
+      <div className="hidden md:flex md:col-span-2 md:border-l border-theme-light items-center justify-center px-4">
+        <p className="text-xs text-theme-muted text-center max-w-xs">Atanmamış görev başlatılamaz. Atandıktan sonra kişinin satırında ilerler.</p>
+      </div>
+    </section>
   );
 }
 

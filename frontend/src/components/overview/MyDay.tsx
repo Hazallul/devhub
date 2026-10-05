@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowRight, Plus, Sun, CalendarBlank, Bell, Hourglass, Airplane, CheckSquare, IdentificationCard, Users, PaperPlaneTilt } from '@phosphor-icons/react';
+import { ArrowRight, Plus, Sun, CalendarBlank, Bell, Hourglass, Airplane, CheckSquare, Users, PaperPlaneTilt, ChartPieSlice } from '@phosphor-icons/react';
+import { usePendingSurveyCount } from '../../hooks/surveys';
 import type { Icon } from '@phosphor-icons/react';
 import { DoneToggle } from '../todo/TodoCard';
 import TaskChip, { TASK_CARD_SURFACE } from '../todo/TaskChip';
@@ -10,7 +11,7 @@ import { useTodoCardMenu } from '../todo/cardMenu';
 import { useQuickActions } from '../layout/QuickActions';
 import { Skeleton } from '../ui/primitives';
 import { useCreateTodo, useTodos, useUpdateTodo } from '../../hooks/todos';
-import { useAllTasks, useLeaves, useMe, usePendingPasswordResetCount, usePendingProfileCount, useProfileRequests } from '../../hooks/api';
+import { useAllTasks, useLeaves, useMe, usePendingPasswordResetCount, usePendingProfileCount } from '../../hooks/api';
 import { addDays, dueLabel, firstName, formatDate, toIsoDay } from '../../lib/format';
 import type { TodoItem } from '../../types';
 
@@ -26,8 +27,8 @@ export default function MyDay() {
   const { data: todos } = useTodos();
   const { data: tasks } = useAllTasks();
   const { data: leaves } = useLeaves();
-  const { data: profileRequests } = useProfileRequests();
   const pendingProfiles = usePendingProfileCount(isAdmin).data?.count ?? 0;
+  const pendingSurveys = usePendingSurveyCount().data?.count ?? 0;
   const pendingResets = usePendingPasswordResetCount(isAdmin).data?.count ?? 0;
   const update = useUpdateTodo();
   const create = useCreateTodo();
@@ -61,7 +62,6 @@ export default function MyDay() {
   const dueSoon = myOpenTasks.filter(t => t.dueDate && t.dueDate >= today && t.dueDate <= soon).length;
   const pendingLeaves = (leaves ?? []).filter(l => l.state === 'BEKLIYOR');
   const myPendingLeaves = pendingLeaves.filter(l => l.userId === me.id).length;
-  const myPendingProfile = (profileRequests ?? []).some(r => r.userId === me.id && r.state === 'BEKLIYOR');
   const nextLeave = (leaves ?? [])
     .filter(l => l.userId === me.id && l.state === 'ONAYLANDI' && l.endDate >= today)
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
@@ -81,10 +81,12 @@ export default function MyDay() {
         tone: pendingLeaves.length + pendingProfiles + pendingResets > 0 ? 'accent' : undefined,
       }
       : {
-        icon: myPendingProfile && !myPendingLeaves ? IdentificationCard : Hourglass, to: myPendingProfile && !myPendingLeaves ? '/settings' : '/leaves', label: 'Taleplerim',
-        value: !myPendingLeaves && !myPendingProfile ? 'Bekleyen talebiniz yok' : [myPendingLeaves && `${myPendingLeaves} izin talebi`, myPendingProfile && 'profil değişikliği'].filter(Boolean).join(' · ') + ' onay bekliyor',
-        tone: myPendingLeaves || myPendingProfile ? 'accent' : undefined,
+        icon: Hourglass, to: '/leaves', label: 'Taleplerim',
+        value: myPendingLeaves ? `${myPendingLeaves} izin talebi onay bekliyor` : 'Bekleyen talebiniz yok',
+        tone: myPendingLeaves ? 'accent' : undefined,
       },
+    // Yanıt bekleyen anket varsa öne çıkar (yoksa satır hiç görünmez).
+    ...(pendingSurveys > 0 ? [{ icon: ChartPieSlice, to: '/surveys', label: 'Anket', value: `${pendingSurveys} anket yanıtınızı bekliyor`, tone: 'accent' as const }] : []),
     // İzin bakiyesi burada gösterilmez (yılda bir bakılan bilgi); yalnızca yaklaşan izin ya da talep kısayolu.
     nextLeave
       ? { icon: Airplane, to: '/leaves', label: 'İzin', value: nextLeave.startDate <= today ? `İzindesiniz · ${formatDate(nextLeave.endDate)} tarihine kadar` : `Sıradaki izniniz ${formatDate(nextLeave.startDate)}` }

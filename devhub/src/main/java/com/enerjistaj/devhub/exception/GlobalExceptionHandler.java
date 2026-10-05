@@ -60,7 +60,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleTooLarge(org.springframework.web.multipart.MaxUploadSizeExceededException ex) {
-        return body(HttpStatus.PAYLOAD_TOO_LARGE, "Dosya çok büyük; en fazla 5 MB yüklenebilir.");
+        return body(HttpStatus.PAYLOAD_TOO_LARGE, "Dosya çok büyük; en fazla 200 MB yüklenebilir.");
     }
 
     /** Anlık akış (SSE) bağlantısı istemci tarafından kapandı ya da süresi doldu: yazılacak bir yanıt yok. */

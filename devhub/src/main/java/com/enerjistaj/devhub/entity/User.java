@@ -35,6 +35,9 @@ public class User {
     private Role role;
 
     private String jobTitle;
+
+    /** Departman / ekip (ör. Proje, Destek, Test); yönetici girer, gruplama ve filtre için. */
+    private String department;
     private String currentProject;
     private String status;
 

@@ -42,6 +42,28 @@ public class WorkTimeService {
         return periods.stream().mapToLong(p -> Duration.between(p[0], p[1]).getSeconds()).sum();
     }
 
+    /**
+     * startUtc'den itibaren seconds kadar mesai süresi geçtiği an (UTC). Hafta sonu ve resmi tatiller atlanır (kişinin izni sayılmaz).
+     * Destek taleplerinin çözüm hedefi (SLA) için: ör. Cuma 17:00'de açılan 4 saatlik talebin hedefi Pazartesi 12:00 olur.
+     */
+    public LocalDateTime addWorkSeconds(LocalDateTime startUtc, long seconds) {
+        ZonedDateTime s = startUtc.atZone(UTC).withZoneSameInstant(ActionLogService.ZONE);
+        Calendar cal = calendar(s.toLocalDate(), s.toLocalDate().plusDays(400));
+        long left = seconds;
+        for (LocalDate d = s.toLocalDate(); ; d = d.plusDays(1)) {
+            if (!cal.isWorkday(null, d)) continue;
+            for (LocalTime[] p : periods) {
+                ZonedDateTime ps = d.atTime(p[0]).atZone(ActionLogService.ZONE);
+                ZonedDateTime pe = d.atTime(p[1]).atZone(ActionLogService.ZONE);
+                ZonedDateTime from = s.isAfter(ps) ? s : ps;
+                if (!pe.isAfter(from)) continue;
+                long avail = Duration.between(from, pe).getSeconds();
+                if (avail >= left) return from.plusSeconds(left).withZoneSameInstant(UTC).toLocalDateTime();
+                left -= avail;
+            }
+        }
+    }
+
     /** Tatil ve izin bilgisini bir kez yükleyip birçok hesapta kullanmak için. */
     public Calendar calendar(LocalDate from, LocalDate to) {
         Set<LocalDate> h = holidays.findByDateBetween(from, to).stream().map(Holiday::getDate).collect(Collectors.toSet());

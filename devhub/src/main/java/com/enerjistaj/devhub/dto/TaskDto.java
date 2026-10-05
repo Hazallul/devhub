@@ -35,6 +35,28 @@ public class TaskDto {
     private boolean ticking;
     /** İlk kez Devam Ediyor'a alındığı an (UTC); hiç başlanmadıysa null */
     private LocalDateTime startedAt;
+    /** Etiketler (kimlik), alt görev ilerlemesi, dosya eki sayısı */
+    private java.util.List<Long> labelIds;
+    private int subtasksDone;
+    private int subtasksTotal;
+    private int attachmentCount;
+    /** Bu görevin beklediği görevler; openBlockerIds henüz bitmemiş olanlar (varsa görev başlayamaz) */
+    private java.util.List<Long> blockerIds;
+    private java.util.List<Long> openBlockerIds;
+    /** Bu görevi bekleyen görev sayısı */
+    private int blockingCount;
+
+    public TaskDto withExtras(com.enerjistaj.devhub.taskextra.TaskExtrasService.Extras e) {
+        if (e == null) e = new com.enerjistaj.devhub.taskextra.TaskExtrasService.Extras(java.util.List.of(), 0, 0, 0, java.util.List.of(), java.util.List.of(), 0);
+        labelIds = e.labelIds();
+        subtasksDone = e.subtasksDone();
+        subtasksTotal = e.subtasksTotal();
+        attachmentCount = e.attachmentCount();
+        blockerIds = e.blockerIds();
+        openBlockerIds = e.openBlockerIds();
+        blockingCount = e.blockingCount();
+        return this;
+    }
 
     public static TaskDto from(Task t) {
         return from(t, 0);
@@ -43,7 +65,7 @@ public class TaskDto {
     public static TaskDto from(Task t, long commentCount) {
         return TaskDto.builder()
             .id(t.getId())
-            .userId(t.getUser().getId())
+            .userId(t.getUser() != null ? t.getUser().getId() : null)
             .content(t.getContent())
             .createdAt(t.getCreatedAt())
             .status(t.getStatus())

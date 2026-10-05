@@ -1,26 +1,21 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, UserCircle, Hourglass, XCircle, CheckCircle, Plus, Trash, EnvelopeSimple, AddressBook, ArrowRight, Info } from '@phosphor-icons/react';
+import { Check, UserCircle, Plus, Trash, EnvelopeSimple, AddressBook, ArrowRight } from '@phosphor-icons/react';
 import { Avatar, StatusBadge } from '../ui/primitives';
-import {
-  useMe, useUpdateProfile, useUpdateLinks, useProfileRequests, useCreateProfileRequest, useWithdrawProfileRequest,
-} from '../../hooks/api';
+import { useMe, useUpdateProfile, useUpdateLinks } from '../../hooks/api';
 import { AVATAR_COLORS, LINK_TYPE, LINK_TYPES } from '../../lib/meta';
-import { timeAgo } from '../../lib/format';
 import type { ProfileRequest, UserLink, UserLinkType } from '../../types';
 
 /**
  * Profil kartı. Üç ayrı kayıt davranışı vardır:
  *  - Avatar rengi: tıklanınca hemen kaydedilir.
- *  - Ad soyad ve unvan: yönetici doğrudan kaydeder; çalışan onaya gönderir (yönetici onaylayınca geçerli olur).
+ *  - Ad soyad ve unvan: hesap açılırken yönetici girer; yalnızca yönetici değiştirir (çalışan için salt okunur).
  *  - İletişim ve bağlantılar: kişi onay gerekmeden kendisi düzenler.
  */
 export default function ProfileCard() {
   const me = useMe();
   const isAdmin = me.role === 'ADMIN';
   const update = useUpdateProfile();
-  const request = useCreateProfileRequest();
-  const { data: requests } = useProfileRequests();
 
   const [fullName, setFullName] = useState(me.fullName);
   const [jobTitle, setJobTitle] = useState(me.jobTitle ?? '');
@@ -33,10 +28,7 @@ export default function ProfileCard() {
 
   const color = me.avatarColor ?? AVATAR_COLORS[1];
   const dirty = fullName.trim() !== me.fullName || jobTitle.trim() !== (me.jobTitle ?? '');
-  const mine = (requests ?? []).filter(r => r.userId === me.id && r.state !== 'IPTAL');
-  const pending = mine.find(r => r.state === 'BEKLIYOR');
-  const latest = mine[0];
-  const busy = update.isPending || request.isPending;
+  const busy = update.isPending;
 
   const refreshSession = (user: unknown) => {
     try { localStorage.setItem('user', JSON.stringify(user)); } catch { /* yok say */ }
@@ -46,8 +38,7 @@ export default function ProfileCard() {
     e.preventDefault();
     if (fullName.trim().length < 3) { setError('Ad soyad en az 3 karakter olmalı.'); return; }
     setError('');
-    if (isAdmin) update.mutate({ userId: me.id, fullName: fullName.trim(), jobTitle: jobTitle.trim() }, { onSuccess: refreshSession });
-    else request.mutate({ fullName: fullName.trim(), jobTitle: jobTitle.trim() }, { onSuccess: () => { setFullName(me.fullName); setJobTitle(me.jobTitle ?? ''); } });
+    update.mutate({ userId: me.id, fullName: fullName.trim(), jobTitle: jobTitle.trim() }, { onSuccess: refreshSession });
   };
 
   return (
@@ -84,6 +75,7 @@ export default function ProfileCard() {
         </div>
       </fieldset>
 
+      {isAdmin && (
       <form onSubmit={save} className="pt-6 border-t border-theme-light/40 space-y-4" aria-label="Ad soyad ve unvan">
         <div className="grid sm:grid-cols-2 gap-5">
           <div>
@@ -97,23 +89,16 @@ export default function ProfileCard() {
           </div>
         </div>
 
-        <AnimatePresence initial={false}>
-          {!isAdmin && pending && <PendingNotice key={`p${pending.id}`} request={pending} />}
-          {!isAdmin && !pending && latest && latest.state !== 'BEKLIYOR' && <DecisionNotice key={`d${latest.id}`} request={latest} />}
-        </AnimatePresence>
-
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs text-theme-muted font-medium flex items-center gap-1.5 max-w-md">
-            {!isAdmin && <><Info size={14} weight="bold" className="shrink-0" aria-hidden="true" /> Ad soyad ve unvan değişiklikleri yönetici onayından sonra geçerli olur.</>}
-          </p>
           <div className="flex gap-3 ml-auto">
             {dirty && <button type="button" onClick={() => { setFullName(me.fullName); setJobTitle(me.jobTitle ?? ''); setError(''); }} className="btn-ghost">Geri al</button>}
             <button type="submit" disabled={!dirty || busy} className="btn-primary">
-              {busy ? 'Gönderiliyor…' : isAdmin ? 'Değişiklikleri Kaydet' : pending ? 'Talebi Güncelle' : 'Onaya Gönder'}
+              {busy ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
             </button>
           </div>
         </div>
       </form>
+      )}
 
       <LinksEditor />
     </section>
@@ -138,43 +123,6 @@ export function ProfileDiff({ request }: { request: ProfileRequest }) {
         </div>
       ))}
     </dl>
-  );
-}
-
-function PendingNotice({ request }: { request: ProfileRequest }) {
-  const withdraw = useWithdrawProfileRequest();
-  return (
-    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-      <div role="status" className="rounded-2xl bg-theme-lightest/70 border border-theme-light p-4 flex flex-wrap items-start gap-3">
-        <Hourglass size={20} weight="duotone" className="text-theme-deep shrink-0 mt-0.5" aria-hidden="true" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-theme-deep mb-1">Yönetici onayı bekleniyor <span className="font-medium text-theme-muted">· {timeAgo(request.createdAt)}</span></p>
-          <ProfileDiff request={request} />
-        </div>
-        <button type="button" onClick={() => withdraw.mutate(request.id)} disabled={withdraw.isPending} className="btn-ghost min-h-[2.25rem] px-3 text-sm">Talebi geri çek</button>
-      </div>
-    </motion.div>
-  );
-}
-
-function DecisionNotice({ request }: { request: ProfileRequest }) {
-  const approved = request.state === 'ONAYLANDI';
-  return (
-    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-      <div role="status" className={`rounded-2xl border p-4 flex items-start gap-3 ${approved ? 'bg-theme-lightest/70 border-theme-light' : 'bg-danger-soft border-danger-line'}`}>
-        {approved
-          ? <CheckCircle size={20} weight="duotone" className="text-theme-deep shrink-0 mt-0.5" aria-hidden="true" />
-          : <XCircle size={20} weight="duotone" className="text-danger shrink-0 mt-0.5" aria-hidden="true" />}
-        <div className="flex-1 min-w-0">
-          <p className={`text-sm font-bold mb-1 ${approved ? 'text-theme-deep' : 'text-danger'}`}>
-            Son talebiniz {approved ? 'onaylandı' : 'reddedildi'}
-            <span className="font-medium text-theme-muted"> · {request.decidedByName ?? 'Yönetici'}{request.decidedAt ? `, ${timeAgo(request.decidedAt)}` : ''}</span>
-          </p>
-          <ProfileDiff request={request} />
-          {request.decisionNote && <p className="text-sm text-theme-text mt-2 whitespace-pre-wrap break-words">“{request.decisionNote}”</p>}
-        </div>
-      </div>
-    </motion.div>
   );
 }
 

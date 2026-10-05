@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
-  ListDashes, ListChecks, ArrowUpRight, House, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare,
+  ListDashes, ListChecks, ArrowUpRight, House, MagnifyingGlass, Plus, List, X, Briefcase, Airplane, Megaphone, CheckSquare, Headset, ChartPieSlice,
 } from '@phosphor-icons/react';
 import { getStoredUser } from '../../lib/session';
 import { useLeaves, useMe, usePendingProfileCount, usePendingPasswordResetCount } from '../../hooks/api';
 import { useDocPendingCount } from '../../hooks/docs';
+import { usePendingSurveyCount } from '../../hooks/surveys';
+import { useTickets } from '../../hooks/tickets';
 import { page } from '../../lib/motion';
 import { Menu, MenuItem, MenuDivider } from '../ui/Menu';
 import { groupsFor, HOME_ITEM, HOME_TILE } from './nav';
@@ -142,7 +144,13 @@ function SidebarContent() {
   const pendingResets = usePendingPasswordResetCount(isAdmin).data?.count ?? 0;
   const pendingLeaves = isAdmin ? leaves?.filter(l => l.state === 'BEKLIYOR').length ?? 0 : 0;
   const pendingDocs = useDocPendingCount(isAdmin).data?.count ?? 0;
-  const badges: Record<string, number> = { '/leaves': pendingLeaves, '/users': pendingProfiles + pendingResets, '/docs': pendingDocs };
+  const pendingSurveys = usePendingSurveyCount().data?.count ?? 0;
+  // Talepler: bende iş bekleyenler. Bana atanan açık talepler, yöneticide atanmamışlar,
+  // açtığım talepte benden yanıt bekleniyorsa o da.
+  const waitingTickets = useTickets().data?.filter(t =>
+    ((t.assigneeId === me.id || (isAdmin && t.assigneeId === null)) && (t.status === 'YENI' || t.status === 'INCELENIYOR'))
+    || (t.requesterId === me.id && t.status === 'YANIT_BEKLENIYOR')).length ?? 0;
+  const badges: Record<string, number> = { '/leaves': pendingLeaves, '/users': pendingProfiles + pendingResets, '/docs': pendingDocs, '/surveys': pendingSurveys, '/tickets': waitingTickets };
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 p-3 overflow-y-auto overscroll-contain scrollbar-hover">
@@ -174,7 +182,7 @@ function SidebarContent() {
 
         {groupsFor(me).map(g => (
           <div key={g.label} className="mb-5">
-            <p className="px-3 mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-[0.08em] text-theme-muted">{g.label}</p>
+            <p className="px-3 mb-1.5 text-xs font-medium text-theme-muted">{g.label}</p>
             <div className="space-y-0.5">
               {g.items.map(item => <NavRow key={item.to} to={item.to} icon={item.icon} label={item.label} badge={badges[item.to]} />)}
               {/* Çalışan ekip akışını (son işlemler) pencerede görür; yönetici için "Loglar" bir sayfadır. */}
@@ -227,6 +235,7 @@ function NavRow({ to, icon: IconCmp, label, end, badge }: { to: string; icon: Re
  */
 function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; onOpenDrawer: () => void }) {
   const me = useMe();
+  const navigate = useNavigate();
   const actions = useQuickActions();
   const [menuOpen, setMenuOpen] = useState(false);
   const [newBtn, setNewBtn] = useState<HTMLButtonElement | null>(null);
@@ -255,10 +264,12 @@ function Topbar({ onOpenPalette, onOpenDrawer }: { onOpenPalette: () => void; on
         <Menu open={menuOpen} onClose={() => setMenuOpen(false)} anchor={newBtn} label="Yeni oluştur">
           <MenuItem icon={CheckSquare} onSelect={run(() => actions.newTask())}>{me.role === 'ADMIN' ? 'Görev ata' : 'Görev ekle'}</MenuItem>
           <MenuItem icon={Airplane} onSelect={run(() => actions.newLeave())}>İzin talebi</MenuItem>
+          <MenuItem icon={Headset} onSelect={run(() => navigate('/tickets?yeni=1'))}>Destek talebi</MenuItem>
           {me.role === 'ADMIN' && <>
             <MenuDivider />
             <MenuItem icon={Briefcase} onSelect={run(() => actions.newProject())}>Proje</MenuItem>
             <MenuItem icon={Megaphone} onSelect={run(actions.newAnnouncement)}>Duyuru</MenuItem>
+            <MenuItem icon={ChartPieSlice} onSelect={run(() => navigate('/surveys/yeni'))}>Anket</MenuItem>
           </>}
         </Menu>
       </div>

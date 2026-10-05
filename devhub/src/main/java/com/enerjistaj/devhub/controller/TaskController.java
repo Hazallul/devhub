@@ -53,6 +53,7 @@ public class TaskController {
     private final TaskStatusService taskStatusService;
     private final com.enerjistaj.devhub.service.TaskTimeService taskTime;
     private final com.enerjistaj.devhub.service.WorkTimeService workTime;
+    private final com.enerjistaj.devhub.taskextra.TaskExtrasService extras;
 
     @GetMapping
     public ResponseEntity<List<TaskDto>> getAllTasks() {
@@ -87,6 +88,7 @@ public class TaskController {
         User me = currentUser.get();
         boolean admin = CurrentUser.isAdmin(me);
         List<Long> userIds = idList(payload.get("userIds"));
+        if (Payloads.flag(payload, "unassigned")) return List.of(createUnassigned(payload, me, admin));
         if (userIds.isEmpty()) throw ApiException.badRequest("En az bir kişi seçin.");
         if (userIds.size() > 50) throw ApiException.badRequest("Tek seferde en fazla 50 kişiye görev atanabilir.");
         if (!admin && (userIds.size() > 1 || !userIds.get(0).equals(me.getId()))) {
@@ -125,7 +127,7 @@ public class TaskController {
 
             event(saved, me, user.getId().equals(me.getId()) ? "görevi oluşturdu" : "görevi oluşturdu ve " + user.getFullName() + " kişisine atadı");
             notificationService.notify(user, me, NotificationType.TASK_ASSIGNED, "Size yeni görev atandı", content, link(saved));
-            created.add(TaskDto.from(saved));
+            created.add(TaskDto.from(saved).withExtras(null));
             names.add(user.getFullName());
         }
         actionLogService.record(LogCategory.GOREV, LogAction.OLUSTURMA,
@@ -141,6 +143,50 @@ public class TaskController {
         return created;
     }
 
+    /** Atanmamış görev (yalnızca yönetici): havuza eklenir, sonra tablodan ya da panodan birine atanır. */
+    private TaskDto createUnassigned(Map<String, Object> payload, User me, boolean admin) {
+        if (!admin) throw ApiException.forbidden("Atanmamış görevi yalnızca yöneticiler ekleyebilir.");
+        String content = Payloads.requiredText(payload, "content", "Görev içeriği boş olamaz.", 1000, "Görev");
+        Integer estimate = estimateMinutes(payload);
+        if (estimate == null) throw ApiException.badRequest("Görevin tahmini süresini (iş gücü) girin.");
+        Task t = new Task();
+        t.setContent(content);
+        t.setDescription(Payloads.optionalText(payload, "description", 4000, "Açıklama"));
+        TaskPriority priority = Payloads.enumValue(payload, "priority", TaskPriority.class, "öncelik");
+        if (priority != null) t.setPriority(priority);
+        t.setDueDate(Payloads.date(payload, "dueDate", "Son tarih"));
+        t.setEstimatedMinutes(estimate);
+        t.setCreatedBy(me);
+        if (payload.containsKey("projectId")) t.setProject(projectOrNull(payload.get("projectId")));
+        Task saved = taskRepository.save(t);
+        event(saved, me, "görevi atanmamış olarak oluşturdu");
+        actionLogService.record(LogCategory.GOREV, LogAction.OLUSTURMA, "Atanmamış görev eklendi: " + content).by(me)
+                .target("GOREV", saved.getId(), content)
+                .detail("Öncelik: " + PRIORITY_LABEL.get(saved.getPriority()))
+                .detail(saved.getDueDate() != null ? "Son tarih: " + saved.getDueDate().format(DAY) : null)
+                .detail("Tahmini süre: " + hours(estimate))
+                .detail(saved.getProject() != null ? "Proje: " + saved.getProject().getName() : null).save();
+        return TaskDto.from(saved).withExtras(null);
+    }
+
+    /** Çalışan atanmamış bir görevi kendisi üstlenir. */
+    @PostMapping("/{taskId}/claim")
+    @Transactional
+    public ResponseEntity<TaskDto> claim(@PathVariable Long taskId) {
+        User me = currentUser.get();
+        Task t = taskRepository.findById(taskId).orElseThrow(() -> ApiException.notFound("Görev"));
+        if (t.getUser() != null) throw ApiException.conflict(t.getUser().getId().equals(me.getId()) ? "Bu görev zaten sizde." : "Bu görevi " + t.getUser().getFullName() + " üstlenmiş.");
+        t.setUser(me);
+        event(t, me, "görevi üstlendi");
+        Task saved = taskRepository.save(t);
+        actionLogService.record(LogCategory.GOREV, LogAction.GOREV_AKTARMA, "Atanmamış görev üstlenildi: " + t.getContent()).by(me)
+                .target("GOREV", t.getId(), t.getContent()).change("Atanan", "Atanmamış", me.getFullName()).save();
+        if (t.getCreatedBy() != null) {
+            notificationService.notify(t.getCreatedBy(), me, NotificationType.TASK_ASSIGNED, me.getFullName() + " bir görevi üstlendi", t.getContent(), link(t));
+        }
+        return ResponseEntity.ok(dto(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
+    }
+
     /** Kısmi güncelleme: yalnızca gövdede gelen alanlar değişir. Her değişiklik görev geçmişine yazılır. */
     @PutMapping("/{taskId}")
     @Transactional
@@ -154,7 +200,7 @@ public class TaskController {
         TaskPriority oPriority = t.getPriority();
         LocalDate oDue = t.getDueDate();
         String oProject = t.getProject() != null ? t.getProject().getName() : null;
-        String oUser = t.getUser().getFullName();
+        String oUser = owner(t);
         Integer oEstimate = t.getEstimatedMinutes();
 
         if (payload.containsKey("content")) {
@@ -169,6 +215,26 @@ public class TaskController {
             if (!Objects.equals(description, t.getDescription())) {
                 event(t, me, description == null ? "açıklamayı kaldırdı" : t.getDescription() == null ? "açıklama ekledi" : "açıklamayı güncelledi");
                 t.setDescription(description);
+            }
+        }
+        // Atama durumdan önce işlenir: atanmamış görev panoda birinin "Devam" sütununa bırakılınca önce atanır, sonra başlar.
+        if (payload.containsKey("userId")) {
+            if (!admin) throw ApiException.forbidden("Görevi başka birine yalnızca yöneticiler aktarabilir.");
+            Long userId = idOrNull(payload.get("userId"));
+            Long current = t.getUser() != null ? t.getUser().getId() : null;
+            if (userId == null && current != null) {
+                // Havuza geri al: sürüyorsa önce durur (süre sahibine yazılmış olarak kalır).
+                if (t.getStatus() == TaskStatus.DEVAM) taskStatusService.change(t, TaskStatus.YAPILACAK, me);
+                if (t.getStatus() == TaskStatus.TAMAMLANDI) throw ApiException.conflict("Tamamlanmış görevin ataması kaldırılamaz.");
+                event(t, me, "atamayı kaldırdı: " + t.getUser().getFullName() + " → Atanmamış");
+                t.setUser(null);
+            } else if (userId != null && !userId.equals(current)) {
+                User user = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("Kullanıcı"));
+                if (!user.isActive()) throw ApiException.badRequest(user.getFullName() + " pasif bir hesap; görev aktarılamaz.");
+                event(t, me, current == null ? "görevi " + user.getFullName() + " kişisine atadı" : "görevi aktardı: " + t.getUser().getFullName() + " → " + user.getFullName());
+                taskTime.onReassign(t, user);
+                t.setUser(user);
+                notificationService.notify(user, me, NotificationType.TASK_ASSIGNED, current == null ? "Size yeni görev atandı" : "Size bir görev aktarıldı", t.getContent(), link(t));
             }
         }
         if (payload.containsKey("status")) {
@@ -213,19 +279,6 @@ public class TaskController {
                 t.setProject(project);
             }
         }
-        if (payload.containsKey("userId")) {
-            if (!admin) throw ApiException.forbidden("Görevi başka birine yalnızca yöneticiler aktarabilir.");
-            Long userId = idOrNull(payload.get("userId"));
-            if (userId == null) throw ApiException.badRequest("Atanan kişi boş olamaz.");
-            if (!userId.equals(t.getUser().getId())) {
-                User user = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("Kullanıcı"));
-                if (!user.isActive()) throw ApiException.badRequest(user.getFullName() + " pasif bir hesap; görev aktarılamaz.");
-                event(t, me, "görevi aktardı: " + t.getUser().getFullName() + " → " + user.getFullName());
-                taskTime.onReassign(t, user);
-                t.setUser(user);
-                notificationService.notify(user, me, NotificationType.TASK_ASSIGNED, "Size bir görev aktarıldı", t.getContent(), link(t));
-            }
-        }
         Task saved = taskRepository.save(t);
         logTaskChanges(saved, me, oContent, oDescription, oStatus, oPriority, oDue, oProject, oUser, oEstimate);
         return ResponseEntity.ok(dto(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
@@ -236,7 +289,7 @@ public class TaskController {
         Task t = findOwnTask(taskId);
         actionLogService.record(LogCategory.GOREV, LogAction.SILME, "Görev silindi: " + t.getContent()).by(currentUser.get())
                 .target("GOREV", t.getId(), t.getContent())
-                .detail("Atanan: " + t.getUser().getFullName())
+                .detail("Atanan: " + owner(t))
                 .detail("Durum: " + TaskStatusService.STATUS_LABEL.get(t.getStatus()))
                 .detail(t.getProject() != null ? "Proje: " + t.getProject().getName() : null)
                 .detail(t.getCreatedBy() != null ? "Oluşturan: " + t.getCreatedBy().getFullName() : null)
@@ -280,7 +333,7 @@ public class TaskController {
             actionLogService.record(LogCategory.GOREV, LogAction.GUNCELLEME, "Görevin harcanan süresi düzeltildi: " + t.getContent()).by(me)
                 .target("GOREV", t.getId(), t.getContent())
                 .change("Harcanan süre", from, to)
-                .detail("Görevin sahibi: " + t.getUser().getFullName())
+                .detail("Görevin sahibi: " + owner(t))
                 .level(LogLevel.UYARI).save();
         }
         return ResponseEntity.ok(dto(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
@@ -336,7 +389,7 @@ public class TaskController {
                 .detail("Yorum: " + (text.length() > 300 ? text.substring(0, 297) + "..." : text)).save();
 
         Map<Long, User> recipients = new LinkedHashMap<>();
-        recipients.put(t.getUser().getId(), t.getUser());
+        if (t.getUser() != null) recipients.put(t.getUser().getId(), t.getUser());
         if (t.getCreatedBy() != null) recipients.putIfAbsent(t.getCreatedBy().getId(), t.getCreatedBy());
         recipients.values().forEach(r -> notificationService.notify(r, me, NotificationType.TASK_COMMENT,
             me.getFullName() + " bir göreve yorum yazdı", t.getContent() + " — " + text, link(t)));
@@ -365,11 +418,11 @@ public class TaskController {
                 ActionLogService.diff("Öncelik", PRIORITY_LABEL.get(oPriority), PRIORITY_LABEL.get(t.getPriority())),
                 ActionLogService.diff("Son tarih", oDue != null ? oDue.format(DAY) : null, t.getDueDate() != null ? t.getDueDate().format(DAY) : null),
                 ActionLogService.diff("Proje", oProject != null ? oProject : "Projesiz", project != null ? project : "Projesiz"),
-                ActionLogService.diff("Atanan", oUser, t.getUser().getFullName()),
+                ActionLogService.diff("Atanan", oUser, owner(t)),
                 ActionLogService.diff("Tahmini süre", oEstimate != null ? hours(oEstimate) : null, t.getEstimatedMinutes() != null ? hours(t.getEstimatedMinutes()) : null)).filter(Objects::nonNull).toList();
         if (changes.isEmpty()) return;
         boolean completed = oStatus != TaskStatus.TAMAMLANDI && t.getStatus() == TaskStatus.TAMAMLANDI;
-        boolean moved = !oUser.equals(t.getUser().getFullName());
+        boolean moved = !oUser.equals(owner(t));
         LogAction action = completed ? LogAction.TAMAMLAMA : moved ? LogAction.GOREV_AKTARMA : oStatus != t.getStatus() ? LogAction.DURUM_DEGISIKLIGI : LogAction.GUNCELLEME;
         String title = switch (action) {
             case TAMAMLAMA -> "Görev tamamlandı: ";
@@ -379,7 +432,7 @@ public class TaskController {
         };
         actionLogService.record(LogCategory.GOREV, action, title + t.getContent()).by(me)
                 .target("GOREV", t.getId(), t.getContent()).details(changes)
-                .detail(moved || !t.getUser().getId().equals(me.getId()) ? "Görevin sahibi: " + t.getUser().getFullName() : null).save();
+                .detail(moved || t.getUser() == null || !t.getUser().getId().equals(me.getId()) ? "Görevin sahibi: " + owner(t) : null).save();
     }
 
     private void event(Task t, User actor, String message) {
@@ -394,11 +447,19 @@ public class TaskController {
     private List<TaskDto> dtos(List<Task> tasks) {
         Map<Long, Long> comments = commentCounts();
         Map<Long, com.enerjistaj.devhub.service.TaskTimeService.Summary> time = taskTime.summaries(tasks);
-        return tasks.stream().map(t -> withTime(TaskDto.from(t, comments.getOrDefault(t.getId(), 0L)), time.get(t.getId()))).toList();
+        // Bütün görevler istenince IN listesi yerine tek seferde hepsi okunur.
+        Map<Long, com.enerjistaj.devhub.taskextra.TaskExtrasService.Extras> ex = tasks.size() > 300 ? extras.extras((Collection<Long>) null)
+            : extras.extras(tasks.stream().map(Task::getId).toList());
+        return tasks.stream().map(t -> withTime(TaskDto.from(t, comments.getOrDefault(t.getId(), 0L)), time.get(t.getId())).withExtras(ex.get(t.getId()))).toList();
     }
 
     private TaskDto dto(Task t, long comments) {
-        return withTime(TaskDto.from(t, comments), taskTime.summary(t));
+        return withTime(TaskDto.from(t, comments), taskTime.summary(t)).withExtras(extras.extras(t.getId()));
+    }
+
+    /** Görevin sahibinin adı; atanmamışsa "Atanmamış". */
+    private static String owner(Task t) {
+        return t.getUser() != null ? t.getUser().getFullName() : "Atanmamış";
     }
 
     private static TaskDto withTime(TaskDto d, com.enerjistaj.devhub.service.TaskTimeService.Summary s) {
@@ -463,7 +524,8 @@ public class TaskController {
 
     private Task findOwnTask(Long taskId) {
         Task t = taskRepository.findById(taskId).orElseThrow(() -> ApiException.notFound("Görev"));
-        currentUser.requireSelfOrAdmin(t.getUser().getId(), NOT_OWNER);
+        if (t.getUser() == null) currentUser.requireAdmin("Atanmamış görevi yalnızca yöneticiler düzenleyebilir; üstlenmek için \"Üstlen\" düğmesini kullanın.");
+        else currentUser.requireSelfOrAdmin(t.getUser().getId(), NOT_OWNER);
         return t;
     }
 }

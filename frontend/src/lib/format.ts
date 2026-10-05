@@ -128,14 +128,14 @@ export function seniorityLabel(hireDate: string | null) {
   return m ? `${y} yıl ${m} ay` : `${y} yıl`;
 }
 
-/** "3 gün kaldı", "Bugün", "2 gün gecikti" */
+/** "3 gün kaldı", "Bugün", "2 gün gecikti"; bir haftadan uzaksa "Son tarih 14 Eki" */
 export function dueLabel(value: string) {
   const diff = daysBetween(new Date(), toDate(value));
   if (diff === 0) return { text: 'Bugün', tone: 'warn' as const };
   if (diff === 1) return { text: 'Yarın', tone: 'warn' as const };
   if (diff < 0) return { text: `${-diff} gün gecikti`, tone: 'danger' as const };
   if (diff <= 7) return { text: `${diff} gün kaldı`, tone: 'normal' as const };
-  return { text: formatDate(value), tone: 'normal' as const };
+  return { text: `Son tarih ${formatDate(value)}`, tone: 'normal' as const };
 }
 
 const relative = new Intl.RelativeTimeFormat('tr-TR', { numeric: 'auto' });

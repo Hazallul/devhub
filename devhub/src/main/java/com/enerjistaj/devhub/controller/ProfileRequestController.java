@@ -26,8 +26,8 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Ad soyad ve unvan kişinin kimliğidir; çalışan bunları doğrudan değiştiremez, talep açar ve yönetici onaylar.
- * (Avatar rengi ve iletişim bağlantıları onay gerektirmez; yöneticiler profilleri doğrudan düzenleyebilir.)
+ * Eski profil değişikliği talepleri. Ad soyad ve unvanı artık yalnızca yönetici değiştirir; çalışan yeni talep açamaz.
+ * Önceden açılmış talepler burada listelenir, yönetici sonuçlandırabilir ya da sahibi geri çekebilir.
  */
 @RestController
 @RequestMapping("/api/profile-requests")
@@ -55,36 +55,6 @@ public class ProfileRequestController {
     public ResponseEntity<Map<String, Long>> pendingCount() {
         User me = currentUser.get();
         return ResponseEntity.ok(Map.of("count", CurrentUser.isAdmin(me) ? requests.countByState(ProfileRequestState.BEKLIYOR) : 0L));
-    }
-
-    @PostMapping
-    @Transactional
-    public ResponseEntity<ProfileRequestDto> create(@RequestBody Map<String, Object> body) {
-        User me = currentUser.get();
-        if (CurrentUser.isAdmin(me)) throw ApiException.badRequest("Yöneticiler profil bilgilerini doğrudan değiştirebilir.");
-        String fullName = Payloads.requiredText(body, "fullName", "Ad soyad zorunludur.", 255, "Ad soyad");
-        if (fullName.length() < 3) throw ApiException.badRequest("Ad soyad en az 3 karakter olmalı.");
-        String jobTitle = Payloads.optionalText(body, "jobTitle", 100, "Unvan");
-        if (fullName.equals(me.getFullName()) && Objects.equals(jobTitle, me.getJobTitle())) {
-            throw ApiException.badRequest("Ad soyad veya unvanda bir değişiklik yok.");
-        }
-
-        // Bekleyen eski talep varsa yenisi onun yerine geçer.
-        requests.findByUserIdAndState(me.getId(), ProfileRequestState.BEKLIYOR).forEach(old -> old.setState(ProfileRequestState.IPTAL));
-
-        ProfileChangeRequest r = new ProfileChangeRequest();
-        r.setUser(me);
-        r.setFullName(fullName);
-        r.setJobTitle(jobTitle);
-        r.setPreviousFullName(me.getFullName());
-        r.setPreviousJobTitle(me.getJobTitle());
-        ProfileChangeRequest saved = requests.save(r);
-
-        actionLogService.record(LogCategory.PROFIL, LogAction.TALEP, "Profil değişikliği talep edildi").by(me)
-                .target("PROFIL_TALEBI", saved.getId(), me.getFullName()).details(List.of(summary(saved).split(" · ")))
-                .detail("Yönetici onayı bekleniyor").save();
-        notifications.notifyAdmins(me, NotificationType.PROFILE_REQUESTED, me.getFullName() + " profil değişikliği istedi", summary(saved), "/users");
-        return ResponseEntity.ok(ProfileRequestDto.from(saved));
     }
 
     /** decision: ONAYLANDI veya REDDEDILDI; note: çalışana gösterilecek açıklama (isteğe bağlı). */

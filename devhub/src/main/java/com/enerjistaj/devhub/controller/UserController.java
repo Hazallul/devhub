@@ -65,7 +65,7 @@ public class UserController {
         boolean forced = me.isMustChangePassword();
         me.setPasswordHash(passwordEncoder.encode(next));
         me.setMustChangePassword(false);
-        sessionService.revokeAll(me);
+        sessionService.passwordChanged(me, false);
         User saved = userRepository.save(me);
         actionLogService.record(LogCategory.OTURUM, LogAction.SIFRE_DEGISTIRME, "Şifresini değiştirdi").by(me)
                 .target("KULLANICI", me.getId(), me.getFullName())
@@ -150,7 +150,7 @@ public class UserController {
             String jobTitle = payload.containsKey("jobTitle") ? Payloads.optionalText(payload, "jobTitle", 100, "Unvan") : user.getJobTitle();
             boolean changed = !fullName.equals(user.getFullName()) || !java.util.Objects.equals(jobTitle, user.getJobTitle());
             if (changed && !CurrentUser.isAdmin(me)) {
-                throw ApiException.forbidden("Ad soyad ve unvan değişikliği yönetici onayı gerektirir; lütfen değişiklik talebi gönderin.");
+                throw ApiException.forbidden("Ad soyad ve unvanı yalnızca yönetici değiştirebilir.");
             }
             user.setFullName(fullName);
             user.setJobTitle(jobTitle);

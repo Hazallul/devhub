@@ -45,7 +45,7 @@ function ReportsPage() {
   const today = toIsoDay(new Date());
   const userById = useMemo(() => new Map((users ?? []).map(u => [u.id, u])), [users]);
   const projectById = useMemo(() => new Map((projects ?? []).map(p => [p.id, p])), [projects]);
-  const openTasks = useMemo(() => (tasks ?? []).filter(t => t.status !== 'TAMAMLANDI' && userById.has(t.userId)), [tasks, userById]);
+  const openTasks = useMemo(() => (tasks ?? []).filter(t => t.status !== 'TAMAMLANDI' && t.userId !== null && userById.has(t.userId)), [tasks, userById]);
 
   // ---------- İş yükü: kişi başı açık görev, önceliğe göre ----------
   const workload = useMemo(() => {
@@ -277,7 +277,7 @@ function ReportsPage() {
                 <button
                   type="button"
                   onClick={() => downloadCsv(`gecikmis-gorevler-${today}.csv`, ['Görev', 'Kişi', 'Proje', 'Öncelik', 'Son tarih', 'Gecikme (gün)'],
-                    overdue.map(t => [t.content, userById.get(t.userId)?.fullName, t.projectId ? projectById.get(t.projectId)?.name : '', t.priority, t.dueDate, daysBetween(toDate(t.dueDate!), new Date())]))}
+                    overdue.map(t => [t.content, userById.get(t.userId ?? -1)?.fullName, t.projectId ? projectById.get(t.projectId)?.name : '', t.priority, t.dueDate, daysBetween(toDate(t.dueDate!), new Date())]))}
                   className="btn-secondary h-10 min-h-0 px-3.5 text-sm"
                 >
                   <DownloadSimple size={16} weight="bold" /> Excel'e aktar
@@ -289,7 +289,7 @@ function ReportsPage() {
             ) : (
               <ul className="divide-y divide-theme-light/40">
                 {overdue.map(t => {
-                  const u = userById.get(t.userId);
+                  const u = userById.get(t.userId ?? -1);
                   const late = daysBetween(toDate(t.dueDate!), new Date());
                   return (
                     <li key={t.id}>

@@ -28,10 +28,15 @@ public class RealtimeInterceptor implements HandlerInterceptor, WebMvcConfigurer
     /** Adres öneki → istemcideki React Query anahtarları (önek olarak geçersiz kılınır). Uzun önekler önce denenir. */
     private static final Map<String, List<String>> KEYS = new LinkedHashMap<>();
     static {
+        KEYS.put("/api/admin/backups", List.of("backups"));
         KEYS.put("/api/admin/users", List.of("users", "admin-users", "tasks", "projects", "leaves", "todos", "onboarding"));
         KEYS.put("/api/profile-requests", List.of("profile-requests", "users", "admin-users"));
         KEYS.put("/api/users", List.of("users", "admin-users", "leaves", "onboarding"));
-        KEYS.put("/api/tasks", List.of("tasks", "projects", "todos"));
+        KEYS.put("/api/tasks", List.of("tasks", "projects", "todos", "tickets"));
+        KEYS.put("/api/surveys", List.of("surveys"));
+        KEYS.put("/api/tickets", List.of("tickets", "tasks"));
+        KEYS.put("/api/labels", List.of("labels", "tasks"));
+        KEYS.put("/api/attachments", List.of("tasks", "tickets"));
         KEYS.put("/api/projects", List.of("projects", "users", "tasks"));
         KEYS.put("/api/leaves", List.of("leaves", "users"));
         KEYS.put("/api/announcements", List.of("announcements"));

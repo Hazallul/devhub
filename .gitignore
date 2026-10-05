@@ -7,6 +7,7 @@ build/
 
 # Yerel yedekler (veritabanı dökümleri) ve kişisel araç dosyaları
 _yedek/
+devhub/backups/
 CLAUDE.md
 .claude/
 .vscode/

@@ -1,5 +1,5 @@
 import type { Icon } from '@phosphor-icons/react';
-import { House, Users, Folder, CheckSquare, CalendarBlank, ChartBar, UserGear, Pulse, BookOpenText, ListDashes } from '@phosphor-icons/react';
+import { House, Users, Folder, CheckSquare, CalendarBlank, ChartBar, UserGear, Pulse, BookOpenText, ListDashes, Database, Headset, ChartPieSlice } from '@phosphor-icons/react';
 import type { User } from '../../types';
 
 export interface NavItem { to: string; label: string; icon: Icon; adminOnly?: boolean }
@@ -15,6 +15,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/tasks', label: 'Görevler', icon: CheckSquare },
       { to: '/projects', label: 'Projeler', icon: Folder },
+      { to: '/tickets', label: 'Destek talepleri', icon: Headset },
       { to: '/docs', label: 'Dokümantasyon', icon: BookOpenText },
     ],
   },
@@ -23,6 +24,7 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/team', label: 'Çalışanlar', icon: Users },
       { to: '/leaves', label: 'İzinler', icon: CalendarBlank },
+      { to: '/surveys', label: 'Anketler', icon: ChartPieSlice },
       { to: '/reports', label: 'Raporlar', icon: ChartBar, adminOnly: true },
     ],
   },
@@ -33,6 +35,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/users', label: 'Kullanıcılar', icon: UserGear, adminOnly: true },
       { to: '/logs', label: 'Loglar', icon: ListDashes, adminOnly: true },
       { to: '/monitoring', label: 'Sistem İzleme', icon: Pulse, adminOnly: true },
+      { to: '/backups', label: 'Yedekler', icon: Database, adminOnly: true },
     ],
   },
 ];

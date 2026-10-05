@@ -186,6 +186,8 @@ function PasswordField({ id, label, autoComplete, value, onChange, registration,
 /** initialEmail: şifremi unuttum adımlarından dönünce e-posta yeniden yazılmasın. */
 function LoginStep({ initialEmail, onForgot, onSignedIn, disabled }: { initialEmail: string; onForgot: (email: string) => void; onSignedIn: () => void; disabled: boolean }) {
   const [errorMsg, setErrorMsg] = useState('');
+  // Yedekten geri yükleme sonrası herkes yeniden girer; yöneticiye neden çıkış yapıldığı söylenir.
+  const [restored] = useState(() => new URLSearchParams(window.location.search).has('geriYuklendi'));
   const [demoLoading, setDemoLoading] = useState<string | null>(null);
   const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<LoginFormInputs>({
     resolver: zodResolver(loginSchema),
@@ -214,6 +216,11 @@ function LoginStep({ initialEmail, onForgot, onSignedIn, disabled }: { initialEm
   return (
     <>
       <Heading title="Oturum açın" />
+      {restored && (
+        <p role="status" className="mb-4 rounded-xl border border-theme-light bg-theme-lightest/70 px-3 py-2 text-sm text-theme-text">
+          Veriler yedekten geri yüklendi. Lütfen yeniden giriş yapın.
+        </p>
+      )}
       <form onSubmit={handleSubmit(login)} noValidate className="space-y-4">
         <div>
           <label htmlFor="email" className="label">E-posta</label>

@@ -138,9 +138,9 @@ export function useMe(): User {
 }
 
 // ---------- Mutations ----------
-function useAction<TVars, TResult = unknown>(
+export function useAction<TVars, TResult = unknown>(
   fn: (vars: TVars) => Promise<TResult>,
-  opts: { invalidate: string[][]; success?: string | ((vars: TVars) => string) },
+  opts: { invalidate: readonly (readonly unknown[])[]; success?: string | ((vars: TVars) => string) },
 ) {
   const qc = useQueryClient();
   const toast = useToast();
@@ -210,12 +210,6 @@ export const useProfileRequests = () =>
 export const usePendingProfileCount = (enabled: boolean) =>
   useQuery({ queryKey: ['profile-requests', 'count'], queryFn: get<{ count: number }>('/profile-requests/pending-count'), enabled, refetchInterval: livePoll(30_000) });
 
-export const useCreateProfileRequest = () =>
-  useAction(
-    (body: { fullName: string; jobTitle: string }) => api.post<ProfileRequest>('/profile-requests', body).then(r => r.data),
-    { invalidate: [['profile-requests']], success: 'Değişiklik talebiniz yöneticiye iletildi' },
-  );
-
 export const useDecideProfileRequest = () =>
   useAction(
     ({ id, ...body }: { id: number; decision: 'ONAYLANDI' | 'REDDEDILDI'; note?: string }) => api.put(`/profile-requests/${id}/decision`, body),
@@ -224,9 +218,6 @@ export const useDecideProfileRequest = () =>
       success: ({ decision }) => (decision === 'ONAYLANDI' ? 'Değişiklik onaylandı ve profile uygulandı' : 'Değişiklik talebi reddedildi'),
     },
   );
-
-export const useWithdrawProfileRequest = () =>
-  useAction((id: number) => api.delete(`/profile-requests/${id}`), { invalidate: [['profile-requests']], success: 'Talep geri çekildi' });
 
 export const useChangePassword = () =>
   useAction(
@@ -239,7 +230,7 @@ export const useChangePassword = () =>
   );
 
 export interface UserInput {
-  fullName: string; email: string; role: Role; jobTitle?: string; hireDate?: string; currentProject?: string;
+  fullName: string; email: string; role: Role; jobTitle?: string; department?: string; hireDate?: string; currentProject?: string;
   /** Yalnızca oluştururken: başlangıç şifresi (boşsa sunucu üretir) */
   password?: string;
   /** Yalnızca oluştururken: işe başlangıç listesi açılsın mı (varsayılan evet) */
@@ -315,7 +306,8 @@ export const useUpdateProject = () =>
 
 /** Birden fazla kişi seçilirse her kişiye ayrı görev oluşur. projectId yalnızca yöneticide dikkate alınır (null = projesiz). */
 export interface TaskInput {
-  userIds: number[]; content: string; description?: string; priority?: TaskPriority; dueDate?: string; projectId?: number | null;
+  /** Atanmamış görevde boş dizi ve unassigned: true (yalnızca yönetici) */
+  userIds: number[]; unassigned?: boolean; content: string; description?: string; priority?: TaskPriority; dueDate?: string; projectId?: number | null;
   /** Tahmini iş gücü (dakika, zorunlu) */
   estimatedMinutes: number;
 }
@@ -323,12 +315,13 @@ export interface TaskInput {
 export const useCreateTask = () =>
   useAction(
     (body: TaskInput) => api.post<Task[]>('/tasks', body).then(r => r.data),
-    { invalidate: [['tasks'], ['logs']], success: ({ userIds }) => (userIds.length > 1 ? `${userIds.length} kişiye görev atandı` : 'Görev eklendi') },
+    { invalidate: [['tasks'], ['logs']], success: ({ userIds, unassigned }) => (unassigned ? 'Görev atanmamış olarak eklendi' : userIds.length > 1 ? `${userIds.length} kişiye görev atandı` : 'Görev eklendi') },
   );
 
 type TaskPatch = {
   id: number; content?: string; description?: string | null; status?: TaskStatus; priority?: TaskPriority; dueDate?: string | null;
-  userId?: number; projectId?: number | null; estimatedMinutes?: number;
+  /** null = atamayı kaldır (görev havuza döner) */
+  userId?: number | null; projectId?: number | null; estimatedMinutes?: number;
 };
 
 /** İyimser güncelleme: kart sunucu yanıtını beklemeden yeni sütununa kayar, hata olursa geri alınır. */

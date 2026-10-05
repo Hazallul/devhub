@@ -68,6 +68,10 @@ public class TodoItem {
     @Column(name = "task_id")
     private Long taskId;
 
+    /** Tekrarlayan kart tamamlanınca açılan kopyanın kimliği (tamamlama geri alınırsa kopyayı geri toplamak için). */
+    @Column(name = "repeat_copy_id")
+    private Long repeatCopyId;
+
     @Column(nullable = false)
     private int position;
 

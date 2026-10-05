@@ -3,7 +3,7 @@ package com.enerjistaj.devhub.entity;
 /** Sistem logu kategorisi: kaydın hangi modülle ilgili olduğu. label: dışa aktarmada görünen Türkçe ad (frontend: LOG_CATEGORY). */
 public enum LogCategory {
     OTURUM("Oturum"), KULLANICI("Kullanıcı"), PROFIL("Profil"), PROJE("Proje"), GOREV("Görev"), IZIN("İzin"),
-    DUYURU("Duyuru"), DOKUMAN("Doküman"), SISTEM("Sistem");
+    DUYURU("Duyuru"), DOKUMAN("Doküman"), ANKET("Anket"), DESTEK("Destek"), SISTEM("Sistem");
 
     private final String label;
 

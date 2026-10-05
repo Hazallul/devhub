@@ -221,7 +221,7 @@ public class TodoController {
         Long taskId = id(body.get("taskId"));
         if (taskId != null) {
             // Yalnızca kişinin kendi görevi plana eklenebilir; başkasının görevi "yok" sayılır.
-            tasks.findById(taskId).filter(t -> t.getUser().getId().equals(me.getId())).orElseThrow(() -> ApiException.notFound("Görev"));
+            tasks.findById(taskId).filter(t -> t.getUser() != null && t.getUser().getId().equals(me.getId())).orElseThrow(() -> ApiException.notFound("Görev"));
             i.setTaskId(taskId);
         }
         schedule(i);
@@ -265,6 +265,7 @@ public class TodoController {
                 i.setDoneAt(done ? LocalDateTime.now() : null);
                 i.setDoneBy(done ? currentUser.get() : null);
                 if (done && i.getRepeatRule() != null) repeat(i);
+                if (!done && i.getRepeatCopyId() != null) undoRepeat(i);
                 if (done && i.getTaskId() != null) completeLinkedTask(i);
             }
         }
@@ -463,6 +464,23 @@ public class TodoController {
             steps.save(c);
         }
         i.setRepeatRule(null);
+        i.setRepeatCopyId(saved.getId());
+    }
+
+    /**
+     * Tekrarlayan kartın tamamlanması geri alındı: açılan kopyaya hiç dokunulmadıysa (tamamlanmamış, düzenlenmemiş) silinir ve
+     * tekrar kuralı asıl karta döner. Kopya düzenlendiyse ya da tamamlandıysa kişinin emeği kaybolmasın diye olduğu gibi kalır.
+     */
+    private void undoRepeat(TodoItem i) {
+        Long copyId = i.getRepeatCopyId();
+        i.setRepeatCopyId(null);
+        TodoItem copy = items.findById(copyId).orElse(null);
+        if (copy == null || copy.isDone() || copy.getUpdatedAt().isAfter(copy.getCreatedAt().plusSeconds(2))) return;
+        i.setRepeatRule(copy.getRepeatRule());
+        steps.deleteAll(steps.findByItemIdOrderByPositionAscIdAsc(copyId));
+        stars.findByItemId(copyId).forEach(s -> stars.remove(copyId, s.getUserId()));
+        comments.deleteAll(comments.findByItemIdOrderByCreatedAtAscIdAsc(copyId));
+        items.delete(copy);
     }
 
     /**
@@ -474,7 +492,7 @@ public class TodoController {
         User me = currentUser.get();
         Task t = tasks.findById(i.getTaskId()).orElse(null);
         if (t == null || t.getStatus() == TaskStatus.TAMAMLANDI) return;
-        if (!t.getUser().getId().equals(me.getId()) && !CurrentUser.isAdmin(me)) return;
+        if ((t.getUser() == null || !t.getUser().getId().equals(me.getId())) && !CurrentUser.isAdmin(me)) return;
         String before = TaskStatusService.STATUS_LABEL.get(t.getStatus());
         taskStatus.change(t, TaskStatus.TAMAMLANDI, me);
         tasks.save(t);

@@ -11,6 +11,8 @@ export interface User {
     fullName: string;
     role: Role;
     jobTitle: string | null;
+    /** Departman / ekip (ör. Proje, Destek, Test); yönetici belirler */
+    department?: string | null;
     currentProject: string | null;
     status: UserStatus | null;
     /** Yöneticinin belirlediği çalışma şekli; çalışan yalnızca bununla TOPLANTIDA arasında geçiş yapabilir. */
@@ -46,7 +48,7 @@ export interface Project {
     deadline?: string | null;
 }
 
-export type LogCategory = 'OTURUM' | 'KULLANICI' | 'PROFIL' | 'PROJE' | 'GOREV' | 'IZIN' | 'DUYURU' | 'DOKUMAN' | 'SISTEM';
+export type LogCategory = 'OTURUM' | 'KULLANICI' | 'PROFIL' | 'PROJE' | 'GOREV' | 'IZIN' | 'DUYURU' | 'DOKUMAN' | 'ANKET' | 'DESTEK' | 'SISTEM';
 export type LogLevel = 'BILGI' | 'UYARI' | 'KRITIK';
 export type LogAction =
     | 'GIRIS' | 'GIRIS_BASARISIZ' | 'CIKIS' | 'SIFRE_DEGISTIRME' | 'SIFRE_SIFIRLAMA'
@@ -54,7 +56,7 @@ export type LogAction =
     | 'DURUM_DEGISIKLIGI' | 'PROJE_ATAMA' | 'PROJEDEN_CIKARMA' | 'GOREV_AKTARMA'
     | 'AKTIFLESTIRME' | 'PASIFLESTIRME' | 'YETKI_DEGISIKLIGI'
     | 'TALEP' | 'ONAY' | 'RET' | 'GERI_ALMA' | 'KESINLESTIRME' | 'GERI_CEKME' | 'KAYIT'
-    | 'YAYIN' | 'BILGI';
+    | 'YAYIN' | 'YEDEKLEME' | 'GERI_YUKLEME' | 'YANIT' | 'ATAMA' | 'BILGI';
 /** Eski ad: log türü = kategori */
 export type ActionLogType = LogCategory;
 
@@ -96,7 +98,8 @@ export type TaskPriority = 'DUSUK' | 'ORTA' | 'YUKSEK';
 
 export interface Task {
     id: number;
-    userId: number;
+    /** Atanan kişi; null = atanmamış (havuzda bekleyen) görev */
+    userId: number | null;
     content: string;
     createdAt: string;
     status?: TaskStatus;
@@ -121,7 +124,32 @@ export interface Task {
     startedAt?: string | null;
     /** İstemci: verinin yüklendiği an (canlı sayaç için) */
     fetchedAt?: number;
+    labelIds?: number[];
+    subtasksDone?: number;
+    subtasksTotal?: number;
+    attachmentCount?: number;
+    /** Bu görevin beklediği görevler; openBlockerIds henüz bitmemiş olanlar (varsa görev başlayamaz) */
+    blockerIds?: number[];
+    openBlockerIds?: number[];
+    /** Bu görevi bekleyen görev sayısı */
+    blockingCount?: number;
 }
+
+export type LabelColor = 'blue' | 'green' | 'amber' | 'red' | 'violet' | 'teal' | 'pink' | 'gray';
+
+export interface Label { id: number; name: string; color: LabelColor }
+
+export interface Subtask { id: number; title: string; done: boolean; position: number; doneByName: string | null; doneAt: string | null }
+
+export interface AttachmentInfo {
+    id: number; fileName: string; contentType: string; sizeBytes: number; createdAt: string;
+    uploaderId: number | null; uploaderName: string | null;
+}
+
+/** Bağımlılık listesindeki görev özeti */
+export interface TaskRef { id: number; content: string; status: TaskStatus; userId: number | null; userName: string | null }
+
+export interface TaskDependencies { blockedBy: TaskRef[]; blocking: TaskRef[] }
 
 /** Görevin "Devam Ediyor"da geçen bir aralığı */
 export interface TaskSession {
@@ -176,6 +204,8 @@ export interface LeaveRequest {
     /** Yöneticinin karara eklediği açıklama (ör. ret nedeni) */
     decisionNote: string | null;
     decidedByName: string | null;
+    /** Karar verilmeden tarihi geçtiği için sistem kapattı (state IPTAL) */
+    expired?: boolean;
 }
 
 export interface Announcement {
@@ -208,7 +238,8 @@ export interface LeaveBalance {
 
 export type NotificationType =
     | 'TASK_ASSIGNED' | 'TASK_DUE' | 'TASK_COMPLETED' | 'TASK_COMMENT' | 'TODO_RECEIVED' | 'TODO_REMINDER' | 'TODO_LIST_ADDED' | 'TODO_COMMENT' | 'PROFILE_REQUESTED' | 'PROFILE_DECIDED' | 'LEAVE_REQUESTED' | 'LEAVE_DECIDED' | 'LEAVE_REOPENED'
-    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED' | 'ONBOARDING_DONE' | 'PASSWORD_RESET_REQUESTED';
+    | 'PROJECT_ASSIGNED' | 'STATUS_CHANGED' | 'ANNOUNCEMENT' | 'DOC_REVISION_REQUESTED' | 'DOC_REVISION_DECIDED' | 'ONBOARDING_DONE' | 'PASSWORD_RESET_REQUESTED'
+    | 'BACKUP_FAILED' | 'TASK_UNBLOCKED' | 'SURVEY_PUBLISHED' | 'SURVEY_REMINDER' | 'TICKET_ASSIGNED' | 'TICKET_UPDATED' | 'TICKET_COMMENT';
 
 export interface AppNotification {
     id: number;

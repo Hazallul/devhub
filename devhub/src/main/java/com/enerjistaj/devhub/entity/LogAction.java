@@ -7,7 +7,7 @@ public enum LogAction {
     DURUM_DEGISIKLIGI("Durum değişikliği"), PROJE_ATAMA("Projeye atama"), PROJEDEN_CIKARMA("Projeden çıkarma"), GOREV_AKTARMA("Görev aktarma"),
     AKTIFLESTIRME("Hesap açma"), PASIFLESTIRME("Hesap kapatma"), YETKI_DEGISIKLIGI("Yetki değişikliği"),
     TALEP("Talep"), ONAY("Onay"), RET("Ret"), GERI_ALMA("Karar geri alma"), KESINLESTIRME("Kesinleştirme"), GERI_CEKME("Geri çekme"),
-    KAYIT("Yönetici kaydı"), YAYIN("Yayın"), BILGI("Bilgi");
+    KAYIT("Yönetici kaydı"), YAYIN("Yayın"), YEDEKLEME("Yedekleme"), YANIT("Yanıt"), ATAMA("Atama"), GERI_YUKLEME("Geri yükleme"), BILGI("Bilgi");
 
     private final String label;
 

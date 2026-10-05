@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { Icon } from '@phosphor-icons/react';
-import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText, ListChecks, Sun, Moon } from '@phosphor-icons/react';
+import { MagnifyingGlass, Briefcase, ArrowRight, Plus, Airplane, Megaphone, ListDashes, BookOpenText, ListChecks, Sun, Moon, Headset, ChartPieSlice } from '@phosphor-icons/react';
 import { setThemePref, useTheme } from '../../lib/theme';
 import { DOC_CATEGORIES } from '../../docs';
 import { useDocs } from '../../hooks/docs';
@@ -53,10 +53,12 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
       { id: 'nav-/todo', group: 'Sayfalar', label: 'Yapılacaklarım', hint: 'Kişisel alan', icon: ListChecks, run: go(() => navigate('/todo')) },
       { id: 'act-task', group: 'İşlemler', label: 'Yeni görev ekle', icon: Plus, run: go(() => actions.newTask()) },
       { id: 'act-leave', group: 'İşlemler', label: 'İzin talebi oluştur', icon: Airplane, run: go(() => actions.newLeave()) },
+      { id: 'act-ticket', group: 'İşlemler', label: 'Destek talebi aç', icon: Headset, run: go(() => navigate('/tickets?yeni=1')) },
       { id: 'act-logs', group: 'İşlemler', label: me.role === 'ADMIN' ? 'Sistem loglarını aç' : 'Ekip akışını aç', icon: ListDashes, run: go(() => actions.openLogs()) },
       ...(me.role === 'ADMIN' ? [
         { id: 'act-project', group: 'İşlemler' as const, label: 'Yeni proje oluştur', icon: Briefcase, run: go(() => actions.newProject()) },
         { id: 'act-ann', group: 'İşlemler' as const, label: 'Duyuru yayınla', icon: Megaphone, run: go(() => actions.newAnnouncement()) },
+        { id: 'act-survey', group: 'İşlemler' as const, label: 'Anket oluştur', icon: ChartPieSlice, run: go(() => navigate('/surveys/yeni')) },
       ] : []),
       ...(users ?? []).map(u => ({
         id: `user-${u.id}`, group: 'Kişiler' as const, label: u.fullName, hint: [u.jobTitle, u.currentProject].filter(Boolean).join(' · '),

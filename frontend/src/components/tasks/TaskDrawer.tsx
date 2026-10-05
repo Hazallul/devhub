@@ -3,11 +3,14 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  X, PencilSimple, Trash, CalendarBlank, Briefcase, UserCircle, Flag, CheckCircle, PaperPlaneRight, ChatCircleText, ClockCounterClockwise,
+  X, PencilSimple, Trash, CalendarBlank, Briefcase, UserCircle, Flag, CheckCircle, PaperPlaneRight, ChatCircleText, ClockCounterClockwise, Tag, Lock, HandGrabbing,
 } from '@phosphor-icons/react';
 import type { Icon } from '@phosphor-icons/react';
 import { Avatar, PriorityBadge, Segmented, Skeleton } from '../ui/primitives';
 import EffortPanel from './EffortPanel';
+import Combobox from '../ui/Combobox';
+import { Attachments, Dependencies, LabelPicker, Subtasks } from './TaskExtras';
+import { useClaimTask } from '../../hooks/taskExtras';
 import {
   useAllTasks, useUsers, useMe, useProjects, useUpdateTask, useDeleteTask, useTaskActivity, useAddTaskComment, useDeleteTaskComment,
 } from '../../hooks/api';
@@ -78,6 +81,9 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
   const { data: projects } = useProjects();
   const update = useUpdateTask();
   const remove = useDeleteTask();
+  const claim = useClaimTask();
+  const unassigned = task.userId === null;
+  const waiting = (task.openBlockerIds?.length ?? 0) > 0 && task.status !== 'TAMAMLANDI';
 
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState(task.content);
@@ -162,7 +168,16 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
         )}
 
         <div className="mt-4">
-          {canEdit ? (
+          {unassigned ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-dashed border-theme-light px-3 py-2.5">
+              <span className="text-sm text-theme-muted flex-1 min-w-[12rem]">Bu görev henüz kimseye atanmadı. Atanınca başlatılabilir.</span>
+              {!isAdmin && (
+                <button type="button" onClick={() => claim.mutate(task.id)} disabled={claim.isPending} className="btn-primary min-h-[2.25rem] px-3 text-sm">
+                  <HandGrabbing size={16} weight="bold" /> Üstlen
+                </button>
+              )}
+            </div>
+          ) : canEdit ? (
             <Segmented<TaskStatus>
               label="Durum"
               layoutId={`task-drawer-status-${task.id}`}
@@ -173,6 +188,11 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           ) : (
             <StatusChip status={status} />
           )}
+          {waiting && (
+            <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-warn-ink">
+              <Lock size={13} weight="bold" aria-hidden="true" /> Önce bitmesi gereken görevler var; bunlar tamamlanmadan başlatılamaz (aşağıda Bağımlılıklar).
+            </p>
+          )}
         </div>
       </div>
 
@@ -181,13 +201,14 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
           <dl className="grid sm:grid-cols-2 gap-x-5 gap-y-4">
             <Prop icon={UserCircle} label="Atanan">
               {isAdmin ? (
-                <select aria-label="Atanan kişi" value={task.userId} onChange={e => patch({ id: task.id, userId: Number(e.target.value) })} className="prop-select">
-                  {!owner && <option value={task.userId}>Pasif kullanıcı</option>}
-                  {users?.map(u => <option key={u.id} value={u.id}>{u.fullName}{u.status === 'IZINLI' ? ' (izinli)' : ''}</option>)}
-                </select>
+                <Combobox label="Atanan kişi" value={task.userId === null ? '' : String(task.userId)} width={280} className="w-full"
+                  onChange={v => patch({ id: task.id, userId: v ? Number(v) : null })}
+                  placeholder={task.userId !== null && !owner ? 'Pasif kullanıcı' : 'Atanmamış'} searchPlaceholder="Kişi ara" emptyText="Eşleşen kişi yok"
+                  options={[{ value: '', label: 'Atanmamış', hint: 'Görev havuza döner' },
+                    ...(users ?? []).map(u => ({ value: String(u.id), label: u.fullName, hint: [u.jobTitle, u.status === 'IZINLI' ? 'izinli' : null].filter(Boolean).join(' · ') || undefined, leading: <Avatar user={u} size="xs" /> }))]} />
               ) : owner ? (
                 <span className="flex items-center gap-2"><Avatar user={owner} size="xs" /><span className="truncate">{owner.fullName}</span></span>
-              ) : '-'}
+              ) : unassigned ? <span className="text-theme-muted">Atanmamış</span> : '-'}
             </Prop>
 
             <Prop icon={Flag} label="Öncelik">
@@ -230,6 +251,12 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
               <span className="block text-xs text-theme-muted font-medium mt-0.5">{formatDate(toIsoDay(parseServerDate(task.createdAt)))}</span>
             </Prop>
 
+            <div className="sm:col-span-2">
+              <Prop icon={Tag} label="Etiketler">
+                <LabelPicker task={task} canEdit={canEdit} />
+              </Prop>
+            </div>
+
             {done && task.completedAt && (
               <Prop icon={CheckCircle} label="Tamamlandı">
                 {formatDate(toIsoDay(parseServerDate(task.completedAt)))}
@@ -238,8 +265,11 @@ function DrawerBody({ task, onClose }: { task: Task; onClose: () => void }) {
             )}
           </dl>
 
-          <EffortPanel task={task} canEdit={canEdit} canEditEstimate={isAdmin || (task.createdById === me.id)} />
+          {!unassigned && <EffortPanel task={task} canEdit={canEdit} canEditEstimate={isAdmin || (task.createdById === me.id)} />}
           <Description task={task} canEdit={canEdit} />
+          <Subtasks task={task} canEdit={canEdit} />
+          <Dependencies task={task} canEdit={canEdit} />
+          <Attachments task={task} />
           <Activity task={task} />
         </div>
       </div>
