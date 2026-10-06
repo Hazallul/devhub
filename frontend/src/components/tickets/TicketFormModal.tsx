@@ -83,7 +83,7 @@ export default function TicketFormModal({ open, onClose, onCreated }: { open: bo
           <div className="sm:w-1/2 sm:pr-2.5">
             <span className="label">Atanan</span>
             <Combobox label="Atanan" value={assignee} onChange={setAssignee} className="w-full" width={320} placeholder="Şimdilik atama" searchPlaceholder="Kişi ara"
-              options={[{ value: '', label: 'Şimdilik atama' }, ...(users ?? []).filter(u => u.active).map(u => ({ value: String(u.id), label: u.fullName, hint: [u.jobTitle, u.department].filter(Boolean).join(' · ') || undefined, leading: <Avatar user={u} size="xs" /> }))]} />
+              options={[{ value: '', label: 'Şimdilik atama' }, ...(users ?? []).filter(u => u.active).map(u => ({ value: String(u.id), label: u.fullName, hint: u.status === 'IZINLI' ? 'Bugün izinli' : [u.jobTitle, u.department].filter(Boolean).join(' · ') || undefined, leading: <Avatar user={u} size="xs" /> }))]} />
           </div>
         )}
       </div>

@@ -416,6 +416,10 @@ export const useFinalizeLeaveDecision = () =>
 export const useWithdrawLeave = () =>
   useAction((id: number) => api.delete(`/leaves/${id}`), { invalidate: [['leaves']], success: 'Talep geri çekildi' });
 
+/** Başlamamış onaylı izni iptal eder; günler bakiyeye geri döner. */
+export const useCancelLeave = () =>
+  useAction((id: number) => api.put(`/leaves/${id}/cancel`), { invalidate: [['leaves']], success: 'İzin iptal edildi; günler bakiyenize döndü' });
+
 export const useCreateAnnouncement = () =>
   useAction(
     (body: { title: string; content: string; pinned: boolean }) => api.post('/announcements', body),

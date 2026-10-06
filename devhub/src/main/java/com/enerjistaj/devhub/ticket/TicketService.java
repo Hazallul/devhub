@@ -38,7 +38,7 @@ import java.util.*;
  */
 @Service
 @RequiredArgsConstructor
-public class TicketService implements TaskCompletionListener, TaskExtrasController.TicketAccess {
+public class TicketService implements TaskCompletionListener, TaskExtrasController.TicketAccess, com.enerjistaj.devhub.service.UserDeactivationListener {
 
     public enum Type { ARIZA, ERISIM, EKIPMAN, DIGER }
     public enum Priority { DUSUK, NORMAL, YUKSEK, ACIL }
@@ -364,6 +364,17 @@ public class TicketService implements TaskCompletionListener, TaskExtrasControll
             users.findAllById(to).forEach(u -> notifications.notify(u, actor, NotificationType.TICKET_UPDATED, number(id) + ": bağlı görev tamamlandı",
                 t.get("title") + " — talep edene dönüş yapıp talebi çözüldü olarak işaretleyebilirsiniz.", "/tickets?talep=" + id));
         }
+    }
+
+    /** Hesabı kapatılan kişiye atanmış açık talepler yönetime (atanmamış) döner. */
+    @Override
+    public List<String> userDeactivated(User user, User actor) {
+        List<Long> ids = jdbc.queryForList("SELECT id FROM tickets WHERE assignee_id = ? AND status IN ('YENI','INCELENIYOR','YANIT_BEKLENIYOR')", Long.class, user.getId());
+        for (Long id : ids) {
+            jdbc.update("UPDATE tickets SET assignee_id = NULL, updated_at = UTC_TIMESTAMP() WHERE id = ?", id);
+            event(id, actor, user.getFullName() + " kişisinin hesabı kapatıldığı için talep yönetime döndü");
+        }
+        return ids.isEmpty() ? List.of() : List.of(ids.size() + " açık talep yönetime döndü");
     }
 
     @Override

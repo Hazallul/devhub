@@ -17,17 +17,13 @@ import java.util.List;
 public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long> {
     List<LeaveRequest> findAllByOrderByCreatedAtDesc();
 
+    List<LeaveRequest> findByUserId(Long userId);
+
     /** Bir yılla kesişen, belirli türdeki onaylı/bekleyen izinler (bakiye hesabı için). */
     @Query("select l from LeaveRequest l where l.type = :type and l.state in :states"
             + " and l.startDate <= :to and l.endDate >= :from")
     List<LeaveRequest> findByTypeAndStatesBetween(@Param("type") LeaveType type, @Param("states") Collection<LeaveState> states,
                                                   @Param("from") LocalDate from, @Param("to") LocalDate to);
-
-    @EntityGraph(attributePaths = "user")
-    List<LeaveRequest> findByStateAndStartDate(LeaveState state, LocalDate startDate);
-
-    @EntityGraph(attributePaths = "user")
-    List<LeaveRequest> findByStateAndEndDate(LeaveState state, LocalDate endDate);
 
     /** Tarihi tamamen geçmiş, hâlâ karar bekleyen talepler (hastalık hariç: rapor sonradan gelir). */
     @EntityGraph(attributePaths = "user")
@@ -37,6 +33,12 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, Long
             + " where l.user.id = :userId and l.state in (com.enerjistaj.devhub.entity.LeaveState.BEKLIYOR, com.enerjistaj.devhub.entity.LeaveState.ONAYLANDI)"
             + " and l.startDate <= :end and l.endDate >= :start")
     boolean existsOverlapping(@Param("userId") Long userId, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    /** Belirli günü kapsayan onaylı izinler (durum eşitlemesi için). */
+    @EntityGraph(attributePaths = "user")
+    @Query("select l from LeaveRequest l where l.state = com.enerjistaj.devhub.entity.LeaveState.ONAYLANDI"
+            + " and l.startDate <= :day and l.endDate >= :day")
+    List<LeaveRequest> findApprovedOn(@Param("day") LocalDate day);
 
     @Query("select count(l) > 0 from LeaveRequest l"
             + " where l.user.id = :userId and l.state = com.enerjistaj.devhub.entity.LeaveState.ONAYLANDI"

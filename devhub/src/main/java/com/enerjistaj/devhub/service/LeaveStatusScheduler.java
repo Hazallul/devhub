@@ -8,6 +8,7 @@ import com.enerjistaj.devhub.entity.LogCategory;
 import com.enerjistaj.devhub.entity.NotificationType;
 import com.enerjistaj.devhub.entity.User;
 import com.enerjistaj.devhub.repository.LeaveRequestRepository;
+import com.enerjistaj.devhub.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -19,11 +20,15 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 /**
- * Onaylı izinlerin başladığı gün kişiyi İzinli yapar, bittiği günün ertesinde çalışma şekline (Aktif/Uzaktan) döndürür.
- * Yalnızca izin kaydı olan kişilere dokunur; elle İzinli yapılmış kişiler etkilenmez.
+ * İzinli durumunu izin kayıtlarıyla eşitler: bugünü kapsayan onaylı izni olan kişi İzinli olur, olmayan İzinli kişi
+ * çalışma şekline (Aktif/Uzaktan) döner. Tarih eşitliğine değil bugünkü duruma bakar; böylece sunucu kapalıyken
+ * başlayan ya da biten izinler de bir sonraki çalışmada düzelir (açılışta ve saat başı çalışır).
+ * İzinli durumu her zaman bir izin kaydına dayanır (yönetici İzinli seçince de onaylı kayıt açılır).
  * Karar verilmeden bitiş tarihi geçen yıllık/mazeret talepleri kapatılır (bakiyede ayrılan gün serbest kalır);
  * kişi gerçekten izin kullandıysa yönetici "adına izin kaydı" ile geriye dönük girer. Hastalık talepleri
  * kapatılmaz, çünkü rapor çoğu zaman izin bittikten sonra gelir.
@@ -35,6 +40,7 @@ public class LeaveStatusScheduler {
 
     private final LeaveRequestRepository leaveRepository;
     private final UserStatusService userStatusService;
+    private final UserRepository userRepository;
     private final ActionLogService actionLogService;
     private final NotificationService notificationService;
 
@@ -45,20 +51,19 @@ public class LeaveStatusScheduler {
         syncStatuses();
     }
 
-    @Scheduled(cron = "0 5 0 * * *", zone = "Europe/Istanbul")
+    @Scheduled(cron = "0 5 * * * *", zone = "Europe/Istanbul")
     @Transactional
     public void syncStatuses() {
         LocalDate today = LocalDate.now(ActionLogService.ZONE);
 
-        for (LeaveRequest leave : leaveRepository.findByStateAndStartDate(LeaveState.ONAYLANDI, today)) {
-            userStatusService.change(leave.getUser(), UserStatusService.IZINLI, null);
-        }
-
-        for (LeaveRequest leave : leaveRepository.findByStateAndEndDate(LeaveState.ONAYLANDI, today.minusDays(1))) {
+        Set<Long> onLeave = new HashSet<>();
+        for (LeaveRequest leave : leaveRepository.findApprovedOn(today)) {
             User user = leave.getUser();
-            if (UserStatusService.IZINLI.equals(user.getStatus()) && !leaveRepository.existsApprovedOn(user.getId(), today)) {
-                userStatusService.change(user, user.getWorkMode(), null);
-            }
+            onLeave.add(user.getId());
+            if (user.isActive() && !UserStatusService.IZINLI.equals(user.getStatus())) userStatusService.change(user, UserStatusService.IZINLI, null);
+        }
+        for (User user : userRepository.findByActiveTrueAndStatus(UserStatusService.IZINLI)) {
+            if (!onLeave.contains(user.getId())) userStatusService.change(user, user.getWorkMode(), null);
         }
         expireStalePending(today);
         log.debug("İzin durumları eşitlendi ({})", today);

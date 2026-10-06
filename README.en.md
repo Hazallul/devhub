@@ -178,7 +178,7 @@ Change your own status next to your name in the bottom left.
 
 <img src="docs/screenshots/leaves.webp" alt="Leave" width="100%">
 
-Create a request with **İzin talebi**; once an admin approves it, your status becomes "on leave" automatically on those days. Drag the team calendar left and right to look ahead. Your annual entitlement and remaining days are on this page.
+Create a request with **İzin talebi**; once an admin approves it, your status becomes "on leave" automatically on those days. Drag the team calendar left and right to look ahead. Your annual entitlement and remaining days are on this page. If your plans change, cancel an approved leave that has not started yet with **✕**; the days return to your balance. Annual and excuse requests whose dates pass without a decision close by themselves.
 
 ### Support tickets (Destek talepleri)
 
@@ -213,7 +213,7 @@ Admin accounts get a **Yönetim** (management) section in the sidebar.
 
 | | |
 |---|---|
-| **Kullanıcılar** (users) | Add employees, edit names and job titles, assign roles and projects, deactivate accounts. Password reset requests are approved here. |
+| **Kullanıcılar** (users) | Add employees, edit names and job titles, assign roles and projects, deactivate accounts. A deactivated person's open tasks go back to the unassigned pool, their tickets back to management, and pending leave requests are cancelled. Password reset requests are approved here. |
 | **Raporlar** (reports) | Workload, project progress, estimated vs. actual effort, leave usage. |
 | **Loglar** (logs) | Who did what and when: sign-ins, task changes, approvals. Filterable and exportable to Excel. |
 | **Sistem izleme** (monitoring) | Service health, CPU and memory usage, response times. |

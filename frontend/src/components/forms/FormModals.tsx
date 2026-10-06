@@ -9,7 +9,7 @@ import {
   useMe, useCreateProject, useAssignProject, useCreateLeave, useCreateAnnouncement, useHolidayMap, useLeaveBalances,
 } from '../../hooks/api';
 import { PROJECT_STATUS, PROJECT_STATUSES, LEAVE_TYPE, LEAVE_TYPES } from '../../lib/meta';
-import { leaveDays, leaveDaysLabel, toIsoDay } from '../../lib/format';
+import { addDays, leaveDays, leaveDaysLabel, toIsoDay } from '../../lib/format';
 import type { ProjectStatus, LeaveType, User } from '../../types';
 
 export function FieldError({ id, message }: { id: string; message?: string }) {
@@ -122,6 +122,9 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
   const holidays = useHolidayMap();
   const { data: balances } = useLeaveBalances();
   const today = toIsoDay(new Date());
+  // Sunucuyla aynı sınırlar: hastalık en fazla 30 gün geriye, hiçbir izin bir yıldan ileriye istenmez (yönetici kaydı serbest).
+  const sickFrom = toIsoDay(addDays(new Date(), -30));
+  const latest = toIsoDay(addDays(new Date(), 365));
   const { register, handleSubmit, reset, watch, setValue, setError, formState: { errors } } = useForm<LeaveForm>({
     resolver: zodResolver(leaveSchema),
     defaultValues: { type: 'YILLIK', startDate: today, endDate: today, note: '' },
@@ -185,7 +188,7 @@ export function LeaveFormModal({ open, onClose, forUser }: { open: boolean; onCl
         <div className="grid sm:grid-cols-2 gap-5">
           <div>
             <label htmlFor="leave-start" className="label">Başlangıç<Required /></label>
-            <input id="leave-start" data-autofocus type="date" min={!forUser && type !== 'HASTALIK' ? today : undefined} className="input" aria-describedby="leave-start-err" {...register('startDate', {
+            <input id="leave-start" data-autofocus type="date" min={forUser ? undefined : type === 'HASTALIK' ? sickFrom : today} max={forUser ? undefined : latest} className="input" aria-describedby="leave-start-err" {...register('startDate', {
               onChange: e => { if (end < e.target.value) setValue('endDate', e.target.value); },
             })} />
             <FieldError id="leave-start-err" message={errors.startDate?.message} />

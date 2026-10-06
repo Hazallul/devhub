@@ -72,7 +72,7 @@ function Body({ t, onClose }: { t: Ticket; onClose: () => void }) {
   const patch = (body: Omit<Parameters<typeof update.mutate>[0], 'id'>) => update.mutate({ id: t.id, ...body });
 
   const assigneeOptions = [{ value: '', label: 'Atanmamış', hint: 'Yönetimde bekler' },
-    ...(users ?? []).filter(u => u.active || u.id === t.assigneeId).map(u => ({ value: String(u.id), label: u.fullName, hint: u.jobTitle ?? undefined, leading: <Avatar user={u} size="xs" /> }))];
+    ...(users ?? []).filter(u => u.active || u.id === t.assigneeId).map(u => ({ value: String(u.id), label: u.fullName, hint: u.status === 'IZINLI' ? 'Bugün izinli' : u.jobTitle ?? undefined, leading: <Avatar user={u} size="xs" /> }))];
 
   return (
     <>

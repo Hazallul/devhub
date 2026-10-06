@@ -3,7 +3,7 @@ import { createPortal, flushSync } from 'react-dom';
 import { AnimatePresence, animate, motion, useMotionValue, useReducedMotion } from 'framer-motion';
 import { Plus, Check, X, Airplane, Hourglass, CalendarCheck, ArrowCounterClockwise, CalendarBlank, LockSimple, SealCheck, ChatText, CaretLeft, CaretRight, ArrowRight, HandGrabbing, WarningCircle } from '@phosphor-icons/react';
 import { PageHeader, StatCard, Skeleton, Avatar, Pill, EmptyState } from '../components/ui/primitives';
-import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useUndoLeaveDecision, useFinalizeLeaveDecision, useHolidayMap, useLeaveBalances } from '../hooks/api';
+import { useLeaves, useUsers, useMe, useDecideLeave, useWithdrawLeave, useCancelLeave, useUndoLeaveDecision, useFinalizeLeaveDecision, useHolidayMap, useLeaveBalances } from '../hooks/api';
 import Modal from '../components/ui/Modal';
 import DecisionModal from '../components/ui/DecisionModal';
 import type { Decision } from '../components/ui/DecisionModal';
@@ -136,6 +136,9 @@ export default function Leaves() {
   const { data: users } = useUsers();
   const decide = useDecideLeave();
   const withdraw = useWithdrawLeave();
+  const cancelLeave = useCancelLeave();
+  // İki adımlı iptal: ilk tık sorar, ikinci tık iptal eder
+  const [confirmCancel, setConfirmCancel] = useState<number | null>(null);
   const undo = useUndoLeaveDecision();
   const holidays = useHolidayMap();
   const { data: balances } = useLeaveBalances();
@@ -445,6 +448,8 @@ export default function Leaves() {
                               const startIdx = Math.max(0, rawStart);
                               const endIdx = Math.min(TOTAL - 1, rawEnd);
                               const pendingBar = l.state === 'BEKLIYOR';
+                              // Pencereden önce başlayan izinde yazı görünmeyen tampon günlerde kalmasın: görünür başa kaydırılır.
+                              const hiddenCols = Math.max(0, Math.min(BUFFER, endIdx + 1) - startIdx);
                               return (
                                 <motion.div
                                   key={l.id}
@@ -461,7 +466,7 @@ export default function Leaves() {
                                   className={`absolute top-1.5 bottom-1.5 rounded-lg origin-left flex items-center gap-1 px-2 overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-theme-deep focus-visible:ring-offset-1 ${
                                     pendingBar ? 'border-2 border-dashed border-theme-dark bg-surface/70' : (isAdmin ? leaveTypeMeta(l.type) : LEAVE_GENERIC).className
                                   }`}
-                                  style={{ left: `calc(${(startIdx / TOTAL) * 100}% + 2px)`, width: `calc(${((endIdx - startIdx + 1) / TOTAL) * 100}% - 4px)` }}
+                                  style={{ left: `calc(${(startIdx / TOTAL) * 100}% + 2px)`, width: `calc(${((endIdx - startIdx + 1) / TOTAL) * 100}% - 4px)`, paddingLeft: hiddenCols > 0 ? `calc(${(hiddenCols / TOTAL) * 100}% + 0.5rem)` : undefined }}
                                 >
                                   <span className="text-[0.6875rem] font-bold text-theme-text truncate">{leaveTypeMeta(l.type).label}</span>
                                   {l.note && <ChatText size={12} weight="bold" className="shrink-0 text-theme-text/70" aria-hidden="true" />}
@@ -506,7 +511,7 @@ export default function Leaves() {
             <h2 id="pending-title" className="text-base font-semibold mb-4 flex items-center gap-2">
               Onay bekleyenler <Pill className="bg-accent text-white">{pending.length}</Pill>
             </h2>
-            {pending.length === 0 ? (
+            {isLoading ? <Skeleton className="h-24" /> : pending.length === 0 ? (
               <EmptyState icon={CalendarCheck} title="Bekleyen talep yok" description="Yeni talepler geldiğinde burada görünecek." />
             ) : (
               <ul className="space-y-3">
@@ -587,7 +592,7 @@ export default function Leaves() {
           <h2 id="mine-title" className="text-base font-semibold mb-4 flex items-center gap-2">
             Taleplerim <Pill className="bg-theme-lightest text-theme-deep border border-theme-light">{mine.length}</Pill>
           </h2>
-          {mine.length === 0 ? (
+          {isLoading ? <Skeleton className="h-24" /> : mine.length === 0 ? (
             <EmptyState icon={Airplane} title="Henüz talebiniz yok" description="İzin planlıyorsanız talep oluşturun; onaylandığında durumunuz otomatik güncellenir." action={<button onClick={() => actions.newLeave()} className="btn-secondary"><Plus size={16} weight="bold" /> İzin talebi</button>} />
           ) : (
             <ul className="space-y-3">
@@ -613,6 +618,14 @@ export default function Leaves() {
                           <ArrowCounterClockwise size={18} weight="bold" />
                         </button>
                       )}
+                      {l.state === 'ONAYLANDI' && l.startDate > today && (confirmCancel === l.id ? (
+                        <button onClick={() => cancelLeave.mutate(l.id, { onSettled: () => setConfirmCancel(null) })} disabled={cancelLeave.isPending}
+                          className="h-9 px-3 rounded-xl text-xs font-bold bg-danger-soft text-danger shrink-0">İptal edilsin mi?</button>
+                      ) : (
+                        <button onClick={() => setConfirmCancel(l.id)} className="icon-btn" aria-label="İzni iptal et" title="İzni iptal et (günler bakiyenize döner)">
+                          <X size={18} weight="bold" />
+                        </button>
+                      ))}
                     </motion.li>
                   );
                 })}

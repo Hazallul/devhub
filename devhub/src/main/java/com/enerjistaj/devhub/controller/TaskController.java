@@ -98,7 +98,7 @@ public class TaskController {
         String content = Payloads.requiredText(payload, "content", "Görev içeriği boş olamaz.", 1000, "Görev");
         String description = Payloads.optionalText(payload, "description", 4000, "Açıklama");
         TaskPriority priority = Payloads.enumValue(payload, "priority", TaskPriority.class, "öncelik");
-        LocalDate dueDate = Payloads.date(payload, "dueDate", "Son tarih");
+        LocalDate dueDate = futureDue(Payloads.date(payload, "dueDate", "Son tarih"));
         Integer estimate = estimateMinutes(payload);
         if (estimate == null) throw ApiException.badRequest("Görevin tahmini süresini (iş gücü) girin.");
         boolean explicitProject = admin && payload.containsKey("projectId");
@@ -154,7 +154,7 @@ public class TaskController {
         t.setDescription(Payloads.optionalText(payload, "description", 4000, "Açıklama"));
         TaskPriority priority = Payloads.enumValue(payload, "priority", TaskPriority.class, "öncelik");
         if (priority != null) t.setPriority(priority);
-        t.setDueDate(Payloads.date(payload, "dueDate", "Son tarih"));
+        t.setDueDate(futureDue(Payloads.date(payload, "dueDate", "Son tarih")));
         t.setEstimatedMinutes(estimate);
         t.setCreatedBy(me);
         if (payload.containsKey("projectId")) t.setProject(projectOrNull(payload.get("projectId")));
@@ -185,6 +185,12 @@ public class TaskController {
             notificationService.notify(t.getCreatedBy(), me, NotificationType.TASK_ASSIGNED, me.getFullName() + " bir görevi üstlendi", t.getContent(), link(t));
         }
         return ResponseEntity.ok(dto(saved, activityRepository.countByTaskIdAndKind(saved.getId(), TaskActivityKind.COMMENT)));
+    }
+
+    /** Yeni ya da değiştirilen son tarih geçmiş bir gün olamaz (gecikmiş görevin mevcut tarihi olduğu gibi kalabilir). */
+    private static LocalDate futureDue(LocalDate due) {
+        if (due != null && due.isBefore(LocalDate.now(ActionLogService.ZONE))) throw ApiException.badRequest("Son tarih geçmiş bir gün olamaz.");
+        return due;
     }
 
     /** Kısmi güncelleme: yalnızca gövdede gelen alanlar değişir. Her değişiklik görev geçmişine yazılır. */
@@ -253,6 +259,7 @@ public class TaskController {
         if (payload.containsKey("dueDate")) {
             LocalDate due = Payloads.date(payload, "dueDate", "Son tarih");
             if (!Objects.equals(due, t.getDueDate())) {
+                futureDue(due);
                 event(t, me, due == null ? "son tarihi kaldırdı" : "son tarihi " + due.format(DAY) + " olarak belirledi");
                 t.setDueDate(due);
             }

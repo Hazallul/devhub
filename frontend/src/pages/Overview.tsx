@@ -111,13 +111,13 @@ export default function Overview() {
           <StatCard label="Çalışıyor" icon={Users} value={usersLoading ? '–' : <>{working}<span className="text-lg text-theme-muted font-semibold">/{total}</span></>} hint="Aktif, toplantıda veya uzaktan" onClick={() => navigate('/team')} />
         </motion.div>
         <motion.div variants={listItem}>
-          <StatCard label="Açık görev" icon={CheckSquare} value={openTasks.length} hint={overdue > 0 ? <span className="text-danger font-bold">{overdue} gecikmiş</span> : 'Gecikmiş görev yok'} onClick={() => navigate('/tasks')} />
+          <StatCard label="Açık görev" icon={CheckSquare} value={tasks ? openTasks.length : '–'} hint={!tasks ? 'Yükleniyor' : overdue > 0 ? <span className="text-danger font-bold">{overdue} gecikmiş</span> : 'Gecikmiş görev yok'} onClick={() => navigate('/tasks')} />
         </motion.div>
         <motion.div variants={listItem}>
-          <StatCard label="Aktif proje" icon={FolderOpen} value={activeProjects} hint={`${projects?.length ?? 0} projenin`} onClick={() => navigate('/projects')} />
+          <StatCard label="Aktif proje" icon={FolderOpen} value={projects ? activeProjects : '–'} hint={projects ? `${projects.length} projenin` : 'Yükleniyor'} onClick={() => navigate('/projects')} />
         </motion.div>
         <motion.div variants={listItem}>
-          <StatCard label="Bugün izinde" icon={Airplane} value={onLeave.length} hint={isAdmin && pendingLeaves > 0 ? <span className="text-theme-deep font-bold">{pendingLeaves} talep onay bekliyor</span> : 'İzin takvimini gör'} onClick={() => navigate('/leaves')} />
+          <StatCard label="Bugün izinde" icon={Airplane} value={leaves ? onLeave.length : '–'} hint={isAdmin && pendingLeaves > 0 ? <span className="text-theme-deep font-bold">{pendingLeaves} talep onay bekliyor</span> : 'İzin takvimini gör'} onClick={() => navigate('/leaves')} />
         </motion.div>
       </motion.div>
 

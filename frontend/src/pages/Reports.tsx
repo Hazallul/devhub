@@ -117,6 +117,11 @@ function ReportsPage() {
     .filter(t => t.dueDate && t.dueDate < today)
     .sort((a, b) => (a.dueDate ?? '').localeCompare(b.dueDate ?? '')), [openTasks, today]);
 
+  // Kişi grafikleri yalnızca atanmış işleri sayar; üstteki toplam Genel Bakış'la aynı olsun diye atanmamışları da ekler.
+  const unassignedTasks = (tasks ?? []).filter(t => t.status !== 'TAMAMLANDI' && t.userId === null);
+  const unassignedOpen = unassignedTasks.length;
+  const overdueTotal = overdue.length + unassignedTasks.filter(t => t.dueDate && t.dueDate < today).length;
+
   const loading = !users || !tasks || !projects || !leaves;
 
   const workloadRows: StackRow[] = workload.busy.map(r => ({
@@ -147,8 +152,9 @@ function ReportsPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Aktif çalışan" icon={UsersIcon} value={users?.length ?? '–'} hint={`${workload.idle.length} kişinin açık görevi yok`} />
-        <StatCard label="Açık görev" icon={CheckSquare} value={openTasks.length} hint={overdue.length ? <span className="text-danger font-bold">{overdue.length} gecikmiş</span> : 'Gecikmiş görev yok'} />
-        <StatCard label="Son 30 günde tamamlanan" icon={CheckCircle} value={completed30} hint="Görev" />
+        <StatCard label="Açık görev" icon={CheckSquare} value={tasks && users ? openTasks.length + unassignedOpen : '–'}
+          hint={<>{overdueTotal ? <span className="text-danger font-bold">{overdueTotal} gecikmiş</span> : 'Gecikmiş görev yok'}{unassignedOpen > 0 && ` · ${unassignedOpen} atanmamış`}</>} />
+        <StatCard label="Son 30 günde tamamlanan" icon={CheckCircle} value={tasks ? completed30 : '–'} hint="Görev" />
         <StatCard label={`${year} yıllık izin kullanımı`} icon={CalendarBlank} value={<>{usedAnnual}<span className="text-lg text-theme-muted font-semibold">/{entitlementTotal}</span></>} hint="İş günü (onaylı / toplam hak)" />
       </div>
 

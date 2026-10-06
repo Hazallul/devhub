@@ -176,7 +176,7 @@ Kendi durumunuzu sol alttaki adınızın yanından değiştirin.
 
 <img src="docs/screenshots/leaves.webp" alt="İzinler" width="100%">
 
-**İzin talebi** düğmesiyle talep oluşturun; yönetici onaylayınca durumunuz izin günlerinde kendiliğinden "İzinli" olur. Ekip takvimini tutup sağa sola sürükleyerek ileriki haftalara bakabilirsiniz. Yıllık izin hakkınız ve kalan gün sayınız bu sayfada.
+**İzin talebi** düğmesiyle talep oluşturun; yönetici onaylayınca durumunuz izin günlerinde kendiliğinden "İzinli" olur. Ekip takvimini tutup sağa sola sürükleyerek ileriki haftalara bakabilirsiniz. Yıllık izin hakkınız ve kalan gün sayınız bu sayfada. Planınız değişirse onaylanmış ama henüz başlamamış izninizi **✕** ile iptal edebilirsiniz; günler bakiyenize döner. Karar verilmeden tarihi geçen yıllık ve mazeret talepleri kendiliğinden kapanır.
 
 ### Destek talepleri
 
@@ -211,7 +211,7 @@ Yönetici hesabıyla menüde **Yönetim** bölümü açılır.
 
 | | |
 |---|---|
-| **Kullanıcılar** | Yeni çalışan ekleme, ad soyad ve unvan düzenleme, rol ve proje atama, hesabı kapatma. Şifre sıfırlama talepleri burada onaylanır. |
+| **Kullanıcılar** | Yeni çalışan ekleme, ad soyad ve unvan düzenleme, rol ve proje atama, hesabı kapatma. Hesabı kapatılan kişinin açık görevleri atanmamış havuza, talepleri yönetime döner; bekleyen izinleri iptal edilir. Şifre sıfırlama talepleri burada onaylanır. |
 | **Raporlar** | İş yükü, proje ilerlemesi, tahmin ve gerçekleşen iş gücü, izin kullanımı. |
 | **Loglar** | Kim, ne zaman, ne yaptı: girişler, görev değişiklikleri, onaylar. Filtrelenebilir, Excel'e aktarılabilir. |
 | **Sistem izleme** | Servislerin sağlığı, işlemci ve bellek kullanımı, yanıt süreleri. |

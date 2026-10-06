@@ -49,6 +49,10 @@ public class LeaveController {
     private static final Map<LeaveType, String> TYPE_LABELS = Map.of(
             LeaveType.YILLIK, "Yıllık izin", LeaveType.HASTALIK, "Hastalık izni", LeaveType.MAZERET, "Mazeret izni");
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("d MMM", Locale.forLanguageTag("tr"));
+    /** Çalışanın geriye dönük hastalık bildirimi sınırı (gün) */
+    private static final int SICK_BACKDATE_DAYS = 30;
+    /** Mazeret izni üst sınırı (iş günü); daha uzunu yıllık izindir */
+    private static final int MAX_EXCUSE_WORKDAYS = 10;
 
     /** Yıllık izin bakiyeleri: yönetici herkesinkini, çalışan yalnızca kendisininkini görür. */
     @GetMapping("/balances")
@@ -103,8 +107,17 @@ public class LeaveController {
         if (start == null || end == null) throw ApiException.badRequest("Başlangıç ve bitiş tarihi zorunludur.");
         if (end.isBefore(start)) throw ApiException.badRequest("Bitiş tarihi başlangıçtan önce olamaz.");
         // Çalışan geçmişe dönük yalnızca hastalık izni isteyebilir (rapor sonradan gelir); yönetici kayıt açarken serbesttir.
-        if (!onBehalf && type != LeaveType.HASTALIK && start.isBefore(LocalDate.now(ActionLogService.ZONE))) {
+        LocalDate today = LocalDate.now(ActionLogService.ZONE);
+        if (!onBehalf && type != LeaveType.HASTALIK && start.isBefore(today)) {
             throw ApiException.badRequest("Geçmiş tarihli talep yalnızca hastalık izni için oluşturulabilir.");
+        }
+        // Rapor geç gelebilir ama aylar öncesi bildirilmez; daha eskisini yönetici "adına kayıt" ile girer.
+        if (!onBehalf && type == LeaveType.HASTALIK && start.isBefore(today.minusDays(SICK_BACKDATE_DAYS))) {
+            throw ApiException.badRequest("Hastalık izni en fazla " + SICK_BACKDATE_DAYS + " gün geriye bildirilebilir; daha eskisi için yöneticinize başvurun.");
+        }
+        if (start.isAfter(today.plusYears(1))) throw ApiException.badRequest("İzin en fazla bir yıl sonrası için planlanabilir.");
+        if (type == LeaveType.MAZERET && workdayService.count(start, end) > MAX_EXCUSE_WORKDAYS) {
+            throw ApiException.badRequest("Mazeret izni en fazla " + MAX_EXCUSE_WORKDAYS + " iş günü olabilir; daha uzun süre için yıllık izin isteyin.");
         }
         if (workdayService.count(start, end) == 0) {
             throw ApiException.badRequest("Seçilen tarihler hafta sonu veya resmi tatile denk geliyor; en az bir iş günü seçin.");
@@ -239,6 +252,38 @@ public class LeaveController {
             throw ApiException.conflict("Bu talep için henüz verilmiş bir karar yok.");
         }
         return leave;
+    }
+
+    /**
+     * Henüz başlamamış onaylı izni iptal eder (kesinleşmiş olsa da): planı değişen kişi kullanmayacağı günleri bakiyesinden
+     * yemesin. Sahibi ya da yönetici yapabilir; başlamış izinde erken dönüş durum değişikliğiyle yapılır (izni kısaltır).
+     */
+    @PutMapping("/{id}/cancel")
+    @Transactional
+    public ResponseEntity<LeaveDto> cancel(@PathVariable Long id) {
+        User me = currentUser.get();
+        LeaveRequest leave = leaveRepository.findById(id).orElseThrow(() -> ApiException.notFound("İzin talebi"));
+        boolean owner = leave.getUser().getId().equals(me.getId());
+        if (!owner && !CurrentUser.isAdmin(me)) throw ApiException.forbidden("Yalnızca kendi izninizi iptal edebilirsiniz.");
+        if (leave.getState() != LeaveState.ONAYLANDI) throw ApiException.conflict("Yalnızca onaylanmış izin iptal edilebilir; bekleyen talebi geri çekin.");
+        if (!leave.getStartDate().isAfter(LocalDate.now(ActionLogService.ZONE))) {
+            throw ApiException.conflict("Başlamış izin iptal edilemez; erken dönüyorsanız durumunuzu değiştirin, izin o güne kısalır.");
+        }
+        leave.setState(LeaveState.IPTAL);
+        // Açıklama "İptal eden: not" olarak görünür; ilk onayın kaydı loglarda kalır.
+        leave.setDecidedBy(me);
+        leave.setDecidedAt(LocalDateTime.now());
+        leave.setDecisionNote("İzin iptal edildi; günler bakiyeye döndü.");
+        leaveRepository.save(leave);
+        actionLogService.record(LogCategory.IZIN, LogAction.GERI_CEKME, "Onaylı izin iptal edildi: " + leave.getUser().getFullName()).by(me)
+                .target("IZIN", leave.getId(), leave.getUser().getFullName()).detail(summary(leave))
+                .detail(owner ? "Kişi kendi iznini iptal etti" : "Yönetici iptal etti").save();
+        if (owner) {
+            notificationService.notifyAdmins(me, NotificationType.LEAVE_REQUESTED, me.getFullName() + " onaylı iznini iptal etti", summary(leave), "/leaves");
+        } else {
+            notificationService.notify(leave.getUser(), me, NotificationType.LEAVE_DECIDED, "İzniniz iptal edildi", summary(leave), "/leaves");
+        }
+        return ResponseEntity.ok(LeaveDto.from(leave));
     }
 
     @DeleteMapping("/{id}")

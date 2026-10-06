@@ -45,7 +45,7 @@ public class AdminUserController {
     private final CurrentUser currentUser;
     private final com.enerjistaj.devhub.realtime.RealtimeService realtime;
     private final com.enerjistaj.devhub.onboarding.OnboardingService onboarding;
-    private final com.enerjistaj.devhub.service.TaskTimeService taskTime;
+    private final com.enerjistaj.devhub.service.UserOffboardingService offboarding;
     private final com.enerjistaj.devhub.service.SessionService sessionService;
 
     /** Pasifler dahil tüm kullanıcılar. */
@@ -79,7 +79,7 @@ public class AdminUserController {
                 .role(role(payload, Role.EMPLOYEE))
                 .jobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"))
                 .department(department(payload))
-                .hireDate(Payloads.date(payload, "hireDate", "İşe giriş tarihi"))
+                .hireDate(hireDate(payload))
                 .annualLeaveDays(0) // hak her zaman işe giriş tarihinden hesaplanır (LeavePolicy); sütun yalnızca bilgi amaçlı güncel tutulur
                 .currentProject(project(payload))
                 .status("AKTIF")
@@ -127,7 +127,7 @@ public class AdminUserController {
         }
         if (payload.containsKey("jobTitle")) user.setJobTitle(Payloads.optionalText(payload, "jobTitle", 100, "Unvan"));
         if (payload.containsKey("department")) user.setDepartment(department(payload));
-        if (payload.containsKey("hireDate")) user.setHireDate(Payloads.date(payload, "hireDate", "İşe giriş tarihi"));
+        if (payload.containsKey("hireDate")) user.setHireDate(hireDate(payload));
         if (payload.containsKey("role")) {
             Role role = role(payload, user.getRole());
             if (user.getRole() == Role.ADMIN && role != Role.ADMIN) ensureAnotherAdmin(user);
@@ -168,19 +168,30 @@ public class AdminUserController {
         boolean wasActive = user.isActive();
         user.setActive(active);
         User saved = userRepository.save(user);
+        List<String> handedOver = List.of();
         if (!active) {
             todoMembershipService.onUserDeactivated(saved);
             realtime.disconnect(saved.getId());
-            taskTime.closeAllFor(saved);
+            handedOver = offboarding.deactivated(saved, me);
         }
         if (wasActive != active) {
             actionLogService.record(LogCategory.KULLANICI, active ? LogAction.AKTIFLESTIRME : LogAction.PASIFLESTIRME,
                     (active ? "Hesap yeniden etkinleştirildi: " : "Hesap pasifleştirildi: ") + saved.getFullName()).by(me)
                     .target("KULLANICI", saved.getId(), saved.getFullName())
                     .detail(active ? "Kişi yeniden giriş yapabilir" : "Kişi giriş yapamaz; açık oturumları da geçersiz sayılır")
+                    .details(handedOver)
                     .level(active ? LogLevel.UYARI : LogLevel.KRITIK).save();
         }
         return ResponseEntity.ok(UserDto.from(saved));
+    }
+
+    /** İşe giriş tarihi: en fazla bir yıl sonrası (yeni başlayacak kişi) ve 1950'den sonra olmalı. */
+    private static LocalDate hireDate(Map<String, Object> payload) {
+        LocalDate d = Payloads.date(payload, "hireDate", "İşe giriş tarihi");
+        if (d != null && (d.isAfter(LocalDate.now(ActionLogService.ZONE).plusYears(1)) || d.isBefore(LocalDate.of(1950, 1, 1)))) {
+            throw ApiException.badRequest("İşe giriş tarihi geçersiz görünüyor; tarihi kontrol edin.");
+        }
+        return d;
     }
 
     /** Geçici şifre üretir; kullanıcı bir sonraki girişte değiştirmek zorundadır. Şifre yalnızca bu yanıtta görünür. */

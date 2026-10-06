@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class SurveyService {
+public class SurveyService implements com.enerjistaj.devhub.service.UserDeactivationListener {
 
     public enum State { TASLAK, ACIK, KAPALI }
     public enum QType { TEK_SECIM, COKLU_SECIM, PUAN, METIN }
@@ -183,10 +183,20 @@ public class SurveyService {
 
     /** Yayınlanmış ankette yalnızca son tarih ve sonuç görünürlüğü değişebilir. */
     @Transactional
+    /** Hesabı kapatılan kişi yanıtlamadığı açık anketlerden çıkar; katılım oranı ayrılan kişiyi beklemesin. */
+    @Override
+    public List<String> userDeactivated(User user, User actor) {
+        int n = jdbc.update("DELETE r FROM survey_recipients r JOIN surveys s ON s.id = r.survey_id WHERE r.user_id = ? AND r.responded = b'0' AND s.state = 'ACIK'", user.getId());
+        return n == 0 ? List.of() : List.of(n + " açık ankette katılımcı listesinden çıkarıldı");
+    }
+
     public void updateSettings(Long id, Map<String, Object> body, User me) {
-        adminGet(id, me);
+        Summary s = adminGet(id, me);
         if (body.containsKey("closesAt")) {
             LocalDateTime closes = Spec.closes(body.get("closesAt"));
+            if (closes != null && s.state() != State.KAPALI && !closes.isAfter(LocalDateTime.now(ZoneOffset.UTC))) {
+                throw ApiException.badRequest("Son tarih geçmiş bir an olamaz.");
+            }
             jdbc.update("UPDATE surveys SET closes_at = ? WHERE id = ?", closes == null ? null : Timestamp.valueOf(closes), id);
         }
         if (body.containsKey("resultsPublic")) jdbc.update("UPDATE surveys SET results_public = ? WHERE id = ?", Boolean.TRUE.equals(body.get("resultsPublic")), id);
@@ -297,7 +307,9 @@ public class SurveyService {
     public void respond(Long id, Map<String, Object> body, User me) {
         Summary s = visible(id, me);
         if (!s.recipient()) throw ApiException.forbidden("Bu anket size gönderilmedi.");
-        if (s.state() != State.ACIK) throw ApiException.conflict("Bu anket kapandı; artık yanıt alınmıyor.");
+        // Otomatik kapanma 5 dakikada bir çalışır; aradaki sürede de son tarihten sonra yanıt alınmaz.
+        boolean pastDeadline = s.closesAt() != null && s.closesAt().isBefore(LocalDateTime.now(ZoneOffset.UTC));
+        if (s.state() != State.ACIK || pastDeadline) throw ApiException.conflict("Bu anket kapandı; artık yanıt alınmıyor.");
         if (s.responded()) throw ApiException.conflict("Bu anketi zaten yanıtladınız.");
         Map<String, Object> raw = body.get("answers") instanceof Map<?, ?> m ? (Map<String, Object>) m : Map.of();
         List<Question> qs = questions(id);

@@ -144,6 +144,8 @@ export default function Projects() {
         <div className="space-y-4"><Skeleton className="h-32 rounded-2xl" /><div className="grid md:grid-cols-2 gap-4"><Skeleton className="h-56 rounded-2xl" /><Skeleton className="h-56 rounded-2xl" /></div></div>
       ) : (
         <>
+          {/* Boştakiler ve görevsizler yönetimin iş dağıtma aracı; çalışana iş arkadaşlarını "boşta" diye göstermeyiz. */}
+          {isAdmin && (<>
           {/* Boştaki çalışanlar */}
           <section
             aria-labelledby="pool-title"
@@ -198,6 +200,7 @@ export default function Projects() {
               </div>
             )}
           </section>
+          </>)}
 
           <div className="flex items-center justify-between gap-4 mb-5 flex-wrap">
             <Segmented<Filter>

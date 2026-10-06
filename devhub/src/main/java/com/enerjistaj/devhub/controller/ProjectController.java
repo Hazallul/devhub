@@ -51,6 +51,9 @@ public class ProjectController {
         p.setName(name);
         p.setDescription(Payloads.optionalText(payload, "description", 500, "Açıklama"));
         p.setDeadline(Payloads.date(payload, "deadline", "Teslim tarihi"));
+        if (p.getDeadline() != null && p.getDeadline().isBefore(java.time.LocalDate.now(com.enerjistaj.devhub.service.ActionLogService.ZONE))) {
+            throw ApiException.badRequest("Yeni projenin teslim tarihi geçmiş bir gün olamaz.");
+        }
         ProjectStatus status = Payloads.enumValue(payload, "status", ProjectStatus.class, "proje aşaması");
         p.setStatus(status != null ? status : ProjectStatus.PLANLAMA);
         Project saved = projectRepository.save(p);
