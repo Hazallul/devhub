@@ -45,7 +45,9 @@ services:
       start_period: 40s
 
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      target: dev
     container_name: devhub-frontend
     restart: unless-stopped
     ports:

@@ -159,9 +159,9 @@ function ReportsPage() {
       </div>
 
       {loading ? (
-        <div className="grid lg:grid-cols-2 gap-6"><Skeleton className="h-80 rounded-3xl" /><Skeleton className="h-80 rounded-3xl" /></div>
+        <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-6"><Skeleton className="h-80 rounded-3xl" /><Skeleton className="h-80 rounded-3xl" /></div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-6 pb-10">
+        <div className="grid grid-cols-[minmax(0,1fr)] lg:grid-cols-2 gap-6 pb-10">
           {/* İş yükü */}
           <section className="card p-5" aria-labelledby="r-workload">
             <div className="flex items-start justify-between gap-3 flex-wrap mb-4">

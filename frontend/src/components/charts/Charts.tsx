@@ -79,7 +79,7 @@ export function HBarStack({ rows, series, normalize = false, unit, labelWidth = 
           const width = normalize ? 100 : (total / max) * 100;
           const present = series.filter(s => (r.values[s.key] ?? 0) > 0);
           return (
-            <li key={r.id} className="grid items-center gap-3" style={{ gridTemplateColumns: `${labelWidth}px 1fr` }}>
+            <li key={r.id} className="grid items-center gap-3" style={{ gridTemplateColumns: `min(${labelWidth / 16}rem, 38%) minmax(0, 1fr)` }}>
               <div className="text-sm font-semibold text-theme-text truncate" title={r.ariaLabel}>{r.label}</div>
               <div className="flex items-center gap-2 min-w-0">
                 <motion.div

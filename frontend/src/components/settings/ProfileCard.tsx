@@ -172,7 +172,7 @@ function LinksEditor() {
             const meta = LINK_TYPE[r.type];
             return (
               <motion.li key={r.key} layout initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, height: 0, transition: { duration: 0.15 } }}
-                className="grid grid-cols-[1fr_auto] sm:grid-cols-[10.625rem_8.75rem_1fr_auto] gap-2 items-center">
+                className="grid grid-cols-[minmax(0,8.5rem)_minmax(0,1fr)_auto] sm:grid-cols-[10.625rem_8.75rem_1fr_auto] gap-2 items-center">
                 <div className="relative">
                   <meta.icon size={16} weight="bold" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-theme-deep pointer-events-none" aria-hidden="true" />
                   <select aria-label="Tür" value={r.type} onChange={e => patch(r.key, { type: e.target.value as UserLinkType })} className="input py-2.5 pl-10 text-sm">

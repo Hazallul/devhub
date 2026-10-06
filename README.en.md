@@ -90,6 +90,19 @@ docker compose down -v   # removes everything, including the database
 
 </details>
 
+<details>
+<summary>Faster production mode</summary>
+
+The command above runs the interface in development mode: pages reload when the code changes, but each page takes a few seconds to compile the first time it opens. To just use or demo DevHub, run production mode, which builds the interface once and serves the ready files; pages open instantly and the addresses stay the same:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Production mode has no one-click sign-in buttons (a real installation should not leave a password-free way in). Sign in with a sample account's e-mail and password; the password is in `frontend/.env.development`. Run the first command again to return to development mode.
+
+</details>
+
 | Address | What is there |
 |---|---|
 | http://localhost:5173 | DevHub |

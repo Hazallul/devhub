@@ -88,6 +88,19 @@ docker compose down -v   # her şeyi siler (veritabanı dahil)
 
 </details>
 
+<details>
+<summary>Daha hızlı açılan üretim modu</summary>
+
+Yukarıdaki komut arayüzü geliştirme modunda çalıştırır: kod değişince sayfa kendini yeniler ama her sayfa ilk açılışta birkaç saniye derlenir. Yalnızca kullanmak ya da tanıtmak için arayüzü bir kez derleyip hazır dosyalardan sunan üretim modunu kullanın; sayfalar anında açılır, adresler aynı kalır:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+Üretim modunda hızlı giriş düğmeleri yoktur (gerçek bir kurulumda şifresiz giriş kapısı bırakılmaz). Örnek hesaplarla e-posta ve şifre yazarak girin; şifre `frontend/.env.development` dosyasındadır. Geliştirme moduna dönmek için ilk komutu yeniden çalıştırın.
+
+</details>
+
 | Adres | Ne var? |
 |---|---|
 | http://localhost:5173 | DevHub |

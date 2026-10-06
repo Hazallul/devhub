@@ -1,0 +1,15 @@
+# Üretim modu: arayüz derlenip nginx ile sunulur (geliştirme sunucusu yerine). Kullanım:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Adresler aynı kalır: arayüz http://localhost:5173, API http://localhost:8081.
+services:
+  frontend:
+    build:
+      context: ../frontend
+      target: prod
+    # Geliştirmedeki kaynak kod bağlamaları üretimde kullanılmaz.
+    volumes: !reset []
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:5173/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
