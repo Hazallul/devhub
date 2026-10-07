@@ -159,7 +159,8 @@ Her satır bir kişidir: bu hafta kaç saat çalıştığı, kalan işi ve göre
 - Kartı aynı satırda başka sütuna **sürükleyerek** durumunu değiştirin.
 - **Kırmızı** kartlar gecikmiş, **turuncu** kartlar yüksek öncelikli işlerdir.
 - Üstteki filtrelerle yalnızca kendi işlerinizi, bir projeyi, bir departmanı ya da bir önceliği görebilirsiniz.
-- Kalabalık ekiplerde kişileri **Departman** ya da **Proje** ile gruplayın; gruplar açılıp kapanır ve tercihiniz hatırlanır.
+- Kişiler **Departman** ya da **Proje** başlıkları altında gruplanır; gruplar açılıp kapanır ve tercihiniz hatırlanır.
+- **Takvim** görünümü işleri günlere yayar: her görevin kalan tahmini işi kişinin mesai saatlerine (günde 8 saat; hafta sonu, tatil ve izin hariç) sırayla yerleştirilir, böylece kimin hangi işi hangi güne kadar bitireceği görünür. Çubuk rengi son tarihe ne kadar pay kaldığını gösterir: yeşil rahat, turuncu yaklaşıyor (iş bittikten sonra en fazla 2 iş günü kalıyor), kırmızı son gün ya da yetişmiyor, mavi son tarihi olmayan iş; yüksek öncelikli görevlerde ayrıca çift ok işareti var. Takvimi fareyle tutup sağa sola sürükleyerek geçmişe ve ileriye bakın; çubuğa tıklayınca plan, kalan iş ve son tarih bir kartta açılır. Görev atandığı an takvimde yer alır.
 - Panonun en üstündeki **Atanmamış** satırı henüz kimseye verilmemiş işleri gösterir. Yönetici kartı bir kişinin satırına sürükleyerek atar.
 
 Sağ üstteki **Tablo** görünümü bütün görevleri (atanmış ya da atanmamış) tek listede gösterir: **Atanmamış** sekmesinde bekleyen işleri görün, **Atanan** sütunundan tek tıkla birine atayın ya da birden fazla görevi seçip toplu atayın. Sütun başlıklarına tıklayarak sıralayabilirsiniz. Çalışanlar atanmamış bir görevi **Üstlen** ile kendine alabilir.

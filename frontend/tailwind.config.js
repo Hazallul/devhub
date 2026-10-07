@@ -43,6 +43,8 @@ export default {
         warn: { DEFAULT: v('warn'), soft: v('warn-soft'), line: v('warn-line'), ink: v('warn-ink') },
         clay: { DEFAULT: v('clay'), soft: v('clay-soft'), line: v('clay-line'), ink: v('clay-ink'), mid: v('clay-mid') },
         good: { DEFAULT: v('good'), soft: v('good-soft'), ink: v('good-ink') },
+        /** Görev takvimi çubukları: öncelik ve risk */
+        tl: { none: v('tl-none'), calm: v('tl-calm'), soon: v('tl-soon'), risk: v('tl-risk') },
       },
       /* Gölge neredeyse yok: düz yüzeyde katmanı çizgi ayırır. float = açılır menü/pencere, glow = vurgulanan öğe. */
       boxShadow: {

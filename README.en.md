@@ -161,7 +161,8 @@ Each row is a person: hours worked this week, remaining work, and tasks in **To 
 - **Drag** a card to another column in the same row to change its status.
 - **Red** cards are overdue, **orange** cards are high priority.
 - Filters on top show only your work, one project, one department or one priority.
-- In large teams, group people by **Departman** (department) or **Proje** (project); groups collapse and your choice is remembered.
+- People are grouped under **Departman** (department) or **Proje** (project) headings; groups collapse and your choice is remembered.
+- The **Takvim** (calendar) view spreads the work over days: each task's remaining estimate is laid out in order over the person's working hours (8 hours a day, skipping weekends, holidays and leave), so you can see who finishes what by which day. Bar colours show how much room is left before the deadline: green relaxed, orange getting close (at most 2 working days to spare), red due today or not going to make it, blue no deadline; high-priority tasks also carry a double-arrow mark. Drag the calendar left and right to look back or ahead; click a bar to see its plan, remaining work and deadline in a card. A task appears as soon as it is assigned.
 - The **Atanmamış** (unassigned) row at the top holds work nobody has yet. An admin drags a card onto a person's row to assign it.
 
 The **Tablo** (table) view in the top right lists every task, assigned or not: open the **Atanmamış** tab to see waiting work, assign it from the **Atanan** column in one click, or select several tasks and assign them at once. Click a column header to sort. Employees can take an unassigned task with **Üstlen** (take on).

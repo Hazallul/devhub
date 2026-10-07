@@ -12,11 +12,12 @@ import { LabelChips, TaskBadges } from './TaskExtras';
 import { useClaimTask } from '../../hooks/taskExtras';
 import { byUrgency, taskUrgency, urgencySurface } from '../../lib/urgency';
 import GroupHeader from '../ui/GroupHeader';
+import PeopleTimeline from './PeopleTimeline';
 import { groupItems, groupKeyOf, useCollapsedGroups, usePersisted, type GroupBy } from '../../lib/groups';
 import type { Project, Task, TaskStatus, User, Workload } from '../../types';
 
-type Density = 'CARDS' | 'SUMMARY';
-type Sort = 'LOAD' | 'NAME';
+/** Kartlar: durum sütunları; Takvim: işler günlere yayılır (PeopleTimeline) */
+type Density = 'CARDS' | 'TIMELINE';
 
 /** Tamamlandı hücresinde yalnızca son bu kadar günde biten görevler gösterilir (pano şişmesin). */
 const DONE_DAYS = 14;
@@ -57,10 +58,11 @@ interface Props {
 export default function PeopleBoard({ tasks, users, projectById, filtered, canEdit, canAssign, onMove, onOpen, onNew, unassigned = [], onNewUnassigned }: Props) {
   const { data: workload } = useWorkload();
   const now = useNow(30_000);
-  const [density, setDensity] = useState<Density>(() => (localStorage.getItem('devhub.tasks.people.density') as Density) || 'CARDS');
-  const [sort, setSort] = useState<Sort>('LOAD');
+  const [density, setDensity] = useState<Density>(() => (localStorage.getItem('devhub.tasks.people.density') === 'TIMELINE' ? 'TIMELINE' : 'CARDS'));
   // Kalabalık ekiplerde kişiler departmana ya da projeye göre gruplanır; gruplar katlanır ve hatırlanır.
-  const [groupBy, setGroupBy] = usePersisted<GroupBy>('devhub.tasks.people.group', 'NONE');
+  const [storedGroup, setGroupBy] = usePersisted<GroupBy>('devhub.tasks.people.group', 'DEPARTMENT');
+  // "Grupsuz" kaldırıldı: eski kayıtlı tercih departmana düşer
+  const groupBy: GroupBy = storedGroup === 'NONE' ? 'DEPARTMENT' : storedGroup;
   const groups = useCollapsedGroups(`devhub.tasks.people.closed.${groupBy}`);
   const [drag, setDrag] = useState<Task | null>(null);
   const [over, setOver] = useState<string | null>(null);
@@ -99,10 +101,9 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
       r.cells.DEVAM.sort(byPriority);
       r.cells.TAMAMLANDI.sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''));
     });
-    return list.sort(sort === 'LOAD'
-      ? (a, b) => b.remaining - a.remaining || a.user.fullName.localeCompare(b.user.fullName, 'tr')
-      : (a, b) => a.user.fullName.localeCompare(b.user.fullName, 'tr'));
-  }, [tasks, users, workload, filtered, sort, now, doneSince]);
+    // En çok açık işi olan üstte
+    return list.sort((a, b) => b.remaining - a.remaining || a.user.fullName.localeCompare(b.user.fullName, 'tr'));
+  }, [tasks, users, workload, filtered, now, doneSince]);
 
   const totals = useMemo(() => {
     let remaining = 0, worked = 0, capacity = 0, running = 0;
@@ -145,14 +146,17 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
         </p>
         <div className="flex flex-wrap gap-2">
           <Segmented<GroupBy> label="Gruplama" layoutId="people-group" value={groupBy} onChange={setGroupBy}
-            options={[{ value: 'NONE', label: 'Grupsuz' }, { value: 'DEPARTMENT', label: 'Departman' }, { value: 'PROJECT', label: 'Proje' }]} />
-          <Segmented<Sort> label="Sıralama" layoutId="people-sort" value={sort} onChange={setSort}
-            options={[{ value: 'LOAD', label: 'Yüke göre' }, { value: 'NAME', label: 'Ada göre' }]} />
-          <Segmented<Density> label="Yoğunluk" layoutId="people-density" value={density} onChange={changeDensity}
-            options={[{ value: 'CARDS', label: 'Kartlar' }, { value: 'SUMMARY', label: 'Özet' }]} />
+            options={[{ value: 'DEPARTMENT', label: 'Departman' }, { value: 'PROJECT', label: 'Proje' }]} />
+          <Segmented<Density> label="Görünüm" layoutId="people-density" value={density} onChange={changeDensity}
+            options={[{ value: 'CARDS', label: 'Kartlar' }, { value: 'TIMELINE', label: 'Takvim' }]} />
         </div>
       </div>
 
+      {density === 'TIMELINE' ? (
+        <PeopleTimeline
+          groups={groupItems(rows, r => groupKeyOf(r.user, groupBy)).map(g => ({ key: g.key, items: g.items.map(r => ({ user: r.user, open: [...r.cells.DEVAM, ...r.cells.YAPILACAK] })) }))}
+          isClosed={groups.isClosed} onToggle={groups.toggle} projectById={projectById} unassignedCount={unassigned.length} onOpen={onOpen} />
+      ) : (
       <div className="card overflow-hidden">
         {/* Sütun başlıkları: kaydırırken üstte kalır */}
         <div className={`hidden md:grid ${GRID} sticky top-0 z-10 bg-theme-lightest/95 backdrop-blur-sm border-b border-theme-light text-xs font-medium text-theme-muted`}>
@@ -174,7 +178,7 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
             onDragStart={setDrag} onDragEnd={() => { setDrag(null); setOver(null); }} onOpen={onOpen} onNew={onNewUnassigned} />
         )}
         <div className="divide-y divide-theme-light">
-          {groupBy === 'NONE' ? rows.map(renderRow) : groupItems(rows, r => groupKeyOf(r.user, groupBy)).map(g => {
+          {groupItems(rows, r => groupKeyOf(r.user, groupBy)).map(g => {
             const open = !groups.isClosed(g.key);
             const remaining = g.items.reduce((s, r) => s + r.remaining, 0);
             const overdue = g.items.reduce((s, r) => s + [...r.cells.YAPILACAK, ...r.cells.DEVAM].filter(t => taskUrgency(t).overdue).length, 0);
@@ -193,6 +197,7 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
           })}
         </div>
       </div>
+      )}
     </div>
   );
 
@@ -201,7 +206,6 @@ export default function PeopleBoard({ tasks, users, projectById, filtered, canEd
             <PersonRow
               key={r.user.id}
               row={r}
-              density={density}
               now={now}
               projectById={projectById}
               dragging={drag}
@@ -226,8 +230,8 @@ const GRID = 'md:grid-cols-[14rem_repeat(3,minmax(0,1fr))] xl:grid-cols-[16rem_r
 const byPriority = (a: Task, b: Task) =>
   byUrgency(a, b) || TASK_PRIORITY[a.priority ?? 'ORTA'].rank - TASK_PRIORITY[b.priority ?? 'ORTA'].rank || (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999');
 
-function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit, canAssign, onDragStart, onDragEnd, onOver, onDrop, onMove, onOpen, onNew }: {
-  row: Row; density: Density; now: number; projectById: Map<number, Project>; dragging: Task | null; over: string | null;
+function PersonRow({ row: r, now, projectById, dragging, over, canEdit, canAssign, onDragStart, onDragEnd, onOver, onDrop, onMove, onOpen, onNew }: {
+  row: Row; now: number; projectById: Map<number, Project>; dragging: Task | null; over: string | null;
   canEdit: (t: Task) => boolean; canAssign: boolean;
   onDragStart: (t: Task) => void; onDragEnd: () => void; onOver: (key: string | null) => void; onDrop: (s: TaskStatus) => void;
   onMove: (t: Task, s: TaskStatus) => void; onOpen: (id: number) => void; onNew?: () => void;
@@ -243,12 +247,10 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
   const loadTone = loadWeeks > 1.5 ? 'text-danger' : loadWeeks > 1 ? 'text-warn-ink' : 'text-theme-deep';
   const acceptsFromOthers = canAssign && dragging && dragging.userId !== u.id;
 
-  const summary = density === 'SUMMARY';
-
   return (
     <motion.section layout="position" aria-label={u.fullName} className={`md:grid ${GRID} group/row`}>
       {/* Kişi */}
-      <div className={`flex md:flex-col min-w-0 px-4 ${summary ? 'py-2.5 gap-1' : 'py-3.5 gap-2.5'}`}>
+      <div className={`flex md:flex-col min-w-0 px-4 py-3.5 gap-2.5`}>
         <div className="flex items-center gap-2.5 min-w-0 flex-1 md:flex-none">
           <Avatar user={u} size="sm" />
           <div className="min-w-0 flex-1">
@@ -264,7 +266,7 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
             </button>
           </div>
         </div>
-        <div className={`hidden sm:block min-w-[11rem] md:min-w-0 ${summary ? 'space-y-0.5' : 'space-y-1.5'}`}>
+        <div className={`hidden sm:block min-w-[11rem] md:min-w-0 space-y-1.5`}>
           {u.status === 'IZINLI' && (
             <span className="inline-flex items-center gap-1 text-xs text-clay-ink"><Airplane size={12} weight="bold" aria-hidden="true" /> İzinli</span>
           )}
@@ -273,19 +275,17 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
               <span>Bu hafta</span>
               <span className="tabular"><span className="text-theme-text font-medium">{formatDuration(worked, true)}</span>{capacity > 0 && ` / ${formatDuration(capacity, true)}`}</span>
             </div>
-            {!summary && (
-              <div className="h-1 rounded-full bg-theme-lightest mt-1 overflow-hidden">
-                <div className="h-full rounded-full bg-accent" style={{ width: `${capacity ? Math.min(100, (worked / capacity) * 100) : 0}%` }} />
-              </div>
-            )}
+            <div className="h-1 rounded-full bg-theme-lightest mt-1 overflow-hidden">
+              <div className="h-full rounded-full bg-accent" style={{ width: `${capacity ? Math.min(100, (worked / capacity) * 100) : 0}%` }} />
+            </div>
           </div>
           <p className="flex items-center justify-between text-xs text-theme-muted" title="Açık görevlerin kalan tahmini işi">
             <span>Açık iş</span>
             <span className={`tabular font-medium ${loadTone}`}>
-              {formatDuration(r.remaining, true)}{!summary && r.remaining > 0 && <span className="font-normal text-theme-muted"> ({String(Math.round((r.remaining / 3600 / DAY_HOURS) * 10) / 10).replace('.', ',')} gün)</span>}
+              {formatDuration(r.remaining, true)}{r.remaining > 0 && <span className="font-normal text-theme-muted"> ({String(Math.round((r.remaining / 3600 / DAY_HOURS) * 10) / 10).replace('.', ',')} gün)</span>}
             </span>
           </p>
-          {!summary && today > 0 && <p className="flex justify-between text-xs text-theme-muted"><span>Bugün</span><span className="tabular text-theme-text font-medium">{formatDuration(today, true)}</span></p>}
+          {today > 0 && <p className="flex justify-between text-xs text-theme-muted"><span>Bugün</span><span className="tabular text-theme-text font-medium">{formatDuration(today, true)}</span></p>}
         </div>
       </div>
 
@@ -296,7 +296,6 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
           const list = r.cells[s];
           const shown = expanded ? list : list.slice(0, CELL_LIMIT);
           const isOver = over === key && !!dragging && (dragging.userId === u.id ? canEdit(dragging) : !!acceptsFromOthers);
-          const hours = list.reduce((sum, t) => sum + (s === 'TAMAMLANDI' ? liveSpent(t, now) : (t.estimatedMinutes ?? 0) * 60), 0);
           return (
             <motion.div
               key={s}
@@ -309,13 +308,10 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
               }}
               onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onOver(null); }}
               onDrop={e => { e.preventDefault(); onDrop(s); }}
-              className={`min-w-0 px-2.5 md:border-l border-theme-light transition-colors ${summary ? 'py-2' : 'py-2.5'} ${isOver ? 'bg-theme-medium/10 shadow-[inset_0_0_0_2px_rgb(var(--medium))]' : ''}`}
+              className={`min-w-0 px-2.5 md:border-l border-theme-light transition-colors py-2.5 ${isOver ? 'bg-theme-medium/10 shadow-[inset_0_0_0_2px_rgb(var(--medium))]' : ''}`}
               aria-label={`${u.fullName}, ${TASK_STATUS[s].label}`}
             >
               <p className="md:hidden text-xs font-medium text-theme-muted px-1 pb-1">{TASK_STATUS[s].label}</p>
-              {summary ? (
-                <SummaryCell list={list} status={s} hours={hours} now={now} onOpen={onOpen} />
-              ) : (
                 <div className="space-y-1.5">
                   {shown.map(t => (
                     <MiniCard key={t.id} task={t} now={now} project={t.projectId ? projectById.get(t.projectId) : undefined}
@@ -329,34 +325,11 @@ function PersonRow({ row: r, density, now, projectById, dragging, over, canEdit,
                   )}
                   {list.length === 0 && isOver && <p className="text-xs text-theme-deep text-center py-3">Buraya bırakın</p>}
                 </div>
-              )}
             </motion.div>
           );
         })}
       </AnimatePresence>
     </motion.section>
-  );
-}
-
-/** Özet yoğunluk: hücrede sayı, saat ve her görev için tıklanabilir küçük bir nokta. */
-function SummaryCell({ list, status, hours, now, onOpen }: { list: Task[]; status: TaskStatus; hours: number; now: number; onOpen: (id: number) => void }) {
-  if (list.length === 0) return null;
-  return (
-    <div className="px-1">
-      <p className="flex items-baseline gap-2">
-        <span className="text-base font-semibold tabular">{list.length}</span>
-        <span className="text-xs text-theme-muted">{status === 'TAMAMLANDI' ? `${formatDuration(hours, true)} çalışıldı` : `${formatDuration(hours, true)} tahmini`}</span>
-      </p>
-      <div className="flex flex-wrap gap-1 mt-1">
-        {list.map(t => {
-          const tone = effortTone(liveSpent(t, now), t.estimatedMinutes);
-          return (
-            <button key={t.id} type="button" onClick={() => onOpen(t.id)} title={t.content} aria-label={t.content}
-              className={`w-3 h-3 rounded-sm transition-transform hover:scale-125 ${tone === 'over' ? 'bg-danger' : tone === 'near' ? 'bg-warn' : t.ticking ? 'bg-good' : 'bg-theme-light'}`} />
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
